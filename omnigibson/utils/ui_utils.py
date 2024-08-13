@@ -817,11 +817,13 @@ class KeyboardRobotController:
         action = np.zeros(self.action_dim)
 
         # Handle the action if any key is actively being pressed
+        # print("self.active_action: ", self.active_action)
         if self.active_action is not None:
             idx, val = self.active_action["idx"], self.active_action["val"]
 
             # Only handle the action if the value is specified
             if val is not None:
+                # print("idx, val: ", idx, val)
                 # If there is no index, the user is controlling a joint with "[" and "]"
                 if idx is None and len(self.joint_command_idx) != 0:
                     idx = self.joint_command_idx[self.active_joint_command_idx_idx]
@@ -860,13 +862,15 @@ class KeyboardRobotController:
                 action[self.controller_info[binary_gripper]["start_idx"]] = self.persistent_gripper_action[binary_gripper]
 
         # Print out the user what is being pressed / controlled
-        sys.stdout.write("\033[K")
+        # sys.stdout.write("\033[K")
         keypress_str = self.current_keypress.__str__().split(".")[-1]
-        print("Pressed {}. Action: {}".format(keypress_str, action))
-        sys.stdout.write("\033[F")
+        # print("Pressed {}. Action: {}".format(keypress_str, action))
+        # sys.stdout.write("\033[F")
+        # print('action: ', action.shape)
 
+        # changed by Arpit
         # Return action
-        return action
+        return action, keypress_str
 
     def print_keyboard_teleop_info(self):
         """

@@ -20,6 +20,8 @@ dev/transfer.c
 *.bak
 *.zip
 .*.swp
+*.hdf5
+*.hdf5.lock
 
 docs/apidoc
 
@@ -88,3 +90,16 @@ coverage.xml
 # Doc
 docs/reference
 site/
+
+# Custom folders
+data/
+dynamics_model_dataset/
+dynamics_model_dataset_seg/
+dynamics_model_dataset_seg_test/
+dynamics_model_dataset_test/
+dynamics_model_dataset_test_2/
+old/
+temp_dataset/
+wandb/
+outputs/
+robot_exec_output/

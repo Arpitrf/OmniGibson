@@ -41,6 +41,7 @@ def main(random_selection=False, headless=False, short_exec=False):
         model=obj_model,
         position=[0, 0, 50.0],
     )
+    print("obj_cfg: ", obj_cfg)
 
     cfg = {
         "scene": {

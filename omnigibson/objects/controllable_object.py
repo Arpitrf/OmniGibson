@@ -310,6 +310,7 @@ class ControllableObject(BaseObject):
 
         for name, controller in self._controllers.items():
             # Set command, then take a controller step
+            # print("controller: ", type(controller))
             controller.update_goal(command=action[idx : idx + controller.command_dim], control_dict=self.get_control_dict())
             # Update idx
             idx += controller.command_dim
@@ -326,6 +327,7 @@ class ControllableObject(BaseObject):
         """
         Takes a controller step across all controllers and deploys the computed control signals onto the object.
         """
+        # print("In ControllableObject step")
         # Skip if we don't have control enabled
         if not self.control_enabled:
             return

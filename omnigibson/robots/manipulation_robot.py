@@ -237,12 +237,15 @@ class ManipulationRobot(BaseRobot):
                 and IsGraspingState.UNKNOWN if unknown.
         """
         arm = self.default_arm if arm == "default" else arm
+        # print("arm: ", arm, candidate_obj)
+        # print("self._ag_obj_in_hand[arm]: ", self._ag_obj_in_hand[arm])
         if self.grasping_mode != "physical":
             is_grasping_obj = (
                 self._ag_obj_in_hand[arm] is not None
                 if candidate_obj is None
                 else self._ag_obj_in_hand[arm] == candidate_obj
             )
+            print("is_grasping internal: ", is_grasping_obj)
             is_grasping = (
                 IsGraspingState.TRUE
                 if is_grasping_obj and self._ag_release_counter[arm] is None
@@ -494,7 +497,9 @@ class ManipulationRobot(BaseRobot):
         Returns:
             str: Default arm name for this robot, corresponds to the first entry in @arm_names by default
         """
-        return self.arm_names[0]
+        # change later
+        # return self.arm_names[0]
+        return self.arm_names[1]
 
     @property
     def arm_action_idx(self):
@@ -681,7 +686,9 @@ class ManipulationRobot(BaseRobot):
             3-array: (x,y,z) global end-effector Cartesian position for this robot's end-effector corresponding
                 to arm @arm
         """
+        # print("self.arm_namesssssssssssssss: ", self.arm_names)
         arm = self.default_arm if arm == "default" else arm
+        # print("armmmmmm: ", arm)
         return self._links[self.eef_link_names[arm]].get_position()
 
     def get_eef_orientation(self, arm="default"):
@@ -785,6 +792,7 @@ class ManipulationRobot(BaseRobot):
         # If we're not using physical grasping, we check for gripper contact
         if self.grasping_mode != "physical":
             candidates_set, robot_contact_links = self._find_gripper_contacts(arm=arm)
+            print("candidate_set11: ", len(candidates_set))
             # If we're using assisted grasping, we further filter candidates via ray-casting
             if self.grasping_mode == "assisted":
                 candidates_set_raycast = self._find_gripper_raycast_collisions(arm=arm)
@@ -792,6 +800,7 @@ class ManipulationRobot(BaseRobot):
         else:
             raise ValueError("Invalid grasping mode for calculating in hand object: {}".format(self.grasping_mode))
 
+        print("candidate_set: ", len(candidates_set))
         # Immediately return if there are no valid candidates
         if len(candidates_set) == 0:
             return None
@@ -1217,6 +1226,7 @@ class ManipulationRobot(BaseRobot):
             "max_force": max_force,
             "contact_pos": contact_pos,
         }
+        print("ag_obj: ", ag_obj)
         self._ag_obj_in_hand[arm] = ag_obj
         self._ag_freeze_gripper[arm] = True
         for joint in self.finger_joints[arm]:

@@ -146,6 +146,7 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         assert variant in ("default", "wrist_cam"), f"Invalid Tiago variant specified {variant}!"
         self._variant = variant
         self.rigid_trunk = rigid_trunk
+        print("rigid_trunkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: ", self.rigid_trunk)
         self.default_trunk_offset = default_trunk_offset
         assert_valid_key(key=default_reset_mode, valid_keys=RESET_JOINT_OPTIONS, name="default_reset_mode")
         self.default_reset_mode = default_reset_mode
@@ -200,15 +201,20 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
     @property
     def arm_names(self):
         return ["left", "right"]
+    
+    # def set_head_joints(self):
+    #     pos[[-0.00317451 -0.8972661 ]
 
     @property
     def tucked_default_joint_pos(self):
+        print("indices base, trunk, camera: ", self.base_idx, self.trunk_control_idx, self.camera_control_idx)
         pos = np.zeros(self.n_dof)
         # Keep the current joint positions for the base joints
         pos[self.base_idx] = self.get_joint_positions()[self.base_idx]
         pos[self.trunk_control_idx] = 0
         pos[self.camera_control_idx] = np.array([0.0, 0.0])
         for arm in self.arm_names:
+            print("indices gripper, arm: ", self.gripper_control_idx[arm], self.arm_control_idx[arm])
             pos[self.gripper_control_idx[arm]] = np.array([0.045, 0.045])  # open gripper
             pos[self.arm_control_idx[arm]] = np.array(
                 [-1.10, 1.47, 2.71, 1.71, -1.57, 1.39, 0]
@@ -226,9 +232,14 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         for arm in self.arm_names:
             pos[self.gripper_control_idx[arm]] = np.array([0.045, 0.045])  # open gripper
             if self.default_arm_pose == "vertical":
-                pos[self.arm_control_idx[arm]] = np.array(
-                    [0.85846, -0.14852, 1.81008, 1.63368, 0.13764, -1.32488, -0.68415]
-                )
+                if arm == 'left':
+                    pos[self.arm_control_idx[arm]] = np.array(
+                        [0.65846, -0.14852, 1.81008, 1.63368, 0.13764, -1.32488, -0.68415]
+                    )
+                else:
+                    pos[self.arm_control_idx[arm]] = np.array(
+                        [0.85846, -0.30852, 1.81008, 1.63368, 0.13764, -1.32488, -0.68415] # -0.14852 
+                    )
             elif self.default_arm_pose == "diagonal15":
                 pos[self.arm_control_idx[arm]] = np.array(
                     [0.90522, -0.42811, 2.23505, 1.64627, 0.76867, -0.79464, 2.05251]
@@ -270,7 +281,7 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         """
         self.set_joint_positions(self.untucked_default_joint_pos)
 
-    def reset(self):
+    def reset(self, right_hand_joint_pos=None):
         """
         Reset should not change the robot base pose.
         We need to cache and restore the base joints to the world.
@@ -278,6 +289,13 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         base_joint_positions = self.get_joint_positions()[self.base_idx]
         super().reset()
         self.set_joint_positions(base_joint_positions, indices=self.base_idx)
+        # set the head pose
+        self.set_joint_positions([-0.20317451, -0.7972661], indices=self.camera_control_idx)
+
+        # reset the hand joints to a specific position
+        if right_hand_joint_pos is not None:
+            self.set_joint_positions(right_hand_joint_pos, indices=self.arm_control_idx['right'])
+            
 
     def _post_load(self):
         super()._post_load()
@@ -293,15 +311,15 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         self._world_base_fixed_joint_prim.GetAttribute("physics:localPos0").Set(tuple(position))
         self._world_base_fixed_joint_prim.GetAttribute("physics:localRot0").Set(lazy.pxr.Gf.Quatf(*orientation[[3, 0, 1, 2]].tolist()))
 
-    def _initialize(self):
-        # Run super method first
-        super()._initialize()
+    # def _initialize(self):
+    #     # Run super method first
+    #     super()._initialize()
 
-        # Set the joint friction for EEF to be higher
-        for arm in self.arm_names:
-            for joint in self.finger_joints[arm]:
-                if joint.joint_type != JointType.JOINT_FIXED:
-                    joint.friction = 500
+    #     # Set the joint friction for EEF to be higher
+    #     for arm in self.arm_names:
+    #         for joint in self.finger_joints[arm]:
+    #             if joint.joint_type != JointType.JOINT_FIXED:
+    #                 joint.friction = 500
 
     # Name of the actual root link that we are interested in. Note that this is different from self.root_link_name,
     # which is "base_footprint_x", corresponding to the first of the 6 1DoF joints to control the base.
@@ -666,10 +684,10 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         # Default variant
         return os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_dual_omnidirectional_stanford_33.usd")
 
-    @property
-    def simplified_mesh_usd_path(self):
-        # TODO: How can we make this more general - maybe some automatic way to generate these?
-        return os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_dual_omnidirectional_stanford_33_simplified_collision_mesh.usd")
+    # @property
+    # def simplified_mesh_usd_path(self):
+    #     # TODO: How can we make this more general - maybe some automatic way to generate these?
+    #     return os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_dual_omnidirectional_stanford_33_simplified_collision_mesh.usd")
 
     @property
     def robot_arm_descriptor_yamls(self):
@@ -765,3 +783,11 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         action = ManipulationRobot.teleop_data_to_action(self, teleop_action)
         action[self.base_action_idx] = teleop_action.base * 0.1
         return action
+
+    def custom_is_grasping(self):
+        gripper_right_qpos = self._get_proprioception_dict()['gripper_right_qpos']
+        if (gripper_right_qpos[0] > 0.044 and gripper_right_qpos[1] > 0.044) or \
+            (gripper_right_qpos[0] < 0.0001 and gripper_right_qpos[1] < 0.0001):
+            return False
+        else:
+            return True

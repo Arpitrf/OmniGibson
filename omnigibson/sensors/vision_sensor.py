@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import gym
+import matplotlib.pyplot as plt
 
 import omnigibson as og
 import omnigibson.lazy as lazy
@@ -115,6 +116,7 @@ class VisionSensor(BaseSensor):
         clipping_range=(0.001, 10000000.0),
         viewport_name=None,
     ):
+        # print("-------------------------------", image_height, image_width)
         # Create load config from inputs
         load_config = dict() if load_config is None else load_config
         load_config["image_height"] = image_height
@@ -266,11 +268,13 @@ class VisionSensor(BaseSensor):
             reordered_modalities = self._modalities
 
         for modality in reordered_modalities:
+            # print("modalityyyyyyyyyyyyyyyy: ", self._annotators[modality], modality)
             raw_obs = self._annotators[modality].get_data()
             # Obs is either a dictionary of {"data":, ..., "info": ...} or a direct array
             obs[modality] = raw_obs["data"] if isinstance(raw_obs, dict) else raw_obs
             if modality == "seg_semantic":
                 id_to_labels = raw_obs["info"]["idToLabels"]
+                # print("raw_obs: ", raw_obs["info"]["idToLabels"], raw_obs['data'].shape, raw_obs['info'].keys())
                 obs[modality], info[modality] = self._remap_semantic_segmentation(obs[modality], id_to_labels)
             elif modality == "seg_instance":
                 id_to_labels = raw_obs["info"]["idToLabels"]
@@ -278,8 +282,15 @@ class VisionSensor(BaseSensor):
                     obs[modality], id_to_labels, obs["seg_semantic"], info["seg_semantic"], id=False)
             elif modality == "seg_instance_id":
                 id_to_labels = raw_obs["info"]["idToLabels"]
+                # print("id_to_labels: ", id_to_labels)
+                # plt.imshow(obs[modality])
+                # plt.show()
                 obs[modality], info[modality] = self._remap_instance_segmentation(
                     obs[modality], id_to_labels, obs["seg_semantic"], info["seg_semantic"], id=True)
+                # print("hereee")
+                # print("info[modality]: ", info[modality])
+                # plt.imshow(obs[modality])
+                # plt.show()
             elif "bbox" in modality:
                 obs[modality] = self._remap_bounding_box_semantic_ids(obs[modality])
         return obs, info
@@ -329,6 +340,9 @@ class VisionSensor(BaseSensor):
             np.ndarray: Remapped instance segmentation image
             dict: Corrected id_to_labels dictionary
         """
+        # print("1111")
+        # plt.imshow(img)
+        # plt.show()
         # Sometimes 0 and 1 show up in the image, but they are not in the id_to_labels mapping
         id_to_labels.update({"0": "BACKGROUND"})
         if not id:
@@ -391,6 +405,14 @@ class VisionSensor(BaseSensor):
 
         assert set(np.unique(img)).issubset(set(replicator_mapping.keys())), "Instance segmentation image does not match the original id_to_labels mapping."
 
+        # print("replicator_mapping: ", replicator_mapping)
+        # print("registry: ", registry)
+        # temp = img.copy()
+        # temp2, _ = remapper.remap(replicator_mapping, registry, img)
+        # fig, ax = plt.subplots(1,2)
+        # ax[0].imshow(temp)
+        # ax[1].imshow(temp2)
+        # plt.show()
         return remapper.remap(replicator_mapping, registry, img)
 
     def _register_instance(self, instance_name, id=False):

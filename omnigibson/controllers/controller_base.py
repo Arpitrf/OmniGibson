@@ -165,6 +165,7 @@ class BaseController(Serializable, Registerable, Recreatable):
         """
         # Make sure command is a np.array
         command = np.array([command]) if type(command) in {int, float} else np.array(command)
+        # print("pre command: ", command)
         # We only clip and / or scale if self.command_input_limits exists
         if self._command_input_limits is not None:
             # Clip
@@ -184,6 +185,8 @@ class BaseController(Serializable, Registerable, Recreatable):
                     command - self._command_input_transform
                 ) * self._command_scale_factor + self._command_output_transform
 
+        # print("post command: ", command)
+
         # Return processed command
         return command
 
@@ -201,7 +204,9 @@ class BaseController(Serializable, Registerable, Recreatable):
             f"Commands must be dimension {self.command_dim}, got dim {len(command)} instead."
 
         # Preprocess and run internal command
+        # print("UPDATE GOAL IN controller_base: ", command)
         self._goal = self._update_goal(command=self._preprocess_command(np.array(command)), control_dict=control_dict)
+        # self._goal = self._update_goal(command=np.array(command), control_dict=control_dict)
 
     def _update_goal(self, command, control_dict):
         """
@@ -266,6 +271,7 @@ class BaseController(Serializable, Registerable, Recreatable):
         Returns:
             Array[float]: numpy array of outputted control signals
         """
+        # print("Inside BaseController Step")
         # Generate no-op goal if not specified
         if self._goal is None:
             self._goal = self.compute_no_op_goal(control_dict=control_dict)

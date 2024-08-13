@@ -374,7 +374,9 @@ class Environment(gym.Env, GymObservable, Recreatable):
         self._load_external_sensors()
 
         og.sim.play()
+        print("before reset in _load()")
         self.reset()
+        print("after reset in _load()")
 
         # Load the obs / action spaces
         self.load_observation_space()
@@ -509,6 +511,7 @@ class Environment(gym.Env, GymObservable, Recreatable):
 
             # Iterate over all robots and apply actions
             for robot in self.robots:
+                # robot.apply_action(action_dict[robot.name])
                 robot.apply_action(action_dict[robot.name])
 
             # Run simulation step
@@ -550,14 +553,20 @@ class Environment(gym.Env, GymObservable, Recreatable):
         """
         Reset episode.
         """
+
+        # print("in env_base reset")
+        # print("self.task: ", self.task)
         # Reset the task
         self.task.reset(self)
+        # print("22")
 
         # Reset internal variables
         self._reset_variables()
+        # print("33")
 
         # Run a single simulator step to make sure we can grab updated observations
         og.sim.step()
+        # print("44")
 
         # Grab and return observations
         obs, _ = self.get_obs()

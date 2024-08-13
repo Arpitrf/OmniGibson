@@ -8,6 +8,40 @@ from omnigibson.macros import gm
 from omnigibson.sensors import VisionSensor
 from omnigibson.utils.ui_utils import choose_from_options, KeyboardRobotController
 
+def choose_controllers(robot, random_selection=False):
+    """
+    For a given robot, iterates over all components of the robot, and returns the requested controller type for each
+    component.
+
+    :param robot: BaseRobot, robot class from which to infer relevant valid controller options
+    :param random_selection: bool, if the selection is random (for automatic demo execution). Default False
+
+    :return dict: Mapping from individual robot component (e.g.: base, arm, etc.) to selected controller names
+    """
+    # Create new dict to store responses from user
+    controller_choices = dict()
+
+    # Grab the default controller config so we have the registry of all possible controller options
+    default_config = robot._default_controller_config
+
+    # Iterate over all components in robot
+    for component, controller_options in default_config.items():
+        # Select controller
+        options = list(sorted(controller_options.keys()))
+        choice = choose_from_options(
+            options=options, name="{} controller".format(component), random_selection=random_selection
+        )
+
+        # Add to user responses
+        controller_choices[component] = choice
+
+    return controller_choices
+
+CONTROL_MODES = dict(
+    random="Use autonomous random actions (default)",
+    teleop="Use keyboard control",
+)
+
 GRASPING_MODES = dict(
     sticky="Sticky Mitten - Objects are magnetized when they touch the fingers and a CLOSE command is given",
     assisted="Assisted Grasping - Objects are magnetized when they touch the fingers, are within the hand, and a CLOSE command is given",
@@ -32,7 +66,7 @@ def main(random_selection=False, headless=False, short_exec=False):
     # Create environment configuration to use
     scene_cfg = dict(type="Scene")
     robot0_cfg = dict(
-        type="Fetch",
+        type="Tiago",
         obs_modalities=["rgb"],     # we're just doing a grasping demo so we don't need all observation modalities
         action_type="continuous",
         action_normalize=True,
@@ -77,6 +111,29 @@ def main(random_selection=False, headless=False, short_exec=False):
     # Create the environment
     env = og.Environment(configs=cfg)
 
+    #  # Choose robot controller to use
+    # robot = env.robots[0]
+    # controller_choices = choose_controllers(robot=robot, random_selection=random_selection)
+
+    # print("controller_choices: ", controller_choices)
+
+    # # Choose control mode
+    # if random_selection:
+    #     control_mode = "random"
+    # else:
+    #     control_mode = choose_from_options(options=CONTROL_MODES, name="control mode")
+
+    # print("control_mode: ", control_mode)
+
+    # # Update the control mode of the robot
+    # controller_config = {component: {"name": name} for component, name in controller_choices.items()}
+    # print("controller_config: ", controller_config)
+    # robot.reload_controllers(controller_config=controller_config)
+
+    # # Because the controllers have been updated, we need to update the initial state so the correct controller state
+    # # is preserved
+    # env.scene.update_initial_state()
+
     # Reset the robot
     robot = env.robots[0]
     robot.set_position([0, 0, 0])
@@ -109,7 +166,7 @@ def main(random_selection=False, headless=False, short_exec=False):
     max_steps = -1 if not short_exec else 100
     step = 0
     while step != max_steps:
-        action = action_generator.get_random_action() if random_selection else action_generator.get_teleop_action()
+        action, _ = action_generator.get_random_action() if random_selection else action_generator.get_teleop_action()
         for _ in range(10):
             env.step(action)
             step += 1

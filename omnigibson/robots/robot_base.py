@@ -253,13 +253,15 @@ class BaseRobot(USDObject, ControllableObject, GymObservable):
                 for this object
         """
         sensor_config = {} if custom_config is None else deepcopy(custom_config)
+        # print("sensor_config: ", sensor_config)
+        # print("--------------------")
+        # print("_default_sensor_config: ", self._default_sensor_config,)
 
         # Merge the sensor dictionaries
         sensor_config = merge_nested_dicts(
             base_dict=self._default_sensor_config,
             extra_dict=sensor_config,
         )
-
         return sensor_config
 
     def _validate_configuration(self):
@@ -301,6 +303,7 @@ class BaseRobot(USDObject, ControllableObject, GymObservable):
         obs_dict = dict()
         info_dict = dict()
         for sensor_name, sensor in self._sensors.items():
+            # print("sensor_name: ", sensor_name)
             obs_dict[sensor_name], info_dict[sensor_name] = sensor.get_obs()
 
         # Have to handle proprio separately since it's not an actual sensor

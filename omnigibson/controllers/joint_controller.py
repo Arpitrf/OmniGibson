@@ -109,6 +109,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
         )
 
     def _update_goal(self, command, control_dict):
+        # print("In joint_controller _update_goal")
         # Compute the base value for the command
         base_value = control_dict[f"joint_{self._motor_type}"][self.dof_idx]
 
@@ -168,6 +169,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
 
         # Convert control into efforts
         if self._use_impedances:
+            # print("using impedeance")
             if self._motor_type == "position":
                 # Run impedance controller -- effort = pos_err * kp + vel_err * kd
                 position_error = target - base_value
@@ -188,6 +190,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
             u += control_dict["gravity_force"][self.dof_idx] + control_dict["cc_force"][self.dof_idx]
 
         else:
+            # print("not using impedeance")
             # Desired is the exact goal
             u = target
 

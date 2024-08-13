@@ -719,13 +719,20 @@ def launch_simulator(*args, **kwargs):
                     # We need to do this because for some reason omniverse exhibits strange behavior if we do certain
                     # operations immediately after playing; e.g.: syncing USD poses when flatcache is enabled
                     if self.scene is not None and self.scene.initialized:
+                        # remove later   
+                        # print("111")
+                        # self.scene.reset()
                         for robot in self.scene.robots:
                             if robot.initialized:
                                 robot.update_controller_mode()
+                                # # remove later
+                                # robot.reset()
 
                         # Also refresh any transition rules that became stale while sim was stopped
                         TransitionRuleAPI.refresh_all_rules()
 
+  
+                
                 # Additionally run non physics things
                 self._non_physics_step()
 
@@ -768,6 +775,7 @@ def launch_simulator(*args, **kwargs):
             Args:
                 render (bool): Whether rendering should occur or not
             """
+            # print("In simulator step")
             # If we have imported any objects within the last timestep, we render the app once, since otherwise calling
             # step() may not step physics
             if len(self._objects_to_initialize) > 0:

@@ -1,0 +1,553 @@
+[INFO] [omnigibson.simulator] ----- Starting OmniGibson. This will take 10-30 seconds... -----
+Starting kit application with the following args:  ['/isaac-sim/exts/omni.isaac.kit/omni/isaac/kit/simulation_app.py', '/isaac-sim/apps/omnigibson.kit', '--/app/tokens/exe-path=/isaac-sim/kit', '--/persistent/app/viewport/displayOptions=3094', '--/rtx/materialDb/syncLoads=True', '--/rtx/hydra/materialSyncLoads=True', '--/omni.kit.plugin/syncUsdLoads=True', '--/app/renderer/resolution/width=1280', '--/app/renderer/resolution/height=720', '--/app/window/width=1440', '--/app/window/height=900', '--/renderer/multiGpu/enabled=False', '--/app/fastShutdown=True', '--ext-folder', '/isaac-sim/exts', '--ext-folder', '/isaac-sim/apps', '--/physics/cudaDevice=0', '--portable', '--allow-root']
+Passing the following args to the base kit application:  []
+[Info] [carb] Logging to file: /isaac-sim/kit/logs/Kit/Isaac-Sim/2023.1/kit_20240510_202046.log
+2024-05-10 20:20:46 [0ms] [Warning] [omni.kit.app.plugin] No crash reporter present, dumps uploading isn't available.
+[0.027s] [ext: omni.kit.async_engine-0.0.0] startup
+[DEBUG] [asyncio] Using selector: EpollSelector
+[0.192s] [ext: omni.activity.core-1.0.1] startup
+[0.193s] [ext: omni.assets.plugins-0.0.0] startup
+[0.194s] [ext: omni.stats-0.0.0] startup
+[0.194s] [ext: omni.client-1.0.1] startup
+[0.198s] [ext: omni.activity.profiler-1.0.2] startup
+[0.199s] [ext: omni.gpu_foundation-0.0.0] startup
+[0.204s] [ext: omni.rtx.shadercache.vulkan-1.0.0] startup
+[0.204s] [ext: carb.windowing.plugins-1.0.0] startup
+2024-05-10 20:20:47 [774ms] [Warning] [carb.windowing-glfw.gamepad] Joystick with unknown remapping detected (will be ignored):  2.4G Mouse Consumer Control [03000000a71e00006600000010010000]
+[0.782s] [ext: omni.kit.renderer.init-0.0.0] startup
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 535.171.04    | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 4090          | Yes: 0 |     | 24564   MB | 10de      | 0          |
+|     |                                  |        |     |            | 2684      | ece2eaa7.. |
+|     |                                  |        |     |            | 1         |            |
+|=============================================================================================|
+| OS: 22.04.3 LTS (Jammy Jellyfish) ubuntu, Version: 22.04.3, Kernel: 5.15.0-105-generic
+| XServer Vendor: The X.Org Foundation, XServer Version: 12013000 (1.20.13.0)
+| Processor: 12th Gen Intel(R) Core(TM) i9-12900K | Cores: 16 | Logical: 32
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 64035 | Free Memory: 52077
+| Total Page/Swap (MB): 2047 | Free Page/Swap: 1972
+|---------------------------------------------------------------------------------------------|
+[1.258s] [ext: omni.kit.pipapi-0.0.0] startup
+[1.259s] [ext: omni.kit.pip_archive-0.0.0] startup
+[1.259s] [ext: omni.pip.compute-1.2.0] startup
+[1.260s] [ext: omni.pip.cloud-1.0.1] startup
+[1.260s] [ext: omni.isaac.core_archive-2.2.1] startup
+[1.260s] [ext: omni.pip.torch-2_0_1-2.0.2] startup
+[1.271s] [ext: omni.kit.telemetry-0.5.0] startup
+[INFO] [omni.kit.telemetry.impl.sentry_extension] sentry is disabled for external build
+[INFO] [omni.kit.telemetry.impl.sentry_extension] sentry is disabled for external build
+[1.287s] [ext: omni.kit.loop-isaac-1.1.0] startup
+[1.288s] [ext: omni.kit.test-0.0.0] startup
+[1.289s] [ext: omni.isaac.ml_archive-1.1.3] startup
+[1.289s] [ext: omni.mtlx-0.1.0] startup
+[1.289s] [ext: omni.usd.config-1.0.3] startup
+[1.291s] [ext: omni.gpucompute.plugins-0.0.0] startup
+[1.292s] [ext: omni.usd.libs-1.0.0] startup
+[1.395s] [ext: omni.appwindow-1.1.5] startup
+[1.735s] [ext: omni.kit.renderer.core-0.0.0] startup
+[2.616s] [ext: omni.kit.renderer.capture-0.0.0] startup
+[2.617s] [ext: omni.kit.renderer.imgui-0.0.0] startup
+[2.665s] [ext: carb.audio-0.1.0] startup
+[2.687s] [ext: omni.ui-2.18.5] startup
+[2.694s] [ext: omni.uiaudio-1.0.0] startup
+[2.695s] [ext: omni.kit.mainwindow-1.0.1] startup
+[2.696s] [ext: omni.kit.uiapp-0.0.0] startup
+[2.696s] [ext: omni.usd.schema.physics-0.0.0] startup
+[2.784s] [ext: omni.usd.schema.audio-0.0.0] startup
+[2.789s] [ext: omni.usd.schema.isaac-2.0.1] startup
+[2.795s] [ext: omni.usd.schema.omnigraph-1.0.0] startup
+[2.801s] [ext: omni.usd.schema.scene.visualization-2.0.2] startup
+[2.801s] [ext: omni.usd.schema.semantics-0.0.0] startup
+[2.808s] [ext: omni.usd.schema.physx-0.0.0] startup
+[2.828s] [ext: omni.usd.schema.anim-0.0.0] startup
+[2.852s] [ext: omni.usd.schema.forcefield-0.0.0] startup
+[2.857s] [ext: omni.anim.graph.schema-105.2.2] startup
+[2.862s] [ext: omni.anim.navigation.schema-105.2.0] startup
+[2.865s] [ext: omni.usd.schema.geospatial-0.0.0] startup
+[2.867s] [ext: omni.usd.schema.omniscripting-1.0.0] startup
+[2.872s] [ext: omni.resourcemonitor-105.0.0] startup
+[2.873s] [ext: omni.timeline-1.0.9] startup
+[2.874s] [ext: omni.usd_resolver-1.0.1] startup
+[2.879s] [ext: omni.kit.window.popup_dialog-2.0.23] startup
+[2.881s] [ext: omni.graph.exec-0.3.0] startup
+[2.882s] [ext: omni.kit.actions.core-1.0.0] startup
+[2.883s] [ext: omni.usd.core-1.1.8] startup
+[2.887s] [ext: omni.kit.widget.nucleus_connector-1.1.4] startup
+[2.888s] [ext: omni.kit.audiodeviceenum-1.0.1] startup
+[2.889s] [ext: omni.kit.exec.core-0.5.0] startup
+[2.890s] [ext: omni.kit.commands-1.4.6] startup
+[2.892s] [ext: omni.hydra.usdrt_delegate-7.2.34] startup
+[2.909s] [ext: omni.hydra.scene_delegate-0.3.2] startup
+[2.918s] [ext: omni.usd-1.10.18] startup
+[2.963s] [ext: omni.kit.widget.versioning-1.4.6] startup
+[2.965s] [ext: omni.kit.helper.file_utils-0.1.6] startup
+[2.976s] [ext: omni.kit.widget.nucleus_info-1.0.2] startup
+[2.976s] [ext: omni.kit.widget.filebrowser-2.3.35] startup
+[2.978s] [ext: omni.kit.search_core-1.0.5] startup
+[2.979s] [ext: omni.kit.widget.path_field-2.0.8] startup
+[2.979s] [ext: omni.kit.widget.search_delegate-1.0.4] startup
+[2.979s] [ext: omni.kit.widget.browser_bar-2.0.9] startup
+[2.980s] [ext: omni.kit.collaboration.telemetry-1.0.0] startup
+[2.980s] [ext: omni.kit.menu.utils-1.5.6] startup
+[2.985s] [ext: omni.kit.collaboration.channel_manager-1.0.11] startup
+[2.986s] [ext: omni.ui.scene-1.7.0] startup
+[2.989s] [ext: omni.kit.notification_manager-1.0.6] startup
+[2.990s] [ext: omni.kit.clipboard-1.0.3] startup
+[2.990s] [ext: omni.kit.widget.options_menu-1.0.5] startup
+[2.991s] [ext: omni.kit.usd.layers-2.1.27] startup
+[2.998s] [ext: omni.kit.window.filepicker-2.10.13] startup
+[3.001s] [ext: omni.kit.widget.filter-1.1.2] startup
+[3.002s] [ext: omni.kit.menu.create-1.0.11] startup
+[3.003s] [ext: omni.kit.window.file_exporter-1.0.22] startup
+[3.004s] [ext: omni.kit.hotkeys.core-1.3.0] startup
+[3.006s] [ext: omni.kit.context_menu-1.6.8] startup
+[3.007s] [ext: omni.kit.widget.stage-2.9.6] startup
+[3.012s] [ext: omni.kit.primitive.mesh-1.0.15] startup
+[3.013s] [ext: omni.kit.usd_undo-0.1.2] startup
+[3.013s] [ext: omni.kit.stage_templates-1.1.20] startup
+[3.014s] [ext: omni.kit.widget.searchfield-1.1.3] startup
+[3.015s] [ext: omni.kit.widget.highlight_label-1.0.1] startup
+[3.015s] [ext: omni.kit.window.file_importer-1.0.22] startup
+[3.015s] [ext: omni.kit.window.property-1.9.6] startup
+[3.017s] [ext: omni.ui_query-1.1.1] startup
+[3.017s] [ext: omni.inspect-1.0.1] startup
+[3.018s] [ext: usdrt.scenegraph-7.2.34] startup
+[3.047s] [ext: omni.graph.tools-1.41.3] startup
+[3.056s] [ext: omni.graph.core-2.139.12] startup
+[3.059s] [ext: omni.kit.window.file-1.3.44] startup
+[3.061s] [ext: omni.graph-1.106.1] startup
+[3.084s] [ext: omni.kvdb-0.0.0] startup
+[3.085s] [ext: omni.convexdecomposition-105.1.12-5.1] startup
+[3.091s] [ext: omni.localcache-0.0.0] startup
+[3.092s] [ext: omni.iray.libs-0.0.0] startup
+[3.095s] [ext: omni.physx.foundation-105.1.12-5.1] startup
+[3.095s] [ext: omni.usdphysics-105.1.12-5.1] startup
+[3.100s] [ext: omni.mdl.neuraylib-0.2.0] startup
+[3.101s] [ext: omni.isaac.version-1.0.3] startup
+[3.101s] [ext: omni.physx.cooking-105.1.12-5.1] startup
+[3.111s] [ext: omni.mdl-0.2.1] startup
+[3.122s] [ext: omni.physics.tensors-0.1.0] startup
+[3.130s] [ext: omni.physx-105.1.12-5.1] startup
+2024-05-10 20:20:49 [3,136ms] [Warning] [omni.stageupdate.plugin] Deprecated: direct use of IStageUpdate callbacks is deprecated. Use IStageUpdate::getStageUpdate instead.
+[3.145s] [ext: omni.kit.material.library-1.3.41] startup
+[3.148s] [ext: omni.volume-0.4.0] startup
+[3.150s] [ext: omni.physx.tensors-0.1.0] startup
+[3.156s] [ext: omni.kit.numpy.common-0.1.2] startup
+[3.158s] [ext: omni.hydra.rtx-0.1.0] startup
+[3.169s] [ext: omni.warp.core-1.0.0-beta.2] startup
+Warp 1.0.0-beta.2 initialized:
+   CUDA Toolkit: 11.5, Driver: 12.2
+   Devices:
+     "cpu"    | x86_64
+     "cuda:0" | NVIDIA GeForce RTX 4090 (sm_89)
+   Kernel cache: /root/.cache/warp/1.0.0-beta.2
+[3.230s] [ext: omni.isaac.dynamic_control-1.2.6] startup
+[3.239s] [ext: omni.debugdraw-0.1.2] startup
+[3.245s] [ext: omni.isaac.core-3.3.2] startup
+[3.836s] [ext: omni.hydra.pxr-1.1.6] startup
+[3.842s] [ext: omni.kit.collaboration.presence_layer-1.0.8] startup
+[3.844s] [ext: omni.kit.widget.prompt-1.0.6] startup
+[3.845s] [ext: omni.kit.hydra_texture-1.1.12] startup
+[3.851s] [ext: omni.hydra.engine.stats-1.0.1] startup
+[3.857s] [ext: omni.kit.viewport.legacy_gizmos-1.0.14] startup
+[3.863s] [ext: omni.kit.widget.viewport-105.1.7] startup
+[3.866s] [ext: omni.kit.widget.searchable_combobox-1.0.5] startup
+[3.867s] [ext: omni.kit.window.drop_support-1.0.1] startup
+[3.867s] [ext: omni.kit.viewport.registry-104.0.5] startup
+[3.868s] [ext: omni.kit.widget.settings-1.0.6] startup
+[3.869s] [ext: omni.kit.window.content_browser_registry-0.0.1] startup
+[3.870s] [ext: omni.kit.viewport.window-105.1.12] startup
+[3.882s] [ext: omni.kit.window.preferences-1.3.23] startup
+[3.887s] [ext: omni.kit.widget.graph-1.8.4] startup
+[3.890s] [ext: omni.kit.window.content_browser-2.7.17] startup
+[3.897s] [ext: omni.kit.viewport.utility-1.0.16] startup
+[3.898s] [ext: omni.kit.widget.live_session_management-1.2.22] startup
+[3.901s] [ext: omni.kit.window.extensions-1.3.0] startup
+[3.904s] [ext: omni.kit.widget.text_editor-1.0.2] startup
+[3.906s] [ext: omni.kit.property.usd-3.21.15] startup
+[3.912s] [ext: omni.kit.manipulator.viewport-104.0.9] startup
+[3.913s] [ext: omni.graph.ui-1.48.0] startup
+[3.924s] [ext: omni.kit.ui_test-1.2.13] startup
+[3.925s] [ext: omni.graph.visualization.nodes-2.1.1] startup
+[3.934s] [ext: omni.graph.action-1.55.1] startup
+[3.962s] [ext: omni.isaac.ui-0.13.5] startup
+[3.967s] [ext: omni.isaac.surface_gripper-0.7.0] startup
+[3.975s] [ext: omni.isaac.lula-2.1.0] startup
+[3.981s] [ext: omni.kit.graph.delegate.default-1.1.1] startup
+[3.982s] [ext: omni.isaac.manipulators-1.1.0] startup
+[3.986s] [ext: omni.isaac.motion_generation-6.1.0] startup
+[3.990s] [ext: omni.kit.graph.editor.core-1.5.1] startup
+[3.992s] [ext: omni.kit.graph.delegate.modern-1.9.1] startup
+[3.993s] [ext: omni.isaac.franka-0.4.0] startup
+[3.995s] [ext: omni.kit.graph.widget.variables-2.1.0] startup
+[3.996s] [ext: omni.kit.graph.usd.commands-1.3.0] startup
+[3.997s] [ext: omni.isaac.universal_robots-0.3.3] startup
+[3.999s] [ext: omni.isaac.cortex-0.3.5] startup
+[4.001s] [ext: omni.graph.window.core-1.84.0] startup
+[4.008s] [ext: omni.isaac.cloner-0.7.2] startup
+[4.009s] [ext: omni.isaac.cortex.sample_behaviors-1.0.4] startup
+[4.011s] [ext: omni.graph.window.action-1.11.2] startup
+[4.014s] [ext: omni.isaac.gym-0.10.0] startup
+[4.015s] [ext: omni.isaac.kit-1.4.7] startup
+[4.016s] [ext: omni.rtx.window.settings-0.6.9] startup
+[4.020s] [ext: omni.graph.window.generic-1.9.3] startup
+[4.023s] [ext: omni.hydra.pxr.settings-1.0.5] startup
+[4.025s] [ext: omni.kit.streamsdk.plugins-2.5.2] startup
+[4.025s] [ext: omni.kit.viewport.pxr-104.0.1] startup
+[4.025s] [ext: omni.isaac.urdf-1.1.0] startup
+2024-05-10 20:20:50 [4,017ms] [Warning] [omni.isaac.urdf] The extension omni.isaac.urdf has been deprecated. Please use omni.importer.urdf instead.
+[4.025s] [ext: omni.kit.actions.window-1.1.0] startup
+[4.027s] [ext: omni.isaac.utils-0.6.0] startup
+[4.035s] [ext: omni.isaac.dofbot-0.3.1] startup
+[4.037s] [ext: omni.kit.hotkeys.window-1.4.1] startup
+[4.040s] [ext: omni.command.usd-1.0.2] startup
+[4.041s] [ext: omni.kit.selection-0.1.3] startup
+[4.042s] [ext: omni.kit.menu.common-1.1.4] startup
+[4.043s] [ext: omni.kit.widget.layers-1.6.32] startup
+[4.050s] [ext: omni.kit.menu.edit-1.1.14] startup
+[4.052s] [ext: omni.kit.menu.file-1.1.7] startup
+[4.054s] [ext: omni.kit.property.layer-1.1.5] startup
+[4.056s] [ext: semantics.schema.property-1.0.2] startup
+[4.058s] [ext: omni.kit.property.camera-1.0.5] startup
+[4.060s] [ext: omni.kit.property.audio-1.0.9] startup
+[4.064s] [ext: omni.kit.profiler.window-2.1.2] startup
+[WARNING] [omni.kit.profiler.window] remove _SpanInstance.__lt__ and use insort 'key' arg instead
+2024-05-10 20:20:50 [4,114ms] [Warning] [omni.kit.profiler.window] remove _SpanInstance.__lt__ and use insort 'key' arg instead
+[4.125s] [ext: omni.kit.widget.stage_icons-1.0.4] startup
+[4.125s] [ext: omni.hydra.scene_api-0.1.2] startup
+[4.136s] [ext: omni.kit.property.light-1.0.8] startup
+[4.138s] [ext: omni.kit.property.skel-1.0.4] startup
+[4.139s] [ext: omni.kit.window.stage-2.4.4] startup
+[4.142s] [ext: omni.kit.property.transform-1.3.10] startup
+[4.145s] [ext: omni.kit.property.render-1.1.1] startup
+[4.149s] [ext: omni.kit.property.material-1.8.36] startup
+[4.151s] [ext: omni.kit.property.geometry-1.2.11] startup
+[4.154s] [ext: omni.isaac.debug_draw-0.6.1] startup
+2024-05-10 20:20:50 [4,152ms] [Warning] [omni.stageupdate.plugin] Deprecated: direct use of IStageUpdate callbacks is deprecated. Use IStageUpdate::getStageUpdate instead.
+2024-05-10 20:20:50 [4,152ms] [Warning] [omni.stageupdate.plugin] Deprecated: direct use of IStageUpdate callbacks is deprecated. Use IStageUpdate::getStageUpdate instead.
+[4.162s] [ext: omni.kit.menu.stage-1.2.3] startup
+[4.164s] [ext: omni.kit.property.bundle-1.2.9] startup
+[4.166s] [ext: omni.kit.stage_column.payload-1.0.12] startup
+[4.167s] [ext: omni.isaac.occupancy_map-0.3.2] startup
+[4.184s] [ext: omni.isaac.mjcf-1.0.0] startup
+2024-05-10 20:20:50 [4,176ms] [Warning] [omni.isaac.mjcf] The extension omni.isaac.mjcf has been deprecated. Please use omni.importer.mjcf instead.
+[4.184s] [ext: omni.graph.image.core-0.1.0] startup
+[4.185s] [ext: omni.kit.widget.zoombar-1.0.5] startup
+[4.186s] [ext: omni.kit.window.cursor-1.1.2] startup
+[4.187s] [ext: omni.kit.widget.spinner-1.0.6] startup
+[4.188s] [ext: omni.graph.nodes-1.106.3] startup
+[4.303s] [ext: omni.kit.browser.core-2.3.10] startup
+[4.315s] [ext: omni.kit.widget.material_preview-1.0.8] startup
+[4.320s] [ext: omni.kit.viewport.menubar.core-105.0.19] startup
+[4.330s] [ext: omni.graph.scriptnode-1.1.6] startup
+[4.335s] [ext: omni.kit.browser.folder.core-1.9.7] startup
+[4.338s] [ext: omni.kit.window.material_graph-1.8.11] startup
+[4.349s] [ext: omni.syntheticdata-0.4.10] startup
+[4.365s] [ext: omni.kit.manipulator.transform-104.6.15] startup
+[4.367s] [ext: omni.kit.browser.sample-1.4.6] startup
+[4.369s] [ext: omni.kit.viewport.actions-105.1.6] startup
+[4.373s] [ext: omni.kit.raycast.query-1.0.1] startup
+[4.385s] [ext: omni.kit.widget.toolbar-1.5.6] startup
+[4.389s] [ext: omni.warp-1.0.0-beta.2] startup
+[4.426s] [ext: omni.kit.viewport.menubar.display-105.1.0] startup
+[4.428s] [ext: omni.activity.pump-1.0.0] startup
+[4.429s] [ext: omni.kit.manipulator.tool.snap-1.4.2] startup
+[4.434s] [ext: omni.replicator.core-1.10.20] startup
+2024-05-10 20:20:50 [4,441ms] [Warning] [omni.replicator.core.scripts.annotators] Annotator PostProcessDispatch is already registered, overwriting annotator template
+[4.541s] [ext: omni.physx.commands-105.1.12-5.1] startup
+[4.543s] [ext: omni.usdphysics.ui-105.1.12-5.1] startup
+[4.571s] [ext: omni.kit.viewport.ready-1.0.5] startup
+[4.572s] [ext: omni.kit.viewport.rtx-104.0.0] startup
+[4.572s] [ext: omni.isaac.core_nodes-1.7.1] startup
+[4.600s] [ext: omni.sensors.nv.common-1000.0.0-isaacsim.2023.1.1] startup
+[4.610s] [ext: omni.physx.ui-105.1.12-5.1] startup
+[4.636s] [ext: usdrt.gf-1.0.2] startup
+[4.636s] [ext: omni.sensors.nv.materials-1000.0.0-isaacsim.2023.1.1] startup
+[4.637s] [ext: omni.sensors.nv.wpm-1000.0.0-isaacsim.2023.1.1] startup
+[4.637s] [ext: omni.kit.manipulator.selector-1.0.1] startup
+[4.638s] [ext: omni.isaac.range_sensor-2.0.2] startup
+[4.673s] [ext: omni.kit.property.physx-0.1.0] startup
+[4.723s] [ext: omni.physx.demos-105.1.12-5.1] startup
+[4.726s] [ext: omni.sensors.nv.lidar-1000.0.1-isaacsim.2023.1.1] startup
+[4.733s] [ext: omni.sensors.nv.radar-1000.0.0-isaacsim.2023.1.1] startup
+[4.739s] [ext: omni.kit.manipulator.prim-105.0.11] startup
+[4.742s] [ext: omni.kit.window.toolbar-1.5.4] startup
+[4.745s] [ext: omni.kit.manipulator.selection-104.0.8] startup
+[4.746s] [ext: omni.physx.camera-105.1.12-5.1] startup
+[4.754s] [ext: omni.physx.cct-105.1.12-5.1] startup
+[4.765s] [ext: omni.isaac.sensor-9.11.1] startup
+[4.814s] [ext: omni.kit.widget.live-2.1.6] startup
+[4.815s] [ext: omni.physx.graph-105.1.12-5.1] startup
+[4.828s] [ext: omni.physx.supportui-105.1.12-5.1] startup
+[4.843s] [ext: omni.physx.vehicle-105.1.12-5.1] startup
+[4.854s] [ext: omni.kit.stage_column.variant-1.0.13] startup
+[4.856s] [ext: omni.isaac.quadruped-1.4.1] startup
+[4.865s] [ext: omni.kit.widget.cache_indicator-2.0.8] startup
+2024-05-10 20:20:51 [4,859ms] [Warning] [omni.kit.widget.cache_indicator.cache_state_menu] Unable to detect Omniverse Cache Server. File /root/.nvidia-omniverse/config/omniverse.toml is not found. Consider installing it for better IO performance.
+[4.867s] [ext: omni.kit.window.commands-0.2.4] startup
+[4.868s] [ext: omni.kit.window.console-0.2.10] startup
+[4.880s] [ext: omni.kit.window.script_editor-1.7.4] startup
+[4.882s] [ext: omni.physx.bundle-105.1.12-5.1] startup
+[4.882s] [ext: omni.graph.ui_nodes-1.5.10] startup
+[4.902s] [ext: omni.isaac.wheeled_robots-0.9.0] startup
+[4.912s] [ext: omni.kit.window.status_bar-0.1.6] startup
+[4.919s] [ext: omni.kit.window.title-1.1.3] startup
+[4.920s] [ext: omni.replicator.composer-1.2.17] startup
+[4.926s] [ext: omni.graph.bundle.action-2.0.4] startup
+[4.926s] [ext: omni.kit.manipulator.camera-105.0.4] startup
+[4.928s] [ext: omni.kit.viewport.menubar.camera-105.1.9] startup
+[4.932s] [ext: omni.kit.viewport.menubar.render-105.1.1] startup
+[4.933s] [ext: omni.kit.viewport.menubar.settings-105.0.9] startup
+[4.937s] [ext: omni.replicator.isaac-1.11.3] startup
+[4.952s] [ext: omni.replicator.replicator_yaml-2.0.4] startup
+[4.958s] [ext: omni.rtx.settings.core-0.5.13] startup
+[4.961s] [ext: semantics.schema.editor-0.3.4] startup
+[4.963s] [ext: omni.kit.viewport.bundle-104.0.1] startup
+[4.963s] [ext: omni.kit.viewport.menubar.lighting-105.0.7] startup
+[4.965s] [ext: omni.isaac.scene_blox-0.1.0] startup
+[4.967s] [ext: omni.importer.urdf-1.6.1] startup
+[5.001s] [ext: omni.importer.mjcf-1.1.0] startup
+[5.010s] [ext: omni.kit.window.stats-0.1.4] startup
+[5.011s] [ext: omnigibson-2023.1.1] startup
+[5.012s] Simulation App Starting
+2024-05-10 20:20:51 [5,018ms] [Warning] [omni.kit.widget.settings.settings_model] a value for setting /rtx/ecoMode/enabled has been requested but is not available
+2024-05-10 20:20:51 [5,018ms] [Warning] [omni.kit.widget.settings.settings_model] a value for setting /rtx/directLighting/enabled has been requested but is not available
+2024-05-10 20:20:51 [5,018ms] [Warning] [omni.kit.widget.settings.settings_model] a value for setting /rtx/reflections/enabled has been requested but is not available
+2024-05-10 20:20:51 [5,018ms] [Warning] [omni.kit.widget.settings.settings_model] a value for setting /rtx/translucency/enabled has been requested but is not available
+2024-05-10 20:20:51 [5,018ms] [Warning] [omni.kit.widget.settings.settings_model] a value for setting /rtx/raytracing/subsurface/enabled has been requested but is not available
+2024-05-10 20:20:51 [5,018ms] [Warning] [omni.kit.widget.settings.settings_model] a value for setting /rtx/caustics/enabled has been requested but is not available
+2024-05-10 20:20:52 [5,895ms] [Warning] [omni.kit.hotkeys.core.registry] [Hotkey] duplicated action as SPACE (On Press) with omni.kit.widget.toolbar.omni.kit.widget.toolbar::toolbar::play!
+2024-05-10 20:20:52 [5,895ms] [Warning] [omni.kit.hotkeys.core.registry] [Hotkey] Cannot register Global [omni.kit.widget.toolbar] omni.kit.widget.toolbar::toolbar::play.SPACE, error code: Duplicated action definition
+[6.688s] app ready
+2024-05-10 20:20:53 [6,985ms] [Warning] [omni.kit.hotkeys.core.registry] [Hotkey] duplicated action as SPACE (On Press) with omni.kit.widget.toolbar.omni.kit.widget.toolbar::toolbar::play!
+2024-05-10 20:20:53 [6,985ms] [Warning] [omni.kit.hotkeys.core.registry] [Hotkey] Cannot register Global [omni.kit.widget.toolbar] omni.kit.widget.toolbar::toolbar::play.SPACE, error code: Duplicated action definition
+[7.114s] RTX ready
+[7.310s] Simulation App Startup Complete
+[7.320s] [ext: omni.usd.schema.flow-105.1.18] startup
+[7.321s] [ext: omni.flowusd-105.1.45] startup
+2024-05-10 20:20:53 [7,319ms] [Warning] [omni.stageupdate.plugin] Deprecated: direct use of IStageUpdate callbacks is deprecated. Use IStageUpdate::getStageUpdate instead.
+[7.338s] [ext: omni.scene.visualization.core-105.4.10] startup
+[7.351s] [ext: omni.ramp-105.1.14] startup
+[7.358s] [ext: omni.particle.system.core-105.1.6] startup
+2024-05-10 20:20:53 [7,356ms] [Warning] [omni.particle.system.core.scripts.extension] 
+            ATTENTION!: omni.particle.system.core is currently undergoing extensive (breaking) changes.
+            Please be aware that systems built with the existing extension will need to be rebuilt in
+            the USD Composer 2023.2 release.
+[7.370s] [ext: omni.particle.system.ui-105.1.10] startup
+[7.620s] [ext: omni.graph.window.particle.system-105.1.18] startup
+DYNAMICS_TODO:
+  Make sure "omni.particle.system.core2" is a proper dependency.
+  For now, it can just be set to autoload.
+DYNAMICS_TODO:
+  Make sure "omni.particle.system.core2" is a proper dependency.
+  For now, it can just be set to autoload.
+[7.646s] [ext: omni.particle.system.bundle-105.1.0] startup
+------------------------------- 720 1280
+2024-05-10 20:20:54 [7,810ms] [Warning] [omni.fabric.plugin] No source has valid data array=0x562a6e749350 usdValid=0 cpuValid=0
+------------------------------- 720 1280
+
+                   ____________
+                  /          / \
+                 /          / /__
+                /          / /  /\
+               /__________/ /__/  \
+               \   _____  \ \__\  /
+                \  \  / \  \ \_/ /
+                 \  \/___\  \   /
+                  \__________\_/  
+       ___                  _  ____ _ _                     
+      / _ \ _ __ ___  _ __ (_)/ ___(_) |__  ___  ___  _ __  
+     | | | | '_ ` _ \| '_ \| | |  _| | '_ \/ __|/ _ \| '_ \ 
+     | |_| | | | | | | | | | | |_| | | |_) \__ \ (_) | | | |
+      \___/|_| |_| |_|_| |_|_|\____|_|_.__/|___/\___/|_| |_|
+
+[INFO] [omnigibson.simulator] ---------- Welcome to OmniGibson! ----------
+[INFO] [omnigibson.utils.asset_utils] Scene name: Rs_int
+[INFO] [omnigibson.scenes.traversable_scene] TraversableScene model: Rs_int
+------------------------------- 720 1280
+[INFO] [omnigibson.objects.object_base] Loaded skybox at /World/skybox
+[INFO] [omnigibson.objects.object_base] Loaded coffee_table_fqluyq_0 at /World/coffee_table_fqluyq_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_jfsbfp_0 at /World/ceilings_jfsbfp_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_phrrml_0 at /World/ceilings_phrrml_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_rhfker_0 at /World/ceilings_rhfker_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_yimfml_0 at /World/ceilings_yimfml_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_zlhppj_0 at /World/ceilings_zlhppj_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_avvnuv_0 at /World/floors_avvnuv_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_gjemfr_0 at /World/floors_gjemfr_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_ifmioj_0 at /World/floors_ifmioj_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_ptwlei_0 at /World/floors_ptwlei_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_ucjdgj_0 at /World/floors_ucjdgj_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_axhynp_0 at /World/walls_axhynp_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_bcjmdz_0 at /World/walls_bcjmdz_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_dekben_0 at /World/walls_dekben_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_exiopd_0 at /World/walls_exiopd_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_gxvfxw_0 at /World/walls_gxvfxw_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_gxynpx_0 at /World/walls_gxynpx_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_xlgydu_0 at /World/walls_xlgydu_0
+[INFO] [omnigibson.simulator] Imported scene.
+[WARNING] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_left_link:collision_collisions; use boundingCube approximation
+2024-05-10 20:20:57 [10,867ms] [Warning] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_left_link:collision_collisions; use boundingCube approximation
+[WARNING] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_right_link:collision_collisions; use boundingCube approximation
+2024-05-10 20:20:57 [10,903ms] [Warning] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_right_link:collision_collisions; use boundingCube approximation
+2024-05-10 20:20:58 [11,615ms] [Warning] [carb] Client omni.physx.plugin has acquired [omni::physics::schema::IUsdPhysics v1.1] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+------------------------------- 720 720
+[INFO] [omnigibson.objects.object_base] Loaded robot0 at /World/robot0
+[INFO] [omnigibson.objects.controllable_object] Control frequency is None - being set to default of render_frequency: 30.0000
+2024-05-10 20:20:58 [12,492ms] [Warning] [omni.syntheticdata.plugin] SdRenderVarToRawArray missing valid input renderVar InstanceSegmentationSD
+2024-05-10 20:20:58 [12,492ms] [Warning] [omni.syntheticdata.plugin] OgnSdInstanceMapping missing valid input renderVar InstanceMappingInfoSDhost
+2024-05-10 20:20:58 [12,492ms] [Warning] [omni.syntheticdata.plugin] SdRenderVarPtr missing valid input renderVar DistanceToCameraSDhost
+2024-05-10 20:20:58 [12,492ms] [Warning] [omni.syntheticdata.plugin] OgnSdInstanceMapping missing valid input renderVar InstanceMappingInfoSDhost
+Module omni.replicator.core.ogn.python._impl.nodes.OgnSemanticSegmentation load on device 'cuda:0' took 1.22 ms
+in scene_base reset
+[WARNING] [omnigibson.utils.registry_utils] Object 'robot0' is not in the state dict to load from. Skip loading its state.
+2024-05-10 20:20:59 [12,704ms] [Warning] [omnigibson.utils.registry_utils] Object 'robot0' is not in the state dict to load from. Skip loading its state.
+[INFO] [omnigibson.objects.object_base] Loaded box at /World/box
+[INFO] [omnigibson.objects.object_base] Loaded table at /World/table
+in scene_base reset
+robot0 keys:  dict_keys(['root_link', 'joints', 'controllers', 'non_kin', 'ag_obj_constraint_params'])
+root_link:  dict_keys(['pos', 'ori', 'lin_vel', 'ang_vel'])
+joints:  dict_keys(['base_footprint_x_joint', 'base_footprint_y_joint', 'base_footprint_z_joint', 'base_footprint_rx_joint', 'base_footprint_ry_joint', 'base_footprint_rz_joint', 'torso_lift_joint', 'arm_left_1_joint', 'arm_right_1_joint', 'head_1_joint', 'arm_left_2_joint', 'arm_right_2_joint', 'head_2_joint', 'arm_left_3_joint', 'arm_right_3_joint', 'arm_left_4_joint', 'arm_right_4_joint', 'arm_left_5_joint', 'arm_right_5_joint', 'arm_left_6_joint', 'arm_right_6_joint', 'arm_left_7_joint', 'arm_right_7_joint', 'gripper_left_left_finger_joint', 'gripper_left_right_finger_joint', 'gripper_right_left_finger_joint', 'gripper_right_right_finger_joint'])
+base pos:  [0. 0. 0.]
+base ori:  [0. 0. 0. 1.]
+head_joint_1, head_joint_2:  {'pos': array([-1.3786499e-08], dtype=float32), 'vel': array([-0.00809007], dtype=float32), 'effort': array([0.], dtype=float32), 'target_pos': array([-1.3786499e-08], dtype=float32), 'target_vel': array([0.], dtype=float32)} {'pos': array([-0.45000002], dtype=float32), 'vel': array([0.00164494], dtype=float32), 'effort': array([0.], dtype=float32), 'target_pos': array([-0.45000002], dtype=float32), 'target_vel': array([0.], dtype=float32)}
+[WARNING] [omnigibson.utils.registry_utils] Object 'box' is not in the state dict to load from. Skip loading its state.
+2024-05-10 20:20:59 [13,424ms] [Warning] [omnigibson.utils.registry_utils] Object 'box' is not in the state dict to load from. Skip loading its state.
+[WARNING] [omnigibson.utils.registry_utils] Object 'table' is not in the state dict to load from. Skip loading its state.
+2024-05-10 20:20:59 [13,424ms] [Warning] [omnigibson.utils.registry_utils] Object 'table' is not in the state dict to load from. Skip loading its state.
+before reset in _load()
+in env_base reset
+self.task:  <omnigibson.tasks.dummy_task.DummyTask object at 0x7ff5b9c365f0>
+in scene_base reset
+robot0 keys:  dict_keys(['root_link', 'joints', 'controllers', 'non_kin', 'ag_obj_constraint_params'])
+root_link:  dict_keys(['pos', 'ori', 'lin_vel', 'ang_vel'])
+joints:  dict_keys(['base_footprint_x_joint', 'base_footprint_y_joint', 'base_footprint_z_joint', 'base_footprint_rx_joint', 'base_footprint_ry_joint', 'base_footprint_rz_joint', 'torso_lift_joint', 'arm_left_1_joint', 'arm_right_1_joint', 'head_1_joint', 'arm_left_2_joint', 'arm_right_2_joint', 'head_2_joint', 'arm_left_3_joint', 'arm_right_3_joint', 'arm_left_4_joint', 'arm_right_4_joint', 'arm_left_5_joint', 'arm_right_5_joint', 'arm_left_6_joint', 'arm_right_6_joint', 'arm_left_7_joint', 'arm_right_7_joint', 'gripper_left_left_finger_joint', 'gripper_left_right_finger_joint', 'gripper_right_left_finger_joint', 'gripper_right_right_finger_joint'])
+base pos:  [-0.05 -0.25  0.  ]
+base ori:  [ 0.         0.        -0.8660254  0.5      ]
+head_joint_1, head_joint_2:  {'pos': array([-1.971534e-08], dtype=float32), 'vel': array([0.00045757], dtype=float32), 'effort': array([0.], dtype=float32), 'target_pos': array([-1.3786499e-08], dtype=float32), 'target_vel': array([-0.00809007], dtype=float32)} {'pos': array([-0.47222674], dtype=float32), 'vel': array([-2.6682694], dtype=float32), 'effort': array([0.], dtype=float32), 'target_pos': array([-0.45000002], dtype=float32), 'target_vel': array([0.00164494], dtype=float32)}
+22
+33
+44
+after reset in _load()
+[INFO] [omnigibson.utils.asset_utils] Scene name: Rs_int
+[INFO] [omnigibson.scenes.traversable_scene] TraversableScene model: Rs_int
+------------------------------- 720 1280
+[INFO] [omnigibson.objects.object_base] Loaded skybox at /World/skybox
+[INFO] [omnigibson.objects.object_base] Loaded coffee_table_fqluyq_0 at /World/coffee_table_fqluyq_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_jfsbfp_0 at /World/ceilings_jfsbfp_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_phrrml_0 at /World/ceilings_phrrml_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_rhfker_0 at /World/ceilings_rhfker_0
+2024-05-10 20:21:01 [14,886ms] [Warning] [carb] Client omni.stageupdate.plugin has acquired [omni::hydra::IOmniHydra v2.0] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_yimfml_0 at /World/ceilings_yimfml_0
+[INFO] [omnigibson.objects.object_base] Loaded ceilings_zlhppj_0 at /World/ceilings_zlhppj_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_avvnuv_0 at /World/floors_avvnuv_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_gjemfr_0 at /World/floors_gjemfr_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_ifmioj_0 at /World/floors_ifmioj_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_ptwlei_0 at /World/floors_ptwlei_0
+[INFO] [omnigibson.objects.object_base] Loaded floors_ucjdgj_0 at /World/floors_ucjdgj_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_axhynp_0 at /World/walls_axhynp_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_bcjmdz_0 at /World/walls_bcjmdz_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_dekben_0 at /World/walls_dekben_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_exiopd_0 at /World/walls_exiopd_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_gxvfxw_0 at /World/walls_gxvfxw_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_gxynpx_0 at /World/walls_gxynpx_0
+[INFO] [omnigibson.objects.object_base] Loaded walls_xlgydu_0 at /World/walls_xlgydu_0
+[WARNING] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_left_link:collision_collisions; use boundingCube approximation
+2024-05-10 20:21:02 [15,834ms] [Warning] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_left_link:collision_collisions; use boundingCube approximation
+[WARNING] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_right_link:collision_collisions; use boundingCube approximation
+2024-05-10 20:21:02 [15,871ms] [Warning] [omnigibson.prims.rigid_prim] Got overly oblong collision mesh: robot0:suspension_front_right_link:collision_collisions; use boundingCube approximation
+------------------------------- 720 720
+2024-05-10 20:21:03 [16,841ms] [Warning] [carb] Client omni.hydratexture.plugin has acquired [carb::settings::ISettings v1.0] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+2024-05-10 20:21:03 [16,957ms] [Warning] [carb] Client omni.kit.viewport.legacy_gizmos has acquired [carb::settings::ISettings v1.0] 100 times. Consider accessing this interface with carb::getCachedInterface() (Performance warning)
+[INFO] [omnigibson.objects.object_base] Loaded robot0 at /World/robot0
+[INFO] [omnigibson.objects.controllable_object] Control frequency is None - being set to default of render_frequency: 30.0000
+[INFO] [omnigibson.objects.object_base] Loaded box at /World/box
+[INFO] [omnigibson.objects.object_base] Loaded table at /World/table
+[INFO] [omnigibson.simulator] Imported scene.
+[INFO] [omnigibson.simulator] The saved simulation environment loaded.
+robot in KeyboardRobotController:  robot0 20
+
+******************************
+Controlling the Robot Using the Keyboard
+******************************
+
+Joint Control
+1, 2            decrement / increment the joint to control
+[, ]            move the joint backwards, forwards, respectively
+
+Differential Drive Control
+i, k            turn left, right
+l, j            move forward, backwards
+
+Inverse Kinematics Control
+3, 4            toggle between the different arm(s) to control
+←, →            translate arm eef along x-axis
+↑, ↓            translate arm eef along y-axis
+p, ;            translate arm eef along z-axis
+n, b            rotate arm eef about x-axis
+o, u            rotate arm eef about y-axis
+v, c            rotate arm eef about z-axis
+
+Boolean Gripper Control
+5, 6            toggle between the different gripper(s) using binary control
+t               toggle gripper (open/close)
+
+Sensor Rendering
+m               render the onboard sensor modalities (RGB, Depth, Normals, Instance Segmentation, Occupancy Map)
+
+Custom Keymappings
+r               Reset the robot
+
+******************************
+
+Traceback (most recent call last):
+  File "/code/omnigibson/envs/env_base.py", line 524, in step
+    self._scene_graph_builder.step(self.scene)
+  File "/code/omnigibson/scene_graphs/graph_builder.py", line 146, in step
+    desired_frame_to_world, world_to_desired_frame = self._get_desired_frame()
+  File "/code/omnigibson/scene_graphs/graph_builder.py", line 63, in _get_desired_frame
+    desired_frame_to_world = self._get_robot_to_world_transform()
+  File "/code/omnigibson/scene_graphs/graph_builder.py", line 69, in _get_robot_to_world_transform
+    robot_to_world = self._robot.get_position_orientation()
+  File "/code/omnigibson/robots/tiago.py", line 697, in get_position_orientation
+    return self.base_footprint_link.get_position_orientation()
+  File "/code/omnigibson/prims/rigid_prim.py", line 314, in get_position_orientation
+    pos, ori = self._rigid_prim_view.get_world_poses()
+  File "/code/omnigibson/prims/rigid_prim.py", line 355, in _rigid_prim_view
+    assert self._rigid_prim_view_direct.is_physics_handle_valid() and \
+AssertionError: Rigid prim view must be valid if physics is running!
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/code/omnigibson/arpit_trial/grasp_detection_exp.py", line 253, in <module>
+    main()
+  File "/code/omnigibson/arpit_trial/grasp_detection_exp.py", line 225, in main
+    obs, _, _, _ = env.step(action=action)
+  File "/code/omnigibson/envs/env_base.py", line 541, in step
+    raise ValueError(f"Failed to execute environment step {self._current_step} in episode {self._current_episode}")
+ValueError: Failed to execute environment step 0 in episode 1
+2024-05-10 20:21:05 [18,640ms] [Warning] [carb] [Plugin: omni.spectree.delegate.plugin] Module /isaac-sim/kit/exts/omni.usd_resolver/bin/libomni.spectree.delegate.plugin.so remained loaded after unload request
+2024-05-10 20:21:05 [18,642ms] [Warning] [omni.graph.core.plugin] Node type name '' is missing the unique namespace
+2024-05-10 20:21:05 [18,642ms] [Warning] [omni.stageupdate.plugin] Deprecated: direct use of IStageUpdate callbacks is deprecated. Use IStageUpdate::getStageUpdate instead.
+2024-05-10 20:21:05 [18,643ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,643ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,643ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,643ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,643ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,643ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,644ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,644ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,644ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,644ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,644ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Annotators' for removal
+2024-05-10 20:21:05 [18,644ms] [Warning] [omni.graph.core.plugin] Could not find category 'Replicator:Core' for removal
+2024-05-10 20:21:05 [18,647ms] [Warning] [carb.audio.context] 1 contexts were leaked
+2024-05-10 20:21:05 [18,670ms] [Warning] [carb] Recursive unloadAllPlugins() detected!
+2024-05-10 20:21:05 [18,677ms] [Warning] [omni.core.ITypeFactory] Module /isaac-sim/kit/exts/omni.activity.core/bin/libomni.activity.core.plugin.so remained loaded after unload request.

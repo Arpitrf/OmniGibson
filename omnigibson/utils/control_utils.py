@@ -107,6 +107,7 @@ class IKSolver:
         """
         pos = np.array(target_pos, dtype=np.float64).reshape(3, 1)
         rot = np.array(T.quat2mat(np.array([0, 0, 0, 1.0]) if target_quat is None else target_quat), dtype=np.float64)
+        # print("pos, rot: ", pos, rot)
         ik_target_pose = lazy.lula.Pose3(lazy.lula.Rotation3(rot), pos)
 
         # Set the cspace seed and tolerance

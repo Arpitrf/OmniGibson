@@ -89,6 +89,8 @@ def main(random_selection=False, headless=False, short_exec=False):
     # Compile config
     cfg = dict(scene=scene_cfg, robots=[robot0_cfg])
 
+    print("cfg: ", cfg)
+
     # Create the environment
     env = og.Environment(configs=cfg)
 
@@ -96,14 +98,19 @@ def main(random_selection=False, headless=False, short_exec=False):
     robot = env.robots[0]
     controller_choices = choose_controllers(robot=robot, random_selection=random_selection)
 
+    print("controller_choices: ", controller_choices)
+
     # Choose control mode
     if random_selection:
         control_mode = "random"
     else:
         control_mode = choose_from_options(options=CONTROL_MODES, name="control mode")
 
+    print("control_mode: ", control_mode)
+
     # Update the control mode of the robot
     controller_config = {component: {"name": name} for component, name in controller_choices.items()}
+    print("controller_config: ", controller_config)
     robot.reload_controllers(controller_config=controller_config)
 
     # Because the controllers have been updated, we need to update the initial state so the correct controller state
@@ -142,7 +149,7 @@ def main(random_selection=False, headless=False, short_exec=False):
     max_steps = -1 if not short_exec else 100
     step = 0
     while step != max_steps:
-        action = action_generator.get_random_action() if control_mode == "random" else action_generator.get_teleop_action()
+        action, _ = action_generator.get_random_action() if control_mode == "random" else action_generator.get_teleop_action()
         env.step(action=action)
         step += 1
 

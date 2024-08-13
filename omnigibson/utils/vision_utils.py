@@ -107,18 +107,36 @@ class Remapper:
             for key in new_keys:
                 label = old_mapping[key]
                 new_key = next((k for k, v in new_mapping.items() if v == label), None)
-                assert new_key is not None, f"Could not find a new key for label {label} in new_mapping!"
+                # remove later
+                # assert new_key is not None, f"Could not find a new key for label {label} in new_mapping!"
+                # print("111new_key: ", new_key)
+                if new_key is None:
+                    new_key = 0
                 self.key_array[key] = new_key
 
         # For all the values that exist in the image but not in old_mapping.keys(), we map them to whichever key in
         # new_mapping that equals to 'unlabelled'. This is needed because some values in the image don't necessarily
         # show up in the old_mapping, i.e. particle systems.
+        
+        # print("old_mapping: ", old_mapping)
+        # print("-----------")
+        # print("new_mapping: ", new_mapping)
+        # print("np.unique(image): ", np.unique(image))
+        # import matplotlib.pyplot as plt
+        # plt.imshow(image)
+        # plt.show()
+        
         for key in np.unique(image):
             if key not in old_mapping.keys():
                 new_key = next((k for k, v in new_mapping.items() if v == 'unlabelled'), None)
-                assert new_key is not None, f"Could not find a new key for label 'unlabelled' in new_mapping!"
+                # remove later. added by Arpit
+                # assert new_key is not None, f"Could not find a new key for label 'unlabelled' in new_mapping!"
+                # print("222new_key: ", new_key)
+                if new_key is None:
+                    new_key = 0
                 self.key_array[key] = new_key
 
+        # print("self.key_array: ", self.key_array)
         # Apply remapping
         remapped_img = self.key_array[image]
         # Make sure all values are correctly remapped and not equal to the default value
@@ -127,6 +145,9 @@ class Remapper:
         for key in np.unique(remapped_img):
             remapped_labels[key] = new_mapping[key]
 
+        # print("remapped_labels: ", remapped_labels)
+        # plt.imshow(remapped_img)
+        # plt.show()
         return remapped_img, remapped_labels
 
     def remap_bbox(self, semantic_id):

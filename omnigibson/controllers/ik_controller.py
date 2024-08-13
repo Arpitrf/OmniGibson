@@ -59,7 +59,7 @@ class InverseKinematicsController(JointController, ManipulationController):
         mode="pose_delta_ori",
         smoothing_filter_size=None,
         workspace_pose_limiter=None,
-        condition_on_current_position=True,
+        condition_on_current_position=True
     ):
         """
         Args:
@@ -135,6 +135,7 @@ class InverseKinematicsController(JointController, ManipulationController):
         self.task_name = task_name
         self.reset_joint_pos = reset_joint_pos[dof_idx]
         self.condition_on_current_position = condition_on_current_position
+        self.current_stable_pose = None
 
         # Create the lula IKSolver
         self.solver = IKSolver(
@@ -185,6 +186,9 @@ class InverseKinematicsController(JointController, ManipulationController):
             command_output_limits=command_output_limits,
         )
 
+    def set_current_stable_pose(self, pos, orn):
+        self.current_stable_pose = (pos, orn)
+    
     def reset(self):
         # Call super first
         super().reset()
@@ -239,13 +243,19 @@ class InverseKinematicsController(JointController, ManipulationController):
         return state_dict, idx + self.control_filter.state_size
 
     def _update_goal(self, command, control_dict):
+        # print("In IK_controller _update_goal")
         # Grab important info from control dict
         pos_relative = np.array(control_dict[f"{self.task_name}_pos_relative"])
         quat_relative = np.array(control_dict[f"{self.task_name}_quat_relative"])
+        # if flag:
+            # pos_relative = np.array([0.500961  , 0.25096098, 0.78539772])
+        # pos_relative = self.current_stable_pose[0]
+        # print("pos_relative: ", pos_relative)
 
         # Convert position command to absolute values if needed
         if self.mode == "absolute_pose":
             target_pos = command[:3]
+            # print("target_pos: ", target_pos)
         else:
             dpos = command[:3]
             target_pos = pos_relative + dpos
@@ -276,6 +286,11 @@ class InverseKinematicsController(JointController, ManipulationController):
             target_pos=target_pos,
             target_quat=target_quat,
         )
+        # print("target_pos: ", target_pos)
+
+        # print("command: ", command)
+        # if command[0] != 0.0 or command[1] != 0.0 or command[2] != 0.0:
+        #     self.set_current_stable_pose(target_pos, target_quat)
 
         return goal_dict
 
@@ -302,14 +317,18 @@ class InverseKinematicsController(JointController, ManipulationController):
         Returns:
             Array[float]: outputted (non-clipped!) velocity control signal to deploy
         """
+        # print("In IK_controller compute_control")
+        # print("goal_dict: ", goal_dict)
         # Grab important info from control dict
         pos_relative = np.array(control_dict[f"{self.task_name}_pos_relative"])
         quat_relative = np.array(control_dict[f"{self.task_name}_quat_relative"])
         target_pos = goal_dict["target_pos"]
+        # print("target_pos in compute_control: ", target_pos)
         target_quat = goal_dict["target_quat"]
 
         # Calculate and return IK-backed out joint angles
         current_joint_pos = control_dict["joint_position"][self.dof_idx]
+        # print("current_joint_pos: ", current_joint_pos, len(current_joint_pos))
 
         # If the delta is really small, we just keep the current joint position. This avoids joint
         # drift caused by IK solver inaccuracy even when zero delta actions are provided.
@@ -338,17 +357,26 @@ class InverseKinematicsController(JointController, ManipulationController):
                     weight_quat=m.IK_ORN_WEIGHT,
                     max_iterations=m.IK_MAX_ITERATIONS,
                 )
+            # print("target_joint_pos: ", target_joint_pos)
 
             if target_joint_pos is None:
+                # print("target_joint_pos is noneeeeeeeeeeeeeeEEEEEEEEEEEEEEEEEEEEEEEEE")
                 # Print warning that we couldn't find a valid solution, and return the current joint configuration
                 # instead so that we execute a no-op control
                 if gm.DEBUG:
                     log.warning(f"Could not find valid IK configuration! Returning no-op control instead.")
                 target_joint_pos = current_joint_pos
 
+        # print("target_joint_pos: ", target_joint_pos)
         # Optionally pass through smoothing filter for better stability
         if self.control_filter is not None:
             target_joint_pos = self.control_filter.estimate(target_joint_pos)
+
+        # print("target_joint_pos: ", target_joint_pos, len(target_joint_pos))
+        
+        # # Added by Arpit: hack to fix the torso to a fixed height
+        # if len(target_joint_pos) == 8:
+        #     target_joint_pos[0] = 0.15
 
         # Run super to reach desired position / velocity setpoint
         return super().compute_control(goal_dict=dict(target=target_joint_pos), control_dict=control_dict)
