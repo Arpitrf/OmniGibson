@@ -273,6 +273,7 @@ def navigate_primitive(action_primitives, env, robot, episode_memory, arr):
                          grasp_change_inds)
     
 def main():
+    print("helllllllllllllooooooooooooooooooooooooo")
     # Initializations
     np.random.seed(1451)
     args = config_parser().parse_args()
