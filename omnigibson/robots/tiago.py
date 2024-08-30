@@ -146,7 +146,6 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         assert variant in ("default", "wrist_cam"), f"Invalid Tiago variant specified {variant}!"
         self._variant = variant
         self.rigid_trunk = rigid_trunk
-        print("rigid_trunkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk: ", self.rigid_trunk)
         self.default_trunk_offset = default_trunk_offset
         assert_valid_key(key=default_reset_mode, valid_keys=RESET_JOINT_OPTIONS, name="default_reset_mode")
         self.default_reset_mode = default_reset_mode
@@ -234,11 +233,12 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
             if self.default_arm_pose == "vertical":
                 if arm == 'left':
                     pos[self.arm_control_idx[arm]] = np.array(
-                        [0.65846, -0.14852, 1.81008, 1.63368, 0.13764, -1.32488, -0.68415]
+                        [0.55846, -0.50852, 1.81008, 1.63368, 0.63764, -1.32488, -0.68415]
                     )
                 else:
                     pos[self.arm_control_idx[arm]] = np.array(
-                        [0.85846, -0.30852, 1.81008, 1.63368, 0.13764, -1.32488, -0.68415] # -0.14852 
+                        [0.85846, -0.44852, 1.81008, 1.63368, 0.43764, -1.32488, -0.68415]
+                        # [0.75846, -0.50852, 1.81008, 1.63368, 0.63764, -1.32488, -0.68415] # -0.14852 
                     )
             elif self.default_arm_pose == "diagonal15":
                 pos[self.arm_control_idx[arm]] = np.array(
@@ -281,7 +281,7 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         """
         self.set_joint_positions(self.untucked_default_joint_pos)
 
-    def reset(self, right_hand_joint_pos=None):
+    def reset(self, right_hand_joints_pos=None, head_joints_pos=None):
         """
         Reset should not change the robot base pose.
         We need to cache and restore the base joints to the world.
@@ -289,12 +289,14 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         base_joint_positions = self.get_joint_positions()[self.base_idx]
         super().reset()
         self.set_joint_positions(base_joint_positions, indices=self.base_idx)
+        
         # set the head pose
-        self.set_joint_positions([-0.20317451, -0.7972661], indices=self.camera_control_idx)
+        if head_joints_pos is not None: 
+            self.set_joint_positions(head_joints_pos, indices=self.camera_control_idx)
 
         # reset the hand joints to a specific position
-        if right_hand_joint_pos is not None:
-            self.set_joint_positions(right_hand_joint_pos, indices=self.arm_control_idx['right'])
+        if right_hand_joints_pos is not None:
+            self.set_joint_positions(right_hand_joints_pos, indices=self.arm_control_idx['right'])
             
 
     def _post_load(self):

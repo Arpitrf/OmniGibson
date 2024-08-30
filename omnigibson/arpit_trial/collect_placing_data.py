@@ -339,10 +339,12 @@ def main():
     config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
 
     # Update it to create a custom environment and run some actions
+    scene_file = '/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.json'
     config["scene"]["scene_model"] = "Rs_int"
-    config["scene"]["load_object_categories"] = ["floors", "ceilings", "walls", "coffee_table"]
+    config["scene"]["load_object_categories"] = ["floors", "ceilings", "walls", "coffee_table", "Cube"]
+    config["scene"]['scene_file'] = scene_file
     
-    # config["scene"]['scene_file'] = 'sim_state_block_push.json'
+    # # config["scene"]['scene_file'] = 'sim_state_block_push.json'
     config["objects"] = [
         {
             "type": "PrimitiveObject",
@@ -357,15 +359,15 @@ def main():
                         -0.11094563454389572,
                         0.9938263297080994]
         },
-        {
-            "type": "DatasetObject",
-            "name": "table",
-            "category": "breakfast_table",
-            "model": "rjgmmy",
-            "scale": [0.3, 0.3, 0.3],
-            "position": [-0.7, 0.5, 0.2],
-            "orientation": [0, 0, 0, 1]
-        }
+        # {
+        #     "type": "DatasetObject",
+        #     "name": "table",
+        #     "category": "breakfast_table",
+        #     "model": "rjgmmy",
+        #     "scale": [0.3, 0.3, 0.3],
+        #     "position": [-0.7, 0.5, 0.2],
+        #     "orientation": [0, 0, 0, 1]
+        # }
     ]
 
     # Load the environment
@@ -390,53 +392,62 @@ def main():
     save_folder = 'prior'
     os.makedirs(save_folder, exist_ok=True)
 
-    # og.sim.restore('dynamics_model_data/episode_00000_start.json')
-    # # step the simulator a few times 
-    # for _ in range(1000):
-    #     og.sim.step()
+    og.clear()
+    og.sim.restore('/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.json')
+    # step the simulator a few times 
+    print("RESTORING")
+    for _ in range(1000):
+        og.sim.step()
+    
+    # with open('/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.pickle', 'rb') as f:
+    #     state = pickle.load(f)
+    # og.sim.load_state(state)
 
-    # Obtain the number of episodes
-    episode_number = 0
-    if os.path.isfile(f'{save_folder}/dataset.hdf5'):
-        with FileLock(f'{save_folder}/dataset.hdf5' + ".lock"):
-            with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
-                episode_number = len(file['data'].keys())
-                print("episode_number: ", episode_number)
+    # # Obtain the number of episodes
+    # episode_number = 0
+    # if os.path.isfile(f'{save_folder}/dataset.hdf5'):
+    #     with FileLock(f'{save_folder}/dataset.hdf5' + ".lock"):
+    #         with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
+    #             episode_number = len(file['data'].keys())
+    #             print("episode_number: ", episode_number)
 
-    for i in range(2):
-        print(f"---------------- Episode {i} ------------------")
-        start_time = time.time()
-        episode_memory = Memory()
+    # for _ in range(200):
+    #         og.sim.step()
 
-        custom_reset(env, robot, episode_memory)
+    # for i in range(2):
+    #     print(f"---------------- Episode {i} ------------------")
+    #     start_time = time.time()
+    #     episode_memory = Memory()
 
-        for _ in range(50):
-            og.sim.step()
+    #     custom_reset(env, robot, episode_memory)
 
-        # save the start simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+    #     for _ in range(50):
+    #         og.sim.step()
+
+    #     # # save the start simulator state
+    #     # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
+    #     # arr = scene.dump_state(serialized=True)
+    #     # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+    #     #     pickle.dump(arr, f)
         
-        grasp_primitive(action_primitives, env, robot, episode_memory)
-        episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    #     # grasp_primitive(action_primitives, env, robot, episode_memory)
+    #     # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-        # save the end simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+    #     # # save the end simulator state
+    #     # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
+    #     # arr = scene.dump_state(serialized=True)
+    #     # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+    #     #     pickle.dump(arr, f)
 
-        # # save video of the episode
-        # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)
+    #     # # save video of the episode
+    #     # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)
 
-        del episode_memory
-        episode_number += 1
+    #     # del episode_memory
+    #     # episode_number += 1
         
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        print(f"Episode {episode_number}: execution time: {elapsed_time:.2f} seconds")
+    #     # end_time = time.time()
+    #     # elapsed_time = end_time - start_time
+    #     # print(f"Episode {episode_number}: execution time: {elapsed_time:.2f} seconds")
             
         
 

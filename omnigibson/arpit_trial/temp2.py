@@ -31,12 +31,91 @@ def print_dict_keys(dictionary, indent=0):
 # T_r_g = np.vstack((np.column_stack((org_matrix, org_pos)), [0, 0, 0, 1]))
 # print("T_r_g: ", T_r_g)
 
+def obtain_gripper_obj_seg(img, img_info):
+    # img = f[f'data/{k}/observations/seg_instance_id'][0]
+    # img_info = np.array(f[f'data/{k}/observations_info']['seg_instance_id']).astype(str)[0]
+    parts_of_concern = [  
+        '/World/robot0/gripper_right_link/visuals',
+        '/World/robot0/gripper_right_right_finger_link/visuals',
+        '/World/robot0/gripper_right_left_finger_link/visuals',
+        '/World/coffee_table_fqluyq_0/base_link/visuals',
+        '/World/box/base_link/visuals'
+    ]
+    ids_of_concern = []
+    for row in img_info:
+        key, val = row[0], row[1]
+        # print("val: ", val)
+        if val in parts_of_concern:
+            ids_of_concern.append(int(key))
+    
+    # print("ids_of_concern: ", ids_of_concern)
+    new_img = img.copy()
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            # print("img[i][j]: ", img[i][j], type(int(img[i][j])), type(ids_of_concern[0]))
+            if int(img[i][j]) not in ids_of_concern:
+                # print(int(img[i][j]))
+                new_img[i][j] = 0
+    
+    fig, ax = plt.subplots(1,2)
+    ax[0].imshow(img)
+    ax[1].imshow(new_img)
+    plt.show()
+    return new_img
 
-f = h5py.File('dynamics_model_dataset_seg_test/dataset.hdf5', "r")
-print(np.array(f['data/episode_00007/actions/actions']))
-img = np.array(f['data/episode_00007/observations/gripper_obj_seg'])
-plt.imshow(img[0])
-plt.show()
+
+# f = h5py.File('dynamics_model_dataset_seg_test/dataset.hdf5', "r")
+f = h5py.File('prior/dataset.hdf5', "r")
+print(np.array(f['data']['episode_00019/actions/actions']))
+
+
+# for k in f['data'].keys():
+#     plt.imshow(f[f'data/{k}/observations/seg_instance_id'][2])
+#     plt.show()
+
+# plt.imshow(np.array(f['data/episode_00000/observations/gripper_obj_seg'][0]))
+# plt.show()
+
+# print(f['data/episode_00000/observations'].keys())
+# rgb = np.array(f['data/episode_00280/observations/rgb'])
+# print(rgb)
+# for i in range(len(actions)):
+#     print(actions[i], np.linalg.norm(actions[i,:2]))
+
+# # obs = np.array(f['data/episode_00001/observations/seg_instance_id'][2])
+# obs_info_strings = np.array(f['data/episode_00000/observations_info/seg_instance_id_strings'])
+# print("obs_info_strings: ", obs_info_strings.shape)
+# string_array = np.vectorize(lambda x: x.decode('utf-8'))(obs_info_strings)
+# print("string_array: ", string_array)
+# obs_info_shapes = np.array(f['data/episode_00000/observations_info/seg_instance_id_shapes'])
+# print("obs_info_shapes: ", obs_info_shapes)
+
+# # Reconstruct original structure
+# idx = 0
+# reconstructed_data = []
+# for shape in obs_info_shapes:
+#     sublist = []
+#     for _ in range(shape):
+#         sublist.append(list(map(lambda x: x.decode('utf-8'), obs_info_strings[idx:idx+2])))
+#         idx += 2
+#     reconstructed_data.append(sublist)
+
+# reconstructed_data = np.array(reconstructed_data, dtype=object)
+# for i in range(len(reconstructed_data)):
+#     print(i, np.array(reconstructed_data[i]).shape)
+#     if i == 0:
+#         print(reconstructed_data)
+
+# obs = np.array(f['data/episode_00000/observations/seg_instance_id'][0])
+# obs_info = reconstructed_data[0]
+# obtain_gripper_obj_seg(obs, obs_info)
+
+
+# f = h5py.File('dynamics_model_dataset_seg_test/dataset.hdf5', "r")
+# print(np.array(f['data/episode_00007/actions/actions']))
+# img = np.array(f['data/episode_00007/observations/gripper_obj_seg'])
+# plt.imshow(img[0])
+# plt.show()
 # f2 = h5py.File('dynamics_model_dataset_seg_test/dataset.hdf5', "r")
 # print(np.array(f2['data/episode_00002/observations'].keys()))
 
@@ -216,5 +295,81 @@ plt.show()
 
 # for package in pkg_resources.working_set:
 #     print("%s: %s" % (package, time.ctime(os.path.getctime(package.location))))
+
+
+
+# Testing out the output of get_prior from slahmr-hamer
+# # out = np.load('/home/arpit/test_projects/slahmr-hamer/outputs_for_moma/pick_place_apple_navigate_prior_results.npz')
+# out = np.load('/home/arpit/test_projects/slahmr-hamer/outputs_for_moma/forward_test3_prior_results.npz')
+# print("out.shape: ", out.files)
+# init_pos = out['hand_positions'][0]
+# for pos in out['hand_positions']:
+#     print("pos, norm: ", pos, np.linalg.norm(pos-init_pos))
+#     final_pos =  out['hand_positions'][-1]
+# print("final_pos - init_pos: ", final_pos - init_pos)
+    
+
+# out = np.load('/home/arpit/test_projects/slahmr-hamer/outputs_for_moma/nav_test6_prior_results.npz')
+# init_pos = out['body_positions'][0]
+# for pos in out['body_positions']:
+#     print("pos, norm: ", pos, np.linalg.norm(pos-init_pos))
+
+# final_pos =  out['body_positions'][-1]
+# print("final_pos - init_pos: ", final_pos - init_pos)
+
+
+# # checking sampling
+# mu_z = [-0.073, -0.056, -0.014, -0.05,  -0.082, -0.033]
+# sigma_z = [
+#     [ 0.001,  0.001, -0.001,  0.,     0.,     0.002],
+#     [ 0.001,  0.,    -0.001,  0.,     0.,     0.   ],
+#     [-0.001, -0.001,  0.002, -0.001, -0.001,  0.   ],
+#     [ 0.   ,  0.,    -0.001,  0.001,  0.,    -0.   ],
+#     [ 0.   ,  0.,    -0.001,  0.,     0.,    -0.   ],
+#     [ 0.002,  0.,     0.,    -0.,    -0.,     0.005],
+#  ]
+
+# import matplotlib.pyplot as plt
+
+# data = []
+# for i in range(100000):
+#     data.append(np.random.multivariate_normal(mu_z, sigma_z)[0])
+
+# # Specify custom bins
+# bins = np.arange(-15, 1) * 0.01
+
+# # Plot histogram with custom bins
+# plt.hist(data, bins=bins, edgecolor='black')
+
+# # Add labels and title
+# plt.xlabel('Value')
+# plt.ylabel('Frequency')
+# plt.title('Histogram with Custom Bins')
+
+# # Display the plot
+# plt.show()
+
+
+# # Make video from multiple videos:
+# from moviepy.editor import VideoFileClip, concatenate_videoclips
+# import glob
+
+# path = "/home/arpit/test_projects/OmniGibson/outputs/2024-08-27/15-46-38"
+
+# # Use glob to get a list of all .mp4 files in the directory
+# video_files = sorted(glob.glob(os.path.join(path, "*.mp4")))
+
+# # Alternatively, if you want to be explicit about sorting by filename:
+# video_files = sorted(glob.glob(os.path.join(path, "*.mp4")), key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+# print("video_files: ", video_files)
+
+# # Load the video clips
+# clips = [VideoFileClip(video) for video in video_files]
+
+# # Concatenate the video clips
+# final_clip = concatenate_videoclips(clips)
+
+# # Write the output video to a file
+# final_clip.write_videofile("output_video.mp4", codec="libx264")
 
 

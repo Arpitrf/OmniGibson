@@ -18,6 +18,7 @@ from omnigibson.macros import gm
 from omnigibson.action_primitives.starter_semantic_action_primitives import StarterSemanticActionPrimitives, StarterSemanticActionPrimitiveSet
 from omnigibson.utils.ui_utils import choose_from_options, KeyboardRobotController, draw_line
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
+from omnigibson.objects import DatasetObject
 
 from memory import Memory
 from arpit_utils import save_video
@@ -30,7 +31,10 @@ def obtain_gripper_obj_seg(img, img_info):
         '/World/robot0/gripper_right_right_finger_link/visuals',
         '/World/robot0/gripper_right_left_finger_link/visuals',
         '/World/coffee_table_fqluyq_0/base_link/visuals',
-        '/World/box/base_link/visuals'
+        '/World/box/base_link/visuals',
+        '/World/plate/base_link/visuals',
+        '/World/apple/base_link/visuals',
+        '/World/table/base_link/visuals'
     ]
     ids_of_concern = []
     for key, val in img_info.items():
@@ -76,20 +80,84 @@ def dump_to_memory(env, robot, episode_memory):
 
 def custom_reset(env, robot, episode_memory):
     proprio = robot._get_proprioception_dict()
-    curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
-    # default_joint_pos = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
+    # print("proprio.keys: ", proprio.keys())
+    # curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
+    # to start at the same joint pos
+    curr_right_arm_joints = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
 
-    # print("proprio: ", proprio.keys())
-    noise_1 = np.random.uniform(-0.2, 0.2, 3)
+    # Randomizing right arm pose
+    noise_1 = np.random.uniform(-0.3, 0.3, 3)
     noise_2 = np.random.uniform(-0.1, 0.1, 4)
     noise = np.concatenate((noise_1, noise_2))
     # print("arm_qpos.shape, noise.shape: ", curr_right_arm_joints.shape, noise.shape)
-    # right_hand_joint_pos = curr_right_arm_joints + noise 
-    right_hand_joint_pos = curr_right_arm_joints  
+    right_hand_joints_pos = curr_right_arm_joints + noise 
+    # right_hand_joints_pos = curr_right_arm_joints  
+    # print("right_hand_joints_pos: ", right_hand_joints_pos)
+
+    # Randomizing head pose
+    default_head_joints = np.array([-0.20317451, -0.7972661])
+    noise_1 = np.random.uniform(-0.1, 0.1, 1)
+    noise_2 = np.random.uniform(-0.1, 0.1, 1)
+    noise = np.concatenate((noise_1, noise_2))
+    head_joints = default_head_joints + noise
+    # print("Head joint positions: ", head_joints)
 
     # Reset environment and robot
+    # print("env initial state: ", env.scene._initial_state)
+    scene_initial_state = env.scene._initial_state
+
+    # for manipulation
+    # scene_initial_state['object_registry']['robot0']['joints']['head_2_joint']['target_pos'] = np.array([-0.83])
+    # scene_initial_state['object_registry']['robot0']['root_link']['pos'] = [-0.05, -0.4, 0.0]
+    # r_euler = R.from_euler('z', -100, degrees=True) # or -120
+
+    # Randomizing object pose
+
+    # Randomizing object sizes
+    table_z_scale = np.random.uniform(0.5, 0.8)
+    table_x_scale = np.random.uniform(0.9, 1.1)
+    table_y_scale = np.random.uniform(0.95, 1.05)
+    # apple_z_pos = table_z_scale * 0.8       # table_z_scale=1 is 0.8 height for apple
+    og.sim.stop()
+    for o in env.scene.objects:
+        if o.name == 'table':
+            o.scale = np.array([table_x_scale, table_y_scale, table_z_scale])
+        if o.name == 'apple':
+            apple_scale = np.random.uniform(0.9, 1, 3)
+            o.scale = apple_scale
+            # apple_pos = o.get_position()
+            # target_pos = np.array([apple_pos[0], apple_pos[1], apple_z_pos])
+            # print("target_pos: ", target_pos)
+            # o.set_position_orientation(position=target_pos)
+    og.sim.play()
+
+    # for o in env.scene.objects:
+    #     if o.name == 'apple':
+    #         print("o.pos: ", o.get_position())
+    #         input()
+
+    # Randomizing starting pos of robot
+    start_pos = np.array([-0.05, 0.35, 0.0])
+    x_noise = np.random.uniform(-0.5, 0.7) # previously -0.3 to 0.8
+    # x_noise = 0.7
+    start_pos[0] += x_noise
+    y_noise = np.random.uniform(-0.3, 0.5)
+    # for random nav
+    y_noise = np.random.uniform(-0.7, 0.3)
+    # y_noise = 0.5
+    start_pos[1] += y_noise
+    scene_initial_state['object_registry']['robot0']['root_link']['pos'] = start_pos
+
+    # Ramdomizing starting orientation of robot
+    yaw = np.random.uniform(-70, -110) #previous -80 to -120
+    r_euler = R.from_euler('z', yaw, degrees=True)
+    r_quat = R.as_quat(r_euler)
+    scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
+
     env.reset()
-    robot.reset(right_hand_joint_pos=right_hand_joint_pos)
+    # TODO: Change this through the same interface (using scene_initial_state)
+    robot.reset(right_hand_joints_pos=right_hand_joints_pos, head_joints_pos=head_joints)
+
 
     # Step simulator a few times so that the effects of "reset" take place
     for _ in range(10):
@@ -158,12 +226,19 @@ def config_parser(parser=None):
 def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory, step, grasp_change_inds, arr=None):
     actions = []
     counter = 0
+    succ = True
     # print("type(ctrl_gen): ", ctrl_gen)
     for action in ctrl_gen:
-        print("action: ", action)
+        # print("action: ", action)
+        if action == 'navigate_error':
+            succ = False
+            return succ
         if action == 'Done':
             # save everything to data
             obs, obs_info = env.get_obs()
+
+            # plt.imshow(obs['robot0']['robot0:eyes:Camera:0']['rgb'])
+            # plt.show()
 
             # seg_instance_id = obs['robot0']['robot0:eyes:Camera:0']['seg_instance_id']
             # print("arr: ", arr)
@@ -191,7 +266,11 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory, ste
             gripper_obj_seg = obtain_gripper_obj_seg(obs['robot0']['robot0:eyes:Camera:0']['seg_instance_id'], obs_info['robot0']['robot0:eyes:Camera:0']['seg_instance_id'])
             episode_memory.add_observation('gripper_obj_seg', gripper_obj_seg)
 
+            # print(obs_info['robot0']['robot0:eyes:Camera:0']['seg_semantic'])
+            
             for k in obs_info['robot0']['robot0:eyes:Camera:0'].keys():
+                # print("k, v: ", k, obs_info['robot0']['robot0:eyes:Camera:0'][k])
+                # input()
                 episode_memory.add_observation_info(k, obs_info['robot0']['robot0:eyes:Camera:0'][k])
             for k in proprio.keys():
                 episode_memory.add_proprioception(k, proprio[k])
@@ -203,18 +282,6 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory, ste
             episode_memory.add_extra('contacts', is_contact)
             
             continue
-
-        # print("action: ", action[12:18], np.linalg.norm(action[12:18]))
-        # complete_action = action
-        # [12,13,14]: delta_pos; [15,16,17]: delta_axis_angle; [18]: grasp(-1 is close and 1 is open) 
-        # preprocessed_arm_action = action[12:19]
-        # command = robot._controllers['arm_right']._preprocess_command(action[12:18])
-        # processed_arm_action = np.concatenate((command, action[18:19]))
-        # print("processed_arm_action: ", processed_arm_action.shape)
-        # print("preprocessed_arm_action: ", preprocessed_arm_action.shape)
-        # print("complete_action: ", complete_action.shape)
-        
-        # actions.append(action[5:11].tolist())
 
         wait = False
         # To collect data for random grasps
@@ -239,7 +306,73 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory, ste
         step += 1
     
     print("total steps: ", counter)
-    return step, gripper_closed
+    return succ
+
+def random_navigate_primitive(action_primitives, env, robot, episode_memory, arr):
+    max_len = 10
+    epiosde_len = 0
+    apple_visible = True
+    gripper_closed = False
+    step = 0
+    grasp_change_inds = []
+
+
+    while epiosde_len < max_len and apple_visible:
+        print("episode_len, apple_visible: ", epiosde_len, apple_visible)
+        # sample random pose2d action (norm round 0.2 to 0.4)
+        # if we want either translate or rotate
+        options = np.array(['translate', 'rotate'])
+        chosen_option = np.random.choice(options)
+        # chosen_option = 'translate+rotate'
+        print("chosen_option: ", chosen_option)
+        delta_pos = np.array([0.0, 0.0, 0.0])
+        delta_orientation = 0.0
+      
+        if chosen_option == 'translate' or chosen_option == 'translate+rotate':
+            delta_pos = np.random.uniform(-1, 1, 2)
+            random_norm = np.random.uniform(0.2, 0.4)
+            print("random_norm: ", random_norm)
+            delta_pos = delta_pos / np.linalg.norm(delta_pos) * random_norm
+            print("delta_pos: ", delta_pos, np.linalg.norm(delta_pos))
+
+
+        if chosen_option == 'rotate' or chosen_option == 'translate+rotate':
+            # change later
+            # delta_orientation = np.random.uniform(-20, 20)
+            delta_orientation = np.random.uniform(-30, 30)
+            delta_orientation = np.deg2rad(delta_orientation)
+
+        
+        delta_pose2d = np.array([delta_pos[0], delta_pos[1], delta_orientation])    
+        curr_pos, curr_orn = robot.get_position_orientation()
+        curr_orientation = np.array(R.from_quat(curr_orn).as_euler('xyz'))[2]
+        print("curr_orientation: ", np.rad2deg(curr_orientation))
+        curr_pose2d = np.array([curr_pos[0], curr_pos[1], curr_orientation])
+        print("curr_pose2d, delta_pose2d: ", curr_pose2d, delta_pose2d)
+        target_pose2d = curr_pose2d + delta_pose2d
+
+        # move base direct ik
+        succ = execute_controller(action_primitives._navigate_to_pose_direct(target_pose2d),
+                         env,
+                         robot,
+                         gripper_closed,
+                         episode_memory,
+                         step,
+                         grasp_change_inds)
+        
+        if not succ:
+            break
+        else:
+            # save action to episode memory
+            episode_memory.add_action('actions', delta_pose2d)
+
+        epiosde_len += 1
+
+        obs, obs_info = env.get_obs()
+        seg_semantic = obs_info['robot0']['robot0:eyes:Camera:0']['seg_semantic']
+        if 'apple' not in seg_semantic.values():
+            print("APPLE NOT VISIBLE!!")
+            apple_visible = False
 
 def navigate_primitive(action_primitives, env, robot, episode_memory, arr):
     obj = env.scene.object_registry("name", "apple")
@@ -264,7 +397,7 @@ def navigate_primitive(action_primitives, env, robot, episode_memory, arr):
     # # target_orn_euler[2] -= 0.35
     # target_pos[0] -= 0.1
     pose2d += np.array([noise_pos[0], noise_pos[1], noise_orn])    
-    execute_controller(action_primitives._navigate_to_pose_linearly_cartesian(pose2d),
+    execute_controller(action_primitives._navigate_to_pose_linearly_cartesian(pose2d, episode_memory=episode_memory),
                          env,
                          robot,
                          gripper_closed,
@@ -272,10 +405,12 @@ def navigate_primitive(action_primitives, env, robot, episode_memory, arr):
                          step,
                          grasp_change_inds)
     
+    # Adding all 0 action for the last step
+    episode_memory.add_action('actions', np.zeros(3, dtype=np.float64))
+    
 def main():
-    print("helllllllllllllooooooooooooooooooooooooo")
     # Initializations
-    np.random.seed(1451)
+    np.random.seed(5)
     args = config_parser().parse_args()
 
     # Load the config
@@ -331,14 +466,14 @@ def main():
             "name": "apple", 
             "category": "apple",
             "model": "omzprq", 
-            "position": [-0.1, -0.9, 0.6]
+            "position": [-0.1, -0.95, 0.6]
         },
         {
             "type": "DatasetObject",
             "name": "plate",
             "category": "plate",
             "model": "pkkgzc",
-            "position": [(-0.75 + 1) - 0.5, (-0.7 - 1.5) + 0.5, 0.6]
+            "position": [(-0.75 + 1) - 0.5, (-0.7 - 1.5) + 0.5, 0.5]
         }
     ]
 
@@ -351,25 +486,9 @@ def main():
 
     action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-    # # Create teleop controller
-    # action_generator = KeyboardRobotController(robot=robot)
-    # # Register custom binding to reset the environment
-    # action_generator.register_custom_keymapping(
-    #     key=lazy.carb.input.KeyboardInput.R,
-    #     description="Reset the robot",
-    #     callback_fn=lambda: env.reset(),
-    # )
-    # # Print out relevant keyboard info if using keyboard teleop
-    # action_generator.print_keyboard_teleop_info()
-
     # save_folder = 'dynamics_model_dataset'
     save_folder = 'navigation_dataset_seg'
     os.makedirs(save_folder, exist_ok=True)
-
-    # og.sim.restore('dynamics_model_data/episode_00000_start.json')
-    # # step the simulator a few times 
-    # for _ in range(1000):
-    #     og.sim.step()
 
     # Obtain the number of episodes
     episode_number = 0
@@ -379,22 +498,33 @@ def main():
                 episode_number = len(file['data'].keys())
                 print("episode_number: ", episode_number)
 
-    for i in range(5):
+    for i in range(200):
         print(f"---------------- Episode {i} ------------------")
         start_time = time.time()
         episode_memory = Memory()
 
+        # input("Press enter to reset")
         arr = custom_reset(env, robot, episode_memory)
+        
+        # ensure apple is in initial view
+        obs, obs_info = env.get_obs()
+        seg_semantic = obs_info['robot0']['robot0:eyes:Camera:0']['seg_semantic']
+        while 'apple' not in seg_semantic.values():
+            episode_memory = Memory()
+            arr = custom_reset(env, robot, episode_memory)
+            obs, obs_info = env.get_obs()
+            seg_semantic = obs_info['robot0']['robot0:eyes:Camera:0']['seg_semantic']
+
 
         for _ in range(50):
             og.sim.step()
 
-        base_pos, base_orn = robot.get_position_orientation()
-        print("base_pos, base_orn: ", base_pos, base_orn)
-        euler = R.from_quat(base_orn).as_euler('XYZ', degrees=True)
-        rotvec = R.from_quat(base_orn).as_rotvec()
-        print("euler: ", euler)
-        print("rotvec: ", rotvec / np.linalg.norm(rotvec), np.linalg.norm(rotvec))
+        # base_pos, base_orn = robot.get_position_orientation()
+        # print("base_pos, base_orn: ", base_pos, base_orn)
+        # euler = R.from_quat(base_orn).as_euler('XYZ', degrees=True)
+        # rotvec = R.from_quat(base_orn).as_rotvec()
+        # print("euler: ", euler)
+        # print("rotvec: ", rotvec / np.linalg.norm(rotvec), np.linalg.norm(rotvec))
 
         # # save the start simulator state
         # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
@@ -404,7 +534,21 @@ def main():
         
         # grasp_primitive(action_primitives, env, robot, episode_memory, arr)
         navigate_primitive(action_primitives, env, robot, episode_memory, arr)
+        # random_navigate_primitive(action_primitives, env, robot, episode_memory, arr)
         # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+
+        # # remove later
+        # seg_semantic = episode_memory.data['observations_info']['seg_semantic']
+        # # episode_memory.data['observations_info']['seg_semantic'][0][0][1] = '/apple'
+        # print("seg_semantic: ", seg_semantic, type(seg_semantic[0][0][0]), type(seg_semantic[0][0][1]))
+        # print("----------------")
+        # seg_instance_id = episode_memory.data['observations_info']['seg_instance_id']
+        # # print("seg_instance_id: ", seg_instance_id, type(seg_instance_id[0][0][0]), type(seg_instance_id[0][0][1]))
+        # for i in range(len(seg_instance_id)):
+        #     for j in range(len(seg_instance_id[i])):
+        #         print("--", seg_instance_id[i][j][0], seg_instance_id[i][j][1], type(seg_instance_id[i][j][0]), type(seg_instance_id[i][j][1]))
+        # print("seg_semantic, seg_instance_id: ", np.array(seg_semantic).shape, np.array(seg_instance_id).shape)
+        # input()
 
         # # save the end simulator state
         # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')

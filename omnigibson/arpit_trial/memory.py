@@ -122,7 +122,7 @@ class Memory:
         arr = []
         for k, v in val.items():
             arr.append([str(k), v])
-        print("arr: ", arr)
+        # print("arr: ", arr)
         self.data['observations_info'][key].append(deepcopy(arr))
 
     def add_action(self, key, val):
@@ -139,34 +139,48 @@ class Memory:
             self.data[key] = []
         self.data[key].append(deepcopy(value))
 
-    # def keys(self):
-    #     return [key for key in self.data]
+    def has_variable_length_array(self, array):
+        def check_shapes(arr):
+            # Convert the array to a NumPy array with dtype=object to handle varying sizes
+            np_array = np.array(arr, dtype=object)
 
-    # def count(self):
-    #     return len(self.data['observations'])
-
-    # def done(self):
-    #     if len(self.data['is_terminal']) == 0:
-    #         return False
-    #     return self.data['is_terminal'][-1]
-
-    # def get_data(self):
-    #     return self.data
-
-    # def check_error(self):
-    #     try:
-    #         count = len(self)
-    #         assert len(self.data['max_coverage']) == count
-    #         assert len(self.data['preaction_coverage']) == count
-    #         assert len(self.data['postaction_coverage']) == count
-    #         return True
-    #     except:
-    #         return False
+            # Get the shapes of all elements at this level
+            shapes = [np.shape(sub_array) for sub_array in np_array]
+            
+            # If there is more than one unique shape, the array is of variable length
+            if len(set(shapes)) > 1:
+                return True
+            
+            # Recursively check the next level if it's deeper than a single level (not scalar)
+            for sub_array in np_array:
+                if isinstance(sub_array, np.ndarray) or isinstance(sub_array, list):
+                    if check_shapes(sub_array):
+                        return True
+            
+            return False
         
+        return check_shapes(array)
+        
+    def add_variable_length_dataset(self, group, key, value):
+        # Flatten the list
+        flattened_data = [item for sublist in value for inner in sublist for item in inner]
+
+        # Track the shapes to reconstruct the structure
+        shapes = [len(sublist) for sublist in value]
+
+        # Create a special dtype for variable-length strings
+        vlen_dtype = h5py.special_dtype(vlen=str)
+       
+        # store the actual data (which is now flattened hence, no uneven shapes) 
+        group.create_dataset(f'{key}_strings', data=np.array(flattened_data, dtype=vlen_dtype), compression='gzip', compression_opts=9)
+        
+        # Store the shapes (which will be used to reconstruct the uneven array)
+        group.create_dataset(f'{key}_shapes', data=np.array(shapes, dtype=np.int32), compression='gzip', compression_opts=9)
+    
     def dump_recursive(self, group, key, value):
-        print("key, type(value): ", key, type(value))
-        if key == 'seg_semantic_id':
-            print("value: ", value, type(value[0][0]))
+        # print("key, type(value): ", key, type(value))
+        # if key == 'seg_semantic_id':
+        #     print("value: ", value, type(value[0][0]))
         try:
             if type(value) == float\
                     or type(value) == np.float64\
@@ -174,18 +188,23 @@ class Memory:
                     or type(value) == int\
                     or type(value) == np.int64\
                     or type(value) == bool:
-                # print("11")
+                # print("11", key)
                 group.attrs[key] = value
             elif type(value) == list or type(value) == np.ndarray or type(value) == tuple:   
-                # print("22")
-                group.create_dataset(
-                    name=key,
-                    data=value,
-                    # **hdf5plugin.Bitshuffle(nelems=0, lz4=True)
-                    compression='gzip',
-                    compression_opts=9)
+                # print("22", key)
+                # HDF5 Can't save variable length arrays/lists. i.e. say shape is (9,) and the first element has len=7 and second element has len=6
+                variable_length = self.has_variable_length_array(np.array(value))
+                if variable_length:
+                    self.add_variable_length_dataset(group, key, value)
+                else:
+                    group.create_dataset(
+                        name=key,
+                        data=value,
+                        # **hdf5plugin.Bitshuffle(nelems=0, lz4=True)
+                        compression='gzip',
+                        compression_opts=9)
             else:
-                # print("33")
+                # print("33", key)
                 subgroup = group.create_group(key)
                 for key_interior, value_interior in value.items():
                     # subgroup = group.create_group(key_interior)
@@ -207,12 +226,13 @@ class Memory:
                     key_idx = len(file['data'].keys())
                 else:
                     file.create_group('data')
-                print("key_idx: ", key_idx)
+                # print("key_idx: ", key_idx)
                 group_key = f'episode_{key_idx:05d}'
                 group = file['data'].create_group(group_key)
                 # print("file.keys(): ", file.keys())
 
-                for key, value in self.data.items():                 
+                for key, value in self.data.items():
+                    # print("key: ", key)                 
                     self.dump_recursive(group, key, value)
 
                 # for step in range(len(self)):

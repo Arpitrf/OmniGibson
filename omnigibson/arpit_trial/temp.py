@@ -131,23 +131,25 @@ def save_seg_video(path, f_name):
 #     counter += 1
 
 # save sequence of images on disk
-f = h5py.File('dynamics_model_dataset_seg_test/dataset.hdf5', "r") 
-counter = 0
+f = h5py.File('prior/dataset.hdf5', "r") 
+counter = -1
 for k in f['data'].keys():
-    path = f'/home/arpit/test_projects/OmniGibson/dynamics_model_dataset_seg_test/{k}_images'
-    os.makedirs(path, exist_ok=True)
-    if counter > 15:
-        break
-    gripper_obj_segs = np.array(f['data'][k]['observations']['gripper_obj_seg'])
-    for i, img in enumerate(gripper_obj_segs):
-        plt.imshow(img)
-        plt.savefig(os.path.join(path , f'{i:04}.jpg'))
-        # cv2.imwrite(os.path.join(path , f'{i:04}.jpg'), img)
-    # rgbs = np.array(f['data'][k]['observations']['rgb'])
-    # rgbs = rgbs[:, :, :, :3]
-    # for i, bgr in enumerate(rgbs):
-    #     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    #     cv2.imwrite(os.path.join(path , f'{i:04}.jpg'), rgb)
     counter += 1
+    # if counter > 270:
+    #     break
+    path = f'/home/arpit/test_projects/OmniGibson/prior/{k}_images'
+    os.makedirs(path, exist_ok=True)
+    # gripper_obj_segs = np.array(f['data'][k]['observations']['gripper_obj_seg'])
+    # for i, img in enumerate(gripper_obj_segs):
+        # plt.imshow(img)
+        # plt.savefig(os.path.join(path , f'{i:04}.jpg'))
+        # cv2.imwrite(os.path.join(path , f'{i:04}.jpg'), img)
+    rgbs = np.array(f['data'][k]['observations']['rgb'])
+    rgbs = rgbs[:, :, :, :3]
+    # print("rgbs: ", counter, rgbs.shape)
+    for i, bgr in enumerate(rgbs):
+        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        cv2.imwrite(os.path.join(path , f'{i:04}.jpg'), rgb)
+
     
 # edit hdf5 files

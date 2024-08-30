@@ -493,36 +493,36 @@ class Scene(Serializable, Registerable, Recreatable, ABC):
         # Reset the states of all objects (including robots), including (non-)kinematic states and internal variables.
         assert self._initial_state is not None
         
-        # custom initial pose of robot
-        # print("object_registry: ", self._initial_state['object_registry'].keys())
-        if 'robot0' in self._initial_state['object_registry'].keys():
-            # print("robot0 keys: ", self._initial_state['object_registry']['robot0'].keys())
-            # print("root_link: ", self._initial_state['object_registry']['robot0']['root_link'].keys())
-            # print("joints: ", self._initial_state['object_registry']['robot0']['joints'].keys())
-            # print("base pos: ", self._initial_state['object_registry']['robot0']['root_link']['pos'])
-            # print("base ori: ", self._initial_state['object_registry']['robot0']['root_link']['ori'])
-            # print("head_joint_1, head_joint_2: ",self._initial_state['object_registry']['robot0']['joints']['head_1_joint'], self._initial_state['object_registry']['robot0']['joints']['head_2_joint'])
+        # # custom initial pose of robot
+        # # print("object_registry: ", self._initial_state['object_registry'].keys())
+        # if 'robot0' in self._initial_state['object_registry'].keys():
+        #     # print("robot0 keys: ", self._initial_state['object_registry']['robot0'].keys())
+        #     # print("root_link: ", self._initial_state['object_registry']['robot0']['root_link'].keys())
+        #     # print("joints: ", self._initial_state['object_registry']['robot0']['joints'].keys())
+        #     # print("base pos: ", self._initial_state['object_registry']['robot0']['root_link']['pos'])
+        #     # print("base ori: ", self._initial_state['object_registry']['robot0']['root_link']['ori'])
+        #     # print("head_joint_1, head_joint_2: ",self._initial_state['object_registry']['robot0']['joints']['head_1_joint'], self._initial_state['object_registry']['robot0']['joints']['head_2_joint'])
             
-            # uncomment later
-            self._initial_state['object_registry']['robot0']['root_link']['pos'] = [-0.05, -0.4, 0.0]
-            r_euler = R.from_euler('z', -120, degrees=True)
+        #     # uncomment later
+        #     self._initial_state['object_registry']['robot0']['root_link']['pos'] = [-0.05, -0.4, 0.0]
+        #     r_euler = R.from_euler('z', -120, degrees=True)
 
-            # # randomizing starting pos of robot
-            # start_pos = np.array([-0.05, 0.35, 0.0])
-            # x_noise = np.random.uniform(-0.3, 0.8)
-            # # x_noise = 0.7
-            # start_pos[0] += x_noise
-            # y_noise = np.random.uniform(-0.3, 0.5)
-            # # y_noise = 0.5
-            # start_pos[1] += y_noise
-            # self._initial_state['object_registry']['robot0']['root_link']['pos'] = start_pos
-            # r_euler = R.from_euler('z', -100, degrees=True)
+        #     # # randomizing starting pos of robot
+        #     # start_pos = np.array([-0.05, 0.35, 0.0])
+        #     # x_noise = np.random.uniform(-0.3, 0.8)
+        #     # # x_noise = 0.7
+        #     # start_pos[0] += x_noise
+        #     # y_noise = np.random.uniform(-0.3, 0.5)
+        #     # # y_noise = 0.5
+        #     # start_pos[1] += y_noise
+        #     # self._initial_state['object_registry']['robot0']['root_link']['pos'] = start_pos
+        #     # r_euler = R.from_euler('z', -100, degrees=True)
 
-            r_quat = R.as_quat(r_euler)
-            self._initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
-            # self._initial_state['object_registry']['robot0']['joints']['head_2_joint']['pos'] = np.array([-0.83])
-            self._initial_state['object_registry']['robot0']['joints']['head_2_joint']['target_pos'] = np.array([-0.83])
-            # self._initial_state['object_registry']['robot0']['joints']['arm_left_1_joint']['target_pos'] = np.array([2.0])
+        #     r_quat = R.as_quat(r_euler)
+        #     self._initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
+        #     # self._initial_state['object_registry']['robot0']['joints']['head_2_joint']['pos'] = np.array([-0.83])
+        #     self._initial_state['object_registry']['robot0']['joints']['head_2_joint']['target_pos'] = np.array([-0.83])
+        #     # self._initial_state['object_registry']['robot0']['joints']['arm_left_1_joint']['target_pos'] = np.array([2.0])
             
         
         self.load_state(self._initial_state)
