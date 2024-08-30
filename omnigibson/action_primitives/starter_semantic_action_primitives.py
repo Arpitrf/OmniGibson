@@ -1187,7 +1187,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             )
 
     def _move_hand_linearly_cartesian(
-        self, target_pose, stop_on_contact=False, ignore_failure=False, stop_if_stuck=False
+        self, target_pose, stop_on_contact=False, ignore_failure=False, stop_if_stuck=False, in_world_frame=False, episode_memory=None, gripper_closed=False
     ):
         """
         Yields action for the robot to move its arm to reach the specified target pose by moving the eef along a line in cartesian
@@ -1204,9 +1204,14 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # To make sure that this happens in a roughly linear fashion, we will divide the trajectory
         # into 1cm-long pieces
         start_pos, start_orn = self.robot.eef_links[self.arm].get_position_orientation()
+        print("start_pos: ", start_pos.shape)
         travel_distance = th.norm(target_pose[0] - start_pos)
-        num_poses = th.max([2, int(travel_distance / m.MAX_CARTESIAN_HAND_STEP) + 1]).item()
-        pos_waypoints = th.linspace(start_pos, target_pose[0], num_poses)
+        num_poses = th.max(th.tensor([2, int(travel_distance / m.MAX_CARTESIAN_HAND_STEP) + 1])).item()
+        start_pos = start_pos.numpy()
+        new_target_pose = (target_pose[0].numpy(), target_pose[1].numpy())
+        target_pose = new_target_pose
+        import numpy as np
+        pos_waypoints = np.linspace(start_pos, target_pose[0], num_poses)
 
         # Also interpolate the rotations
         t_values = th.linspace(0, 1, num_poses)

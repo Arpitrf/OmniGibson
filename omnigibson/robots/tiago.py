@@ -758,3 +758,11 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         action = ManipulationRobot.teleop_data_to_action(self, teleop_action)
         action[self.base_action_idx] = teleop_action.base * 0.1
         return action
+
+    def custom_is_grasping(self):
+        gripper_right_qpos = self._get_proprioception_dict()['gripper_right_qpos']
+        if (gripper_right_qpos[0] > 0.044 and gripper_right_qpos[1] > 0.044) or \
+            (gripper_right_qpos[0] < 0.0001 and gripper_right_qpos[1] < 0.0001):
+            return False
+        else:
+            return True
