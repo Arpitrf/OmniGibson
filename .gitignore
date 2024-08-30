@@ -20,6 +20,10 @@ dev/transfer.c
 *.bak
 *.zip
 .*.swp
+*.avi
+*.mp4
+*.hdf5
+*.hdf5.lock
 
 docs/apidoc
 
@@ -91,3 +95,22 @@ site/
 
 # Tests of examples
 tests/tests_of_examples
+
+# Custom folders
+backup/
+data/
+dynamics_model_dataset/
+dynamics_model_dataset_seg/
+dynamics_model_dataset_seg_test/
+dynamics_model_dataset_test/
+dynamics_model_dataset_test_2/
+navigation_dataset_seg/
+navigation_dataset_seg_temp/
+old/
+outputs/
+prior/
+prior_npz_files/
+robot_exec_output/
+temp_dataset/
+test_nav_outputs/
+wandb/
