@@ -29,7 +29,8 @@ def obtain_gripper_obj_seg(img, img_info):
         '/World/robot0/gripper_right_right_finger_link/visuals',
         '/World/robot0/gripper_right_left_finger_link/visuals',
         '/World/coffee_table_fqluyq_0/base_link/visuals',
-        '/World/box/base_link/visuals'
+        '/World/box/base_link/visuals',
+        '/World/mixing_bowl/base_link/visuals'
     ]
     ids_of_concern = []
     for key, val in img_info.items():
@@ -324,12 +325,13 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
                          episode_memory,
                          step,
                          grasp_change_inds)
-
+    
     # try placing
-    for o in env.scene.objects:
-        if o.name == 'plate':
-            bowl_obj = o
-    step, gripper_closed = execute_controller(action_primitives._place_on_top(bowl_obj),
+    org_place_pos, org_place_quat = np.array([ 0.65431009, -0.42087801,  0.66123985]), np.array([ 0.57241185,  0.58268626, -0.41505368,  0.4006892 ])
+    # new_place_pos = org_place_pos + np.random.uniform(-0.05, 0.05, 3)
+    new_place_pos = org_place_pos + np.concatenate((np.random.uniform(-0.1, 0.1, 2), np.random.uniform(-0.05, 0.1, 1)))
+    place_pose = (new_place_pos), np.array(org_place_quat)
+    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
                          env,
                          robot,
                          gripper_closed,
@@ -337,13 +339,56 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
                          step,
                          grasp_change_inds)
     
+    print("target pos, reached pos: ", place_pose[0], robot.get_relative_eef_pose(arm='right')[0])
+    # input()
+    
+    # 3. Open grasp
+    gripper_closed = False
+    action = action_primitives._empty_action()
+    # left hand [11] ; right hand [18]
+    action[18] = 1
+    execute_controller([action], env, robot, gripper_closed, episode_memory, step, grasp_change_inds)
+    # step the simulator a few steps to let the gripper close completely
+    for _ in range(80):
+        og.sim.step()
+    # save everything to memory
+    dump_to_memory(env, robot, episode_memory)    
+    episode_memory.add_action('actions', action[12:19])
+
+    # # try placing
+    # for o in env.scene.objects:
+    #     if o.name == 'plate':
+    #         bowl_obj = o
+    # step, gripper_closed = execute_controller(action_primitives._place_on_top(bowl_obj),
+    #                      env,
+    #                      robot,
+    #                      gripper_closed,
+    #                      episode_memory,
+    #                      step,
+    #                      grasp_change_inds)
+
+    #  # 4. Move to a random pose in a neighbourhood
+    # # temp_pose = (org_pos + np.array([0.0, 0.0, 0.2]), org_quat)
+    # x = np.random.uniform(org_pos[0] - 0.2, org_pos[0] + 0.2)
+    # y = np.random.uniform(org_pos[1] - 0.2, org_pos[1] + 0.2)
+    # z = np.random.uniform(org_pos[2] + 0.2, org_pos[2] + 0.4)
+    # neighbourhood_pose = (np.array([x, y, z]), grasp_pose[1])
+    # # print("new_pos: ", new_pose[0])
+    # step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(neighbourhood_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
+    #                      env,
+    #                      robot,
+    #                      gripper_closed,
+    #                      episode_memory,
+    #                      step,
+    #                      grasp_change_inds)
+    
     # Adding all 0 action for the last step
     episode_memory.add_action('actions', np.zeros(7, dtype=np.float64))
 
     
 def main():
     # Initializations
-    np.random.seed(5)
+    np.random.seed(16)
     args = config_parser().parse_args()
 
     # Load the config
@@ -359,6 +404,28 @@ def main():
     # # config["scene"]['scene_file'] = 'sim_state_block_push.json'
     temp_rot = np.array([0, 0, 0.9, 0.2])
     config["objects"] = [
+        # {
+        #     "type": "DatasetObject",
+        #     "name": "coffee_table_fqluyq_0",
+        #     "category": "coffee_table",
+        #     "model": "fqluyq",
+        #     "scale": [
+        #             1.242184319354393,
+        #             1.4171409939406037,
+        #             1.14723922336079
+        #             ],
+        #     "pos": [
+        #             -0.4764547348022461,
+        #             -1.2198129892349243,
+        #             0.25720706582069397
+        #             ],
+        #     "ori": [
+        #         2.509402111172676e-05,
+        #         -0.0005526477470993996,
+        #         0.7088724970817566,
+        #         0.7053365111351013
+        #     ],
+        # },
         {
             "type": "PrimitiveObject",
             "name": "box",
@@ -377,8 +444,8 @@ def main():
             "name": "mixing_bowl", 
             "category": "mixing_bowl",
             "model": "deudkt", 
-            "position": [-0.5, -0.95, 0.5],
-            # "scale": [0.1, 0.05, 0.1],
+            "position": [-0.7, -0.75, 0.5],
+            "scale": [0.9, 0.9, 0.9],
         },
         # {
         #     "type": "DatasetObject",
@@ -415,6 +482,13 @@ def main():
 
     action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
+    table_x_scale, table_y_scale, table_z_scale = 1.242184319354393, 1.8171409939406037, 1.14723922336079
+    og.sim.stop()
+    for o in env.scene.objects:
+        if o.name == 'coffee_table_fqluyq_0':
+            o.scale = np.array([table_x_scale, table_y_scale, table_z_scale])
+    og.sim.play()
+
     # # Create teleop controller
     # action_generator = KeyboardRobotController(robot=robot)
     # # Register custom binding to reset the environment
@@ -427,7 +501,7 @@ def main():
     # action_generator.print_keyboard_teleop_info()
 
     # save_folder = 'dynamics_model_dataset'
-    save_folder = 'prior'
+    save_folder = 'pick_and_place_data'
     os.makedirs(save_folder, exist_ok=True)
 
     # og.sim.restore('/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.json')
@@ -440,14 +514,6 @@ def main():
     #     state = pickle.load(f)
     # og.sim.load_state(state)
 
-    # # Obtain the number of episodes
-    # episode_number = 0
-    # if os.path.isfile(f'{save_folder}/dataset.hdf5'):
-    #     with FileLock(f'{save_folder}/dataset.hdf5' + ".lock"):
-    #         with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
-    #             episode_number = len(file['data'].keys())
-    #             print("episode_number: ", episode_number)
-
     # for _ in range(200):
     #         og.sim.step()
 
@@ -458,8 +524,8 @@ def main():
     gripper_mat = PhysicsMaterial(
         prim_path=f"{robot.prim_path}/gripper_mat",
         name="gripper_material",
-        static_friction=10.0,
-        dynamic_friction=10.0,
+        static_friction=25.0,
+        dynamic_friction=25.0,
         restitution=None,
     )
     for arm, links in robot.finger_links.items():
@@ -469,81 +535,89 @@ def main():
     og.sim.play()
     og.sim.load_state(state)
 
-    # ------------------ teleop -------------------------
-    episode_memory = Memory()
-    custom_reset(env, robot, episode_memory)
+    # # ------------------ teleop -------------------------
+    # episode_memory = Memory()
+    # custom_reset(env, robot, episode_memory)
     
-    # add orientations and base mvmt
-    action_keys = ['P', 'SEMICOLON', 'RIGHT_BRACKET', 'LEFT_BRACKET', 'LEFT', 'RIGHT', 'UP', 'DOWN', 'Y', 'B', 'N', 'O', 'U', 'C', 'V']
-    teleop_traj = []
+    # # add orientations and base mvmt
+    # action_keys = ['P', 'SEMICOLON', 'RIGHT_BRACKET', 'LEFT_BRACKET', 'LEFT', 'RIGHT', 'UP', 'DOWN', 'Y', 'B', 'N', 'O', 'U', 'C', 'V']
+    # teleop_traj = []
     
-    # Create teleop controller
-    action_generator = KeyboardRobotController(robot=robot)
+    # # Create teleop controller
+    # action_generator = KeyboardRobotController(robot=robot)
 
-    # Register custom binding to reset the environment
-    action_generator.register_custom_keymapping(
-        key=lazy.carb.input.KeyboardInput.R,
-        description="Reset the robot",
-        callback_fn=lambda: env.reset(),
-    )
+    # # Register custom binding to reset the environment
+    # action_generator.register_custom_keymapping(
+    #     key=lazy.carb.input.KeyboardInput.R,
+    #     description="Reset the robot",
+    #     callback_fn=lambda: env.reset(),
+    # )
 
-    # Print out relevant keyboard info if using keyboard teleop
-    action_generator.print_keyboard_teleop_info()
+    # # Print out relevant keyboard info if using keyboard teleop
+    # action_generator.print_keyboard_teleop_info()
 
-    max_steps = -1
-    step = 0
-    while step != max_steps:
-        action, keypress_str = action_generator.get_teleop_action()
-        # print("keypress_str: ", step, keypress_str)
-        # print("action: ", action, len(action))
-        if keypress_str == 'TAB':
-            break
-        obs, _, _, _ = env.step(action=action)
-        step += 1
-        if keypress_str in action_keys:
-            print("action: ", action)
-            teleop_traj.append(action)
-        if step % 100 == 0:
-            print("robot right eef pose: ", robot.get_relative_eef_pose(arm='right'))
-            # print("proprio_dict: ", robot._get_proprioception_dict().keys())
-            # print("joint_qpos: ", robot._get_proprioception_dict()['joint_qpos'], robot._get_proprioception_dict()['joint_qpos'].shape)
-            # print("camera_qpos: ", robot._get_proprioception_dict()['camera_qpos'], robot._get_proprioception_dict()['camera_qpos'].shape)
-    # ---------------------------------------------------
+    # max_steps = -1
+    # step = 0
+    # while step != max_steps:
+    #     action, keypress_str = action_generator.get_teleop_action()
+    #     # print("keypress_str: ", step, keypress_str)
+    #     # print("action: ", action, len(action))
+    #     if keypress_str == 'TAB':
+    #         break
+    #     obs, _, _, _ = env.step(action=action)
+    #     step += 1
+    #     if keypress_str in action_keys:
+    #         print("action: ", action)
+    #         teleop_traj.append(action)
+    #     if step % 100 == 0:
+    #         print("robot right eef pose: ", robot.get_relative_eef_pose(arm='right'))
+    #         # print("proprio_dict: ", robot._get_proprioception_dict().keys())
+    #         # print("joint_qpos: ", robot._get_proprioception_dict()['joint_qpos'], robot._get_proprioception_dict()['joint_qpos'].shape)
+    #         # print("camera_qpos: ", robot._get_proprioception_dict()['camera_qpos'], robot._get_proprioception_dict()['camera_qpos'].shape)
+    # # ---------------------------------------------------
 
-    # for i in range(2):
-    #     print(f"---------------- Episode {i} ------------------")
-    #     start_time = time.time()
-    #     episode_memory = Memory()
+    # Obtain the number of episodes
+    episode_number = 0
+    if os.path.isfile(f'{save_folder}/dataset.hdf5'):
+        with FileLock(f'{save_folder}/dataset.hdf5' + ".lock"):
+            with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
+                episode_number = len(file['data'].keys())
+                print("episode_number: ", episode_number)
 
-    #     custom_reset(env, robot, episode_memory)
+    for i in range(200):
+        print(f"---------------- Episode {i} ------------------")
+        start_time = time.time()
+        episode_memory = Memory()
 
-    #     for _ in range(50):
-    #         og.sim.step()
+        custom_reset(env, robot, episode_memory)
 
-    #     # # save the start simulator state
-    #     # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-    #     # arr = scene.dump_state(serialized=True)
-    #     # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-    #     #     pickle.dump(arr, f)
+        for _ in range(50):
+            og.sim.step()
+
+        # save the start simulator state
+        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
+        arr = scene.dump_state(serialized=True)
+        with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+            pickle.dump(arr, f)
         
-    #     grasp_primitive(action_primitives, env, robot, episode_memory)
-    #     # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        grasp_primitive(action_primitives, env, robot, episode_memory)
+        episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-    #     # # save the end simulator state
-    #     # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-    #     # arr = scene.dump_state(serialized=True)
-    #     # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-    #     #     pickle.dump(arr, f)
+        # save the end simulator state
+        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
+        arr = scene.dump_state(serialized=True)
+        with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+            pickle.dump(arr, f)
 
-    #     # # save video of the episode
-    #     # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)
+        # # save video of the episode
+        # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)
 
-    #     # del episode_memory
-    #     # episode_number += 1
+        del episode_memory
+        episode_number += 1
         
-    # #     # end_time = time.time()
-    # #     # elapsed_time = end_time - start_time
-    # #     # print(f"Episode {episode_number}: execution time: {elapsed_time:.2f} seconds")
+        # end_time = time.time()
+        # elapsed_time = end_time - start_time
+        # print(f"Episode {episode_number}: execution time: {elapsed_time:.2f} seconds")
             
         
 

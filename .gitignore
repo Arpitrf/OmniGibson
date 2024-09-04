@@ -109,3 +109,6 @@ prior/
 navigation_dataset_seg/
 prior_npz_files/
 test_nav_outputs/
+pick_and_place_data/
+pick_and_place_data_temp/
+place_data/

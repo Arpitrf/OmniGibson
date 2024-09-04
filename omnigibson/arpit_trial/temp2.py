@@ -64,17 +64,23 @@ def obtain_gripper_obj_seg(img, img_info):
     return new_img
 
 
-# f = h5py.File('dynamics_model_dataset_seg_test/dataset.hdf5', "r")
-f = h5py.File('prior/dataset.hdf5', "r")
-print(np.array(f['data']['episode_00019/actions/actions']))
+f = h5py.File('pick_and_place_data_temp/dataset.hdf5', "r")
+# f = h5py.File('prior/dataset.hdf5', "r")
+print("len: ", np.array(f['data/episode_00000/actions/actions']).shape)
+obs_info = f['data/episode_00000/observations_info'].keys()
+print("obs_info: ", obs_info)
+grasped_state = np.array(f['data/episode_00000/extras/grasps'])
+print("grasped_state: ", grasped_state)
+
+print(np.array(f['data']['episode_00000/actions/actions']))
 
 
 # for k in f['data'].keys():
 #     plt.imshow(f[f'data/{k}/observations/seg_instance_id'][2])
 #     plt.show()
 
-# plt.imshow(np.array(f['data/episode_00000/observations/gripper_obj_seg'][0]))
-# plt.show()
+plt.imshow(np.array(f['data/episode_00000/observations/gripper_obj_seg'][0]))
+plt.show()
 
 # print(f['data/episode_00000/observations'].keys())
 # rgb = np.array(f['data/episode_00280/observations/rgb'])
