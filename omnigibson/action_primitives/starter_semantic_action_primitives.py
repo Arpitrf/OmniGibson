@@ -767,11 +767,20 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # Update the tracking to track the object.
         self._tracking_object = obj
 
-        obj_in_hand = self._get_obj_in_hand()
-        if obj_in_hand is None:
-            raise ActionPrimitiveError(
-                ActionPrimitiveError.Reason.PRE_CONDITION_ERROR, "You need to be grasping an object first to place it somewhere."
-            )
+        # change later
+        for o in self.env.scene.objects:
+            if o.name == 'box':
+                obj_in_hand = o
+        print("self.robot.custom_is_grasping(): ", self.robot.custom_is_grasping())
+        if not self.robot.custom_is_grasping():
+            return
+        # obj_in_hand = self._get_obj_in_hand()
+        # print("obj_in_hand: ", obj_in_hand)
+        # if obj_in_hand is None:
+        #     return 
+            # raise ActionPrimitiveError(
+            #     ActionPrimitiveError.Reason.PRE_CONDITION_ERROR, "You need to be grasping an object first to place it somewhere."
+            # )
         
         # Sample location to place object
         obj_pose = self._sample_pose_with_object_and_predicate(predicate, obj_in_hand, obj)
@@ -852,7 +861,10 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 assert self.arm == "left", "Fixed torso mode only supports left arm!"
                 return self.robot.arm_control_idx["left"]
             else:
-                return np.concatenate([self.robot.trunk_control_idx, self.robot.arm_control_idx[self.arm]])
+                # changed by Arpit
+                # return np.concatenate([self.robot.trunk_control_idx, self.robot.arm_control_idx[self.arm]])
+                print("------", np.array(self.robot.arm_control_idx[self.arm]))
+                return np.array(self.robot.arm_control_idx[self.arm])
             
         # Otherwise just return the default arm control idx
         return np.concatenate([self.robot.trunk_control_idx, self.robot.arm_control_idx[self.arm]])
@@ -865,6 +877,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             return self.robot.robot_arm_descriptor_yamls["left_fixed"]
             
         # Otherwise just return the default arm control idx
+        print("self.robot.robot_arm_descriptor_yamls[self.arm]: ", self.robot.robot_arm_descriptor_yamls[self.arm])
+        # input()
         return self.robot.robot_arm_descriptor_yamls[self.arm]
 
     def _ik_solver_cartesian_to_joint_space(self, relative_target_pose):
@@ -2116,6 +2130,11 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 - 4-array: (x,y,z,w) Quaternion orientation of the hand in the world frame
         """
         obj_in_hand = self._get_obj_in_hand()
+
+        # change later
+        for o in self.env.scene.objects:
+            if o.name == 'box':
+                obj_in_hand = o
 
         assert obj_in_hand is not None
 

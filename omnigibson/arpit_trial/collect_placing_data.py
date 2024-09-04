@@ -251,7 +251,7 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     # add noise to the position
     # new_pos = org_pos + np.random.uniform(-0.02, 0.02, 3)
     # new_pos = org_pos + np.concatenate((np.random.uniform(-0.25, 0.25, 2), np.random.uniform(-0.05, 0.15, 1)))
-    new_pos = org_pos + np.concatenate((np.random.uniform(-0.15, 0.15, 2), np.random.uniform(0.0, 0.1, 1)))
+    # new_pos = org_pos + np.concatenate((np.random.uniform(-0.15, 0.15, 2), np.random.uniform(0.0, 0.1, 1)))
 
     org_rotvec = np.array(R.from_quat(org_quat).as_rotvec())
     org_rotvec_angle = np.linalg.norm(org_rotvec)
@@ -264,8 +264,8 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     new_quat = R.from_rotvec(new_rotvec).as_quat()
 
     # If want to keep the original target pose
-    # new_pos, new_quat = org_pos, org_quat
-    new_quat = org_quat
+    new_pos, new_quat = org_pos, org_quat
+    # new_quat = org_quat
 
     # print("org_axis, org_angle: ", org_rotvec_axis, org_rotvec_angle)
     # print("new_axis, new_angle: ", new_axis, new_angle)
@@ -324,6 +324,18 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
                          episode_memory,
                          step,
                          grasp_change_inds)
+
+    # try placing
+    for o in env.scene.objects:
+        if o.name == 'plate':
+            bowl_obj = o
+    step, gripper_closed = execute_controller(action_primitives._place_on_top(bowl_obj),
+                         env,
+                         robot,
+                         gripper_closed,
+                         episode_memory,
+                         step,
+                         grasp_change_inds)
     
     # Adding all 0 action for the last step
     episode_memory.add_action('actions', np.zeros(7, dtype=np.float64))
@@ -331,7 +343,7 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     
 def main():
     # Initializations
-    np.random.seed(6)
+    np.random.seed(5)
     args = config_parser().parse_args()
 
     # Load the config
@@ -345,6 +357,7 @@ def main():
     config["scene"]['scene_file'] = scene_file
     
     # # config["scene"]['scene_file'] = 'sim_state_block_push.json'
+    temp_rot = np.array([0, 0, 0.9, 0.2])
     config["objects"] = [
         {
             "type": "PrimitiveObject",
@@ -359,6 +372,31 @@ def main():
                         -0.11094563454389572,
                         0.9938263297080994]
         },
+        {
+            "type": "DatasetObject",
+            "name": "mixing_bowl", 
+            "category": "mixing_bowl",
+            "model": "deudkt", 
+            "position": [-0.5, -0.95, 0.5],
+            # "scale": [0.1, 0.05, 0.1],
+        },
+        # {
+        #     "type": "DatasetObject",
+        #     "name": "half_club_sandwich",
+        #     "category": "half_club_sandwich",
+        #     "model": "qkhepd",
+        #     "position": [-0.5, -0.7, 0.45],
+        #     # "orientation": [0, 0, 0, 1],
+        #     "orientation": temp_rot / np.linalg.norm(temp_rot),
+        #     "scale": [0.5, 0.5, 1]
+        # },
+        # {
+        #     "type": "DatasetObject",
+        #     "name": "plate",
+        #     "category": "plate",
+        #     "model": "pkkgzc",
+        #     "position": [-0.5, -0.95, 0.5]
+        # }    
         # {
         #     "type": "DatasetObject",
         #     "name": "table",
@@ -392,12 +430,11 @@ def main():
     save_folder = 'prior'
     os.makedirs(save_folder, exist_ok=True)
 
-    og.clear()
-    og.sim.restore('/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.json')
-    # step the simulator a few times 
-    print("RESTORING")
-    for _ in range(1000):
-        og.sim.step()
+    # og.sim.restore('/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.json')
+    # # step the simulator a few times 
+    # print("RESTORING")
+    # for _ in range(1000):
+    #     og.sim.step()
     
     # with open('/home/arpit/test_projects/OmniGibson/prior/episode_00012_end.pickle', 'rb') as f:
     #     state = pickle.load(f)
@@ -413,6 +450,65 @@ def main():
 
     # for _ in range(200):
     #         og.sim.step()
+
+    state = og.sim.dump_state()
+    og.sim.stop()
+    # Set friction
+    from omni.isaac.core.materials import PhysicsMaterial
+    gripper_mat = PhysicsMaterial(
+        prim_path=f"{robot.prim_path}/gripper_mat",
+        name="gripper_material",
+        static_friction=10.0,
+        dynamic_friction=10.0,
+        restitution=None,
+    )
+    for arm, links in robot.finger_links.items():
+        for link in links:
+            for msh in link.collision_meshes.values():
+                msh.apply_physics_material(gripper_mat)
+    og.sim.play()
+    og.sim.load_state(state)
+
+    # ------------------ teleop -------------------------
+    episode_memory = Memory()
+    custom_reset(env, robot, episode_memory)
+    
+    # add orientations and base mvmt
+    action_keys = ['P', 'SEMICOLON', 'RIGHT_BRACKET', 'LEFT_BRACKET', 'LEFT', 'RIGHT', 'UP', 'DOWN', 'Y', 'B', 'N', 'O', 'U', 'C', 'V']
+    teleop_traj = []
+    
+    # Create teleop controller
+    action_generator = KeyboardRobotController(robot=robot)
+
+    # Register custom binding to reset the environment
+    action_generator.register_custom_keymapping(
+        key=lazy.carb.input.KeyboardInput.R,
+        description="Reset the robot",
+        callback_fn=lambda: env.reset(),
+    )
+
+    # Print out relevant keyboard info if using keyboard teleop
+    action_generator.print_keyboard_teleop_info()
+
+    max_steps = -1
+    step = 0
+    while step != max_steps:
+        action, keypress_str = action_generator.get_teleop_action()
+        # print("keypress_str: ", step, keypress_str)
+        # print("action: ", action, len(action))
+        if keypress_str == 'TAB':
+            break
+        obs, _, _, _ = env.step(action=action)
+        step += 1
+        if keypress_str in action_keys:
+            print("action: ", action)
+            teleop_traj.append(action)
+        if step % 100 == 0:
+            print("robot right eef pose: ", robot.get_relative_eef_pose(arm='right'))
+            # print("proprio_dict: ", robot._get_proprioception_dict().keys())
+            # print("joint_qpos: ", robot._get_proprioception_dict()['joint_qpos'], robot._get_proprioception_dict()['joint_qpos'].shape)
+            # print("camera_qpos: ", robot._get_proprioception_dict()['camera_qpos'], robot._get_proprioception_dict()['camera_qpos'].shape)
+    # ---------------------------------------------------
 
     # for i in range(2):
     #     print(f"---------------- Episode {i} ------------------")
@@ -430,7 +526,7 @@ def main():
     #     # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
     #     #     pickle.dump(arr, f)
         
-    #     # grasp_primitive(action_primitives, env, robot, episode_memory)
+    #     grasp_primitive(action_primitives, env, robot, episode_memory)
     #     # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
     #     # # save the end simulator state
@@ -445,9 +541,9 @@ def main():
     #     # del episode_memory
     #     # episode_number += 1
         
-    #     # end_time = time.time()
-    #     # elapsed_time = end_time - start_time
-    #     # print(f"Episode {episode_number}: execution time: {elapsed_time:.2f} seconds")
+    # #     # end_time = time.time()
+    # #     # elapsed_time = end_time - start_time
+    # #     # print(f"Episode {episode_number}: execution time: {elapsed_time:.2f} seconds")
             
         
 

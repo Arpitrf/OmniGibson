@@ -111,7 +111,10 @@ class IKSolver:
         ik_target_pose = lazy.lula.Pose3(lazy.lula.Rotation3(rot), pos)
 
         # Set the cspace seed and tolerance
+        # print("initial_joint_pos: ", initial_joint_pos)
         initial_joint_pos = self.reset_joint_pos if initial_joint_pos is None else np.array(initial_joint_pos)
+        # print("---------------------", initial_joint_pos, len(initial_joint_pos), self.eef_name)
+        # input()
         self.config.cspace_seeds = [initial_joint_pos]
         self.config.position_tolerance = tolerance_pos
         self.config.orientation_tolerance = 100.0 if target_quat is None else tolerance_quat

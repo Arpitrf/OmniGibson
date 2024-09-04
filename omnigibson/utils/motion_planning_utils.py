@@ -335,13 +335,17 @@ def plan_arm_motion_ik(
         control_idx_in_joint_pos = np.arange(dim)
         robot_description_path = robot.robot_arm_descriptor_yamls["left_fixed"]
     else:
-        joint_control_idx = np.concatenate([robot.trunk_control_idx, robot.arm_control_idx[robot.default_arm]])
+        # changed by Arpit
+        # joint_control_idx = np.concatenate([robot.trunk_control_idx, robot.arm_control_idx[robot.default_arm]])
+        joint_control_idx = np.array(robot.arm_control_idx[robot.default_arm])
         dim = len(joint_control_idx)
         if "combined" in robot.robot_arm_descriptor_yamls:
+            print("11")
             joint_combined_idx = np.concatenate([robot.trunk_control_idx, robot.arm_control_idx["combined"]])
             initial_joint_pos = np.array(robot.get_joint_positions()[joint_combined_idx])
             control_idx_in_joint_pos = np.where(np.in1d(joint_combined_idx, joint_control_idx))[0]
         else:
+            print("22")
             initial_joint_pos = np.array(robot.get_joint_positions()[joint_control_idx])
             control_idx_in_joint_pos = np.arange(dim)  
         robot_description_path = robot.robot_arm_descriptor_yamls[robot.default_arm]
