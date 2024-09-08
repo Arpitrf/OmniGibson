@@ -685,6 +685,7 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         
         # Default variant
         return os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_dual_omnidirectional_stanford_33.usd")
+        # return os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_dual_omnidirectional_stanford.usd")
 
     # @property
     # def simplified_mesh_usd_path(self):

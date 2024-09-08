@@ -1107,6 +1107,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # # self.robot.gripper_control_idx[arm]
 
         control_idx = self.robot.controller_action_idx["arm_" + self.arm]
+        print("control_idx: ", control_idx)
+        print("control mode: ", self.robot._controller_config["arm_" + self.arm]["mode"])
         prev_pos = prev_orn = None
 
         for i in range(m.MAX_STEPS_FOR_HAND_MOVE_IK):
@@ -1252,11 +1254,12 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 gripper_action = 1.0
                 if gripper_closed:
                     gripper_action = -1.0
-                action = np.concatenate((delta_pos, delta_ori, np.array([gripper_action])))
+                nav_action = np.array([0.0, 0.0, 0.0])
+                action = np.concatenate((nav_action, delta_pos, delta_ori, np.array([gripper_action])))
                 # print("action: ", action)
                 episode_memory.add_action('actions', action)
-                pos_norm = np.linalg.norm(action[:3])
-                orn_angle = np.linalg.norm(action[3:])
+                pos_norm = np.linalg.norm(action[3:6])
+                orn_angle = np.linalg.norm(action[6:])
                 # input(f"Moving to waypoint {waypoint}. Norm of waypoint: pos_norm: {pos_norm} orn_angle: {orn_angle}. Press enter")
 
                 # # # remove later
@@ -1710,19 +1713,21 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             interpolated_pose = (goal_pose[0], interpolated_rot)
 
             # Save action to memory
-            interpolated_yaw = Rotation.from_quat(interpolated_rot).as_euler('XYZ', degrees=True)[2]
-            current_yaw = Rotation.from_quat(self.robot.get_orientation()).as_euler('XYZ', degrees=True)[2]
-            # print("Before: interpolated_yaw, current_yaw: ", interpolated_yaw, current_yaw)
-            # Make both yaw values between 0 and 360
-            if interpolated_yaw < 0:
-                interpolated_yaw = 360 - abs(interpolated_yaw)
-            if current_yaw < 0:
-                current_yaw = 360 - abs(current_yaw)
-            # print("After: interpolated_yaw, current_yaw: ", interpolated_yaw, current_yaw)
-            delta_yaw = interpolated_yaw - current_yaw
-            action = np.array([0.0, 0.0, delta_yaw])
-            episode_memory.add_action('actions', action)
-            print("delta_yaw: ", delta_yaw)
+            if episode_memory is not None:
+                interpolated_yaw = Rotation.from_quat(interpolated_rot).as_euler('XYZ', degrees=True)[2]
+                current_yaw = Rotation.from_quat(self.robot.get_orientation()).as_euler('XYZ', degrees=True)[2]
+                # print("Before: interpolated_yaw, current_yaw: ", interpolated_yaw, current_yaw)
+                # Make both yaw values between 0 and 360
+                if interpolated_yaw < 0:
+                    interpolated_yaw = 360 - abs(interpolated_yaw)
+                if current_yaw < 0:
+                    current_yaw = 360 - abs(current_yaw)
+                # print("After: interpolated_yaw, current_yaw: ", interpolated_yaw, current_yaw)
+                delta_yaw = interpolated_yaw - current_yaw
+                delta_yaw = np.deg2rad(delta_yaw)
+                action = np.array([0.0, 0.0, delta_yaw, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+                episode_memory.add_action('actions', action)
+                print("delta_yaw: ", delta_yaw)
 
             yield from self._rotate_in_place(interpolated_pose, angle_threshold=m.DEFAULT_ANGLE_THRESHOLD)
             yield "Done"
@@ -1775,13 +1780,14 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             pose_waypoint = self._get_robot_pose_from_2d_pose(pose_2d_waypoint)
             body_waypoint_pose = self._get_pose_in_robot_frame(pose_waypoint)
             
-            # Save action to memory
-            curr_pos = self.robot.get_position()
-            delta_pos = pose_2d_waypoint[:2] - curr_pos[:2]
-            # TODO: Confirm what are the limits of the yaw value? (360, -ve values?)
-            delta_yaw = pose_2d_waypoint[2] - current_yaw
-            action = np.array([delta_pos[0], delta_pos[1], delta_yaw])
-            episode_memory.add_action('actions', action)
+            if episode_memory is not None:
+                # Save action to memory
+                curr_pos = self.robot.get_position()
+                delta_pos = pose_2d_waypoint[:2] - curr_pos[:2]
+                # TODO: Confirm what are the limits of the yaw value? (360, -ve values?)
+                delta_yaw = pose_2d_waypoint[2] - current_yaw
+                action = np.array([delta_pos[0], delta_pos[1], delta_yaw, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+                episode_memory.add_action('actions', action)
             # pos_norm = np.linalg.norm(action[:2])
             # orn_angle = action[2]
             # input(f"Moving to waypoint {pose_2d_waypoint}. Norm of waypoint: pos_norm: {pos_norm} orn_angle: {orn_angle}. Press enter")

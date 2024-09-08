@@ -326,12 +326,27 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
                          step,
                          grasp_change_inds)
     
-    # try placing
-    org_place_pos, org_place_quat = np.array([ 0.65431009, -0.42087801,  0.66123985]), np.array([ 0.57241185,  0.58268626, -0.41505368,  0.4006892 ])
-    # new_place_pos = org_place_pos + np.random.uniform(-0.05, 0.05, 3)
-    new_place_pos = org_place_pos + np.concatenate((np.random.uniform(-0.1, 0.1, 2), np.random.uniform(-0.05, 0.1, 1)))
-    place_pose = (new_place_pos), np.array(org_place_quat)
-    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
+    # # 4. Try placing near the receptacle
+    # org_place_pos, org_place_quat = np.array([ 0.65431009, -0.42087801,  0.66123985]), np.array([ 0.57241185,  0.58268626, -0.41505368,  0.4006892 ])
+    # # new_place_pos = org_place_pos + np.random.uniform(-0.05, 0.05, 3)
+    # new_place_pos = org_place_pos + np.concatenate((np.random.uniform(-0.1, 0.1, 2), np.random.uniform(-0.05, 0.1, 1)))
+    # place_pose = (new_place_pos), np.array(org_place_quat)
+    # step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
+    #                      env,
+    #                      robot,
+    #                      gripper_closed,
+    #                      episode_memory,
+    #                      step,
+    #                      grasp_change_inds)
+    
+    # 4. Try placing at a random location
+    # temp_pose = (org_pos + np.array([0.0, 0.0, 0.2]), org_quat)
+    x = np.random.uniform(org_pos[0] - 0.2, org_pos[0] + 0.2)
+    y = np.random.uniform(org_pos[1] - 0.2, org_pos[1] + 0.2)
+    z = np.random.uniform(org_pos[2] + 0.1, org_pos[2] + 0.3)
+    neighbourhood_pose = (np.array([x, y, z]), grasp_pose[1])
+    # print("new_pos: ", new_pose[0])
+    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(neighbourhood_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
                          env,
                          robot,
                          gripper_closed,
@@ -339,10 +354,9 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
                          step,
                          grasp_change_inds)
     
-    print("target pos, reached pos: ", place_pose[0], robot.get_relative_eef_pose(arm='right')[0])
-    # input()
-    
-    # 3. Open grasp
+    # print("target pos, reached pos: ", place_pose[0], robot.get_relative_eef_pose(arm='right')[0])
+
+    # 5. Open grasp
     gripper_closed = False
     action = action_primitives._empty_action()
     # left hand [11] ; right hand [18]

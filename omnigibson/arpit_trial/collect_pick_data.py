@@ -75,8 +75,8 @@ def dump_to_memory(env, robot, episode_memory):
 
 def custom_reset(env, robot, episode_memory):
     proprio = robot._get_proprioception_dict()
-    # curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
-    default_joint_pos = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
+    curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
+    # default_joint_pos = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
 
     # print("proprio: ", proprio.keys())
     noise_1 = np.random.uniform(-0.2, 0.2, 3)
@@ -84,8 +84,9 @@ def custom_reset(env, robot, episode_memory):
     noise_2 = np.random.uniform(-0.01, 0.01, 4)
     noise = np.concatenate((noise_1, noise_2))
     # print("arm_qpos.shape, noise.shape: ", curr_right_arm_joints.shape, noise.shape)
-    right_hand_joints_pos = default_joint_pos + noise 
-    # right_hand_joints_pos = default_joint_pos 
+    # right_hand_joints_pos = default_joint_pos + noise 
+    # right_hand_joints_pos = default_joint_pos
+    right_hand_joints_pos = curr_right_arm_joints + noise
 
     scene_initial_state = env.scene._initial_state
     # for manipulation
@@ -94,6 +95,8 @@ def custom_reset(env, robot, episode_memory):
     r_euler = R.from_euler('z', -120, degrees=True) # or -120
     r_quat = R.as_quat(r_euler)
     scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
+    print("r_quat: ", r_quat)
+    input()
 
     head_joints_pos = np.array([-0.5031718015670776, -0.9972541332244873])
     # head_joints_pos = np.array([0.0, -0.83])
@@ -270,11 +273,11 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     # print("org_axis, org_angle: ", org_rotvec_axis, org_rotvec_angle)
     # print("new_axis, new_angle: ", new_axis, new_angle)
 
-    # # For colleting data for random grasps
-    # lis = np.arange(0, 400)
-    # num_inds = np.random.randint(1,4)
-    # grasp_change_inds = np.random.choice(lis, num_inds)
-    # # print("grasp_change_inds: ", grasp_change_inds)
+    # For colleting data for random grasps
+    lis = np.arange(0, 400)
+    num_inds = np.random.randint(1,4)
+    grasp_change_inds = np.random.choice(lis, num_inds)
+    # print("grasp_change_inds: ", grasp_change_inds)
 
     # 1. Move to pregrasp pose
     pre_grasp_pose = (np.array(new_pos) + np.array([0.0, 0.0, 0.1]), np.array(new_quat))
@@ -386,8 +389,8 @@ def main():
     # # Print out relevant keyboard info if using keyboard teleop
     # action_generator.print_keyboard_teleop_info()
 
-    # save_folder = 'dynamics_model_dataset'
-    save_folder = 'prior'
+    save_folder = 'pick_data'
+    # save_folder = 'prior'
     os.makedirs(save_folder, exist_ok=True)
 
     # og.sim.restore('dynamics_model_data/episode_00000_start.json')
@@ -403,30 +406,34 @@ def main():
                 episode_number = len(file['data'].keys())
                 print("episode_number: ", episode_number)
 
-    for i in range(2):
+    for i in range(100):
         print(f"---------------- Episode {i} ------------------")
         start_time = time.time()
         episode_memory = Memory()
 
         custom_reset(env, robot, episode_memory)
 
+        obs, obs_info = env.get_obs()
+        seg_semantic = obs_info['robot0']['robot0:eyes:Camera:0']['seg_semantic']
+        print("seg_semantic.calues(): ", seg_semantic.values())
+
         for _ in range(50):
             og.sim.step()
 
-        # save the start simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+        # # save the start simulator state
+        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
+        # arr = scene.dump_state(serialized=True)
+        # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+        #     pickle.dump(arr, f)
         
         grasp_primitive(action_primitives, env, robot, episode_memory)
-        episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-        # save the end simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+        # # save the end simulator state
+        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
+        # arr = scene.dump_state(serialized=True)
+        # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+        #     pickle.dump(arr, f)
 
         # # save video of the episode
         # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)

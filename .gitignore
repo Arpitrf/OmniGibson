@@ -24,6 +24,8 @@ dev/transfer.c
 *.hdf5.lock
 *.avi
 *.mp4
+*.usd
+
 
 docs/apidoc
 
@@ -112,3 +114,10 @@ test_nav_outputs/
 pick_and_place_data/
 pick_and_place_data_temp/
 place_data/
+pick_and_place_data_combined/
+pick_data/
+navigation_data/
+navigation_data_temp/
+backup/
+combined_data/
+navigate_pick_prior/
