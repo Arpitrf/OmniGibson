@@ -314,7 +314,7 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory, ste
     print("total steps: ", counter)
     return succ
 
-def random_navigate_primitive(action_primitives, env, robot, episode_memory, arr):
+def random_navigate_primitive(action_primitives, env, robot, episode_memory):
     max_len = 10
     epiosde_len = 0
     object_visible = True
@@ -381,7 +381,7 @@ def random_navigate_primitive(action_primitives, env, robot, episode_memory, arr
             print("OBJECT NOT VISIBLE!!")
             object_visible = False
 
-def navigate_primitive(action_primitives, env, robot, episode_memory, arr):
+def navigate_primitive(action_primitives, env, robot, episode_memory):
     obj = env.scene.object_registry("name", "box")
     gripper_closed = False
     step = 0
@@ -540,7 +540,7 @@ def main():
         # print("seg_semantic.values(): ", seg_semantic.values())
         while 'object' not in seg_semantic.values():
             episode_memory = Memory()
-            arr = custom_reset(env, robot, episode_memory)
+            custom_reset(env, robot, episode_memory)
             obs, obs_info = env.get_obs()
             seg_semantic = obs_info['robot0']['robot0:eyes:Camera:0']['seg_semantic']
 
@@ -554,17 +554,17 @@ def main():
         # print("euler: ", euler)
         # print("rotvec: ", rotvec / np.linalg.norm(rotvec), np.linalg.norm(rotvec))
 
-        # save the start simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+        # # save the start simulator state
+        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
+        # arr = scene.dump_state(serialized=True)
+        # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+        #     pickle.dump(arr, f)
         
-        if i < 300:
-            navigate_primitive(action_primitives, env, robot, episode_memory, arr)
+        if i < 0:
+            navigate_primitive(action_primitives, env, robot, episode_memory)
         else:
-            random_navigate_primitive(action_primitives, env, robot, episode_memory, arr)
-        episode_memory.dump(f'{save_folder}/dataset.hdf5')
+            random_navigate_primitive(action_primitives, env, robot, episode_memory)
+        # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
         # # remove later
         # seg_semantic = episode_memory.data['observations_info']['seg_semantic']
@@ -579,11 +579,11 @@ def main():
         # print("seg_semantic, seg_instance_id: ", np.array(seg_semantic).shape, np.array(seg_instance_id).shape)
         # input()
 
-        # save the end simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+        # # save the end simulator state
+        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
+        # arr = scene.dump_state(serialized=True)
+        # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+        #     pickle.dump(arr, f)
 
         # # save video of the episode
         # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)

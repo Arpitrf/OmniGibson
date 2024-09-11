@@ -131,13 +131,13 @@ def save_seg_video(path, f_name):
 #     counter += 1
 
 # save sequence of images on disk
-f = h5py.File('navigate_pick_prior/dataset.hdf5', "r") 
+f = h5py.File('pick_data/dataset.hdf5', "r") 
 counter = -1
 for k in f['data'].keys():
     counter += 1
-    # if counter > 270:
-    #     break
-    path = f'/home/arpit/test_projects/OmniGibson/navigate_pick_prior/{k}_images'
+    if counter > 50:
+        break
+    path = f'/home/arpit/test_projects/OmniGibson/pick_data/{k}_images'
     os.makedirs(path, exist_ok=True)
     # gripper_obj_segs = np.array(f['data'][k]['observations']['gripper_obj_seg'])
     # for i, img in enumerate(gripper_obj_segs):

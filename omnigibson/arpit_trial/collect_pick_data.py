@@ -90,20 +90,33 @@ def custom_reset(env, robot, episode_memory):
 
     scene_initial_state = env.scene._initial_state
     # for manipulation
-    # scene_initial_state['object_registry']['robot0']['joints']['head_2_joint']['target_pos'] = np.array([-0.83])
-    scene_initial_state['object_registry']['robot0']['root_link']['pos'] = [-0.05, -0.4, 0.0]
-    r_euler = R.from_euler('z', -120, degrees=True) # or -120
+    base_pos = np.array([-0.05, -0.4, 0.0])
+    base_x_noise = np.random.uniform(-0.15, 0.15)
+    base_y_noise = np.random.uniform(-0.15, 0.15)
+    base_noise = np.array([base_x_noise, base_y_noise, 0.0])
+    base_pos += base_noise 
+    scene_initial_state['object_registry']['robot0']['root_link']['pos'] = base_pos
+    
+    base_yaw = -120
+    base_yaw_noise = np.random.uniform(-15, 15)
+    base_yaw += base_yaw_noise
+    r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
     r_quat = R.as_quat(r_euler)
     scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
-    print("r_quat: ", r_quat)
-    input()
+    # print("r_quat: ", r_quat)
 
-    head_joints_pos = np.array([-0.5031718015670776, -0.9972541332244873])
-    # head_joints_pos = np.array([0.0, -0.83])
+    # Randomizing head pose
+    # default_head_joints = np.array([-0.20317451, -0.7972661])
+    default_head_joints = np.array([-0.5031718015670776, -0.9972541332244873])
+    noise_1 = np.random.uniform(-0.1, 0.1, 1)
+    noise_2 = np.random.uniform(-0.1, 0.1, 1)
+    noise = np.concatenate((noise_1, noise_2))
+    head_joints = default_head_joints + noise
+    # print("Head joint positions: ", head_joints)
 
     # Reset environment and robot
     env.reset()
-    robot.reset(right_hand_joints_pos=right_hand_joints_pos, head_joints_pos=head_joints_pos)
+    robot.reset(right_hand_joints_pos=right_hand_joints_pos, head_joints_pos=head_joints)
     # robot.reset()
 
     # Step simulator a few times so that the effects of "reset" take place
@@ -217,10 +230,13 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory, ste
 
         if gripper_closed:
             # action[11] = -1
-            action[18] = -1
+            # if left hand is ik
+            # action[18] = -1
+            # if left hand is joint controller
+            action[20] = -1
         else: 
-            # action[11] = 1
-            action[18] = 1
+            # action[18] = 1
+            action[20] = 1
         
         env.step(action)
         if wait:
@@ -241,7 +257,23 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     # Set grasp pose
     # global_pose3 = (np.array([-0.30722928, -0.79808354,  0.4792919 ]), np.array([-0.59315057,  0.37549363,  0.63922846,  0.3139489]))
     # right hand 1: (array([ 0.50431009, -0.25087801,  0.50123985]), array([ 0.57241185,  0.58268626, -0.41505368,  0.4006892 ]))
-    org_pos, org_quat = np.array([ 0.48431009, -0.25087801,  0.46123985]), np.array([ 0.57241185,  0.58268626, -0.41505368,  0.4006892 ])
+    # org_pos, org_quat = np.array([ 0.48431009, -0.25087801,  0.46123985]), np.array([ 0.57241185,  0.58268626, -0.41505368,  0.4006892 ])
+    # world frame
+    org_pos, org_quat = np.array([-0.50942184, -0.69398735,  0.46124049]), np.array([ 0.79082719, -0.20438075, -0.55453328, -0.15910284])
+    
+    # # remove later
+    # current_base_pos, current_base_orn_quat = robot.get_position_orientation()
+    # robot_to_world = np.eye(4)
+    # robot_to_world[:3, :3] = R.from_quat(current_base_orn_quat).as_matrix()
+    # robot_to_world[:3, 3] = np.transpose(current_base_pos)
+    # target_pose = np.eye(4)
+    # target_pose[:3, :3] = R.from_quat(org_quat).as_matrix()
+    # target_pose[:3, 3] = np.transpose(org_pos)
+    # target_pose_world = np.dot(robot_to_world, target_pose)
+    # target_pos_world = target_pose_world[:3, 3]
+    # target_orn_world = np.array(R.from_matrix(target_pose_world[:3, :3]).as_quat())
+    # print("grasp pose in world frame: ", target_pos_world, target_orn_world)
+    # input()
 
     # # get random pose in a cube
     # x_pos = np.random.uniform(0.3, 0.65)
@@ -252,9 +284,9 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
 
 
     # add noise to the position
-    # new_pos = org_pos + np.random.uniform(-0.02, 0.02, 3)
+    new_pos = org_pos + np.random.uniform(-0.02, 0.02, 3)
     # new_pos = org_pos + np.concatenate((np.random.uniform(-0.25, 0.25, 2), np.random.uniform(-0.05, 0.15, 1)))
-    new_pos = org_pos + np.concatenate((np.random.uniform(-0.15, 0.15, 2), np.random.uniform(0.0, 0.1, 1)))
+    # new_pos = org_pos + np.concatenate((np.random.uniform(-0.15, 0.15, 2), np.random.uniform(0.0, 0.1, 1)))
 
     org_rotvec = np.array(R.from_quat(org_quat).as_rotvec())
     org_rotvec_angle = np.linalg.norm(org_rotvec)
@@ -267,21 +299,21 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     new_quat = R.from_rotvec(new_rotvec).as_quat()
 
     # If want to keep the original target pose
-    # new_pos, new_quat = org_pos, org_quat
-    new_quat = org_quat
+    new_pos, new_quat = org_pos, org_quat
+    # new_quat = org_quat
 
     # print("org_axis, org_angle: ", org_rotvec_axis, org_rotvec_angle)
     # print("new_axis, new_angle: ", new_axis, new_angle)
 
-    # For colleting data for random grasps
-    lis = np.arange(0, 400)
-    num_inds = np.random.randint(1,4)
-    grasp_change_inds = np.random.choice(lis, num_inds)
-    # print("grasp_change_inds: ", grasp_change_inds)
+    # # For colleting data for random grasps
+    # lis = np.arange(0, 400)
+    # num_inds = np.random.randint(1,4)
+    # grasp_change_inds = np.random.choice(lis, num_inds)
+    # # print("grasp_change_inds: ", grasp_change_inds)
 
     # 1. Move to pregrasp pose
     pre_grasp_pose = (np.array(new_pos) + np.array([0.0, 0.0, 0.1]), np.array(new_quat))
-    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(pre_grasp_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
+    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(pre_grasp_pose, in_world_frame=True, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
                          env,
                          robot,
                          gripper_closed,
@@ -292,7 +324,7 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
 
     # 2. Move to grasp pose
     grasp_pose = (np.array(new_pos), np.array(new_quat))
-    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(grasp_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
+    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(grasp_pose, in_world_frame=True, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
                          env,
                          robot,
                          gripper_closed,
@@ -304,23 +336,27 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
     gripper_closed = True
     action = action_primitives._empty_action()
     # left hand [11] ; right hand [18]
-    action[18] = -1
+    # if left hand is IK
+    # action[18] = -1
+    # if left has is joint controller
+    action[20] = -1
     execute_controller([action], env, robot, gripper_closed, episode_memory, step, grasp_change_inds)
     # step the simulator a few steps to let the gripper close completely
     for _ in range(40):
         og.sim.step()
     # save everything to memory
-    dump_to_memory(env, robot, episode_memory)    
-    episode_memory.add_action('actions', action[12:19])
+    dump_to_memory(env, robot, episode_memory)
+    action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[12:19])))     
+    episode_memory.add_action('actions', action_to_add)
 
     # 4. Move to a random pose in a neighbourhood
     # temp_pose = (org_pos + np.array([0.0, 0.0, 0.2]), org_quat)
-    x = np.random.uniform(org_pos[0] - 0.2, org_pos[0] + 0.2)
-    y = np.random.uniform(org_pos[1] - 0.2, org_pos[1] + 0.2)
-    z = np.random.uniform(org_pos[2] + 0.2, org_pos[2] + 0.4)
+    x = np.random.uniform(org_pos[0] - 0.15, org_pos[0] + 0.15)
+    y = np.random.uniform(org_pos[1] - 0.15, org_pos[1] + 0.15)
+    z = np.random.uniform(org_pos[2] + 0.2, org_pos[2] + 0.3)
     neighbourhood_pose = (np.array([x, y, z]), grasp_pose[1])
     # print("new_pos: ", new_pose[0])
-    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(neighbourhood_pose, in_world_frame=False, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
+    step, gripper_closed = execute_controller(action_primitives._move_hand_linearly_cartesian(neighbourhood_pose, in_world_frame=True, stop_if_stuck=False, ignore_failure=True, episode_memory=episode_memory, gripper_closed=gripper_closed),
                          env,
                          robot,
                          gripper_closed,
@@ -329,7 +365,7 @@ def grasp_primitive(action_primitives, env, robot, episode_memory):
                          grasp_change_inds)
     
     # Adding all 0 action for the last step
-    episode_memory.add_action('actions', np.zeros(7, dtype=np.float64))
+    episode_memory.add_action('actions', np.zeros(10, dtype=np.float64))
 
     
 def main():
@@ -389,7 +425,7 @@ def main():
     # # Print out relevant keyboard info if using keyboard teleop
     # action_generator.print_keyboard_teleop_info()
 
-    save_folder = 'pick_data'
+    save_folder = 'pick_data_randomized_base'
     # save_folder = 'prior'
     os.makedirs(save_folder, exist_ok=True)
 
@@ -406,7 +442,7 @@ def main():
                 episode_number = len(file['data'].keys())
                 print("episode_number: ", episode_number)
 
-    for i in range(100):
+    for i in range(300):
         print(f"---------------- Episode {i} ------------------")
         start_time = time.time()
         episode_memory = Memory()
@@ -420,20 +456,20 @@ def main():
         for _ in range(50):
             og.sim.step()
 
-        # # save the start simulator state
-        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-        # arr = scene.dump_state(serialized=True)
-        # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-        #     pickle.dump(arr, f)
+        # save the start simulator state
+        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
+        arr = scene.dump_state(serialized=True)
+        with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+            pickle.dump(arr, f)
         
         grasp_primitive(action_primitives, env, robot, episode_memory)
-        # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-        # # save the end simulator state
-        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-        # arr = scene.dump_state(serialized=True)
-        # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-        #     pickle.dump(arr, f)
+        # save the end simulator state
+        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
+        arr = scene.dump_state(serialized=True)
+        with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+            pickle.dump(arr, f)
 
         # # save video of the episode
         # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)

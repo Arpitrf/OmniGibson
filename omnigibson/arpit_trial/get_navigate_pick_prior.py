@@ -514,21 +514,21 @@ def main():
         # print("euler: ", euler)
         # print("rotvec: ", rotvec / np.linalg.norm(rotvec), np.linalg.norm(rotvec))
 
-        # save the start simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+        # # save the start simulator state
+        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
+        # arr = scene.dump_state(serialized=True)
+        # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+        #     pickle.dump(arr, f)
         
         navigate_primitive(action_primitives, env, robot, episode_memory)
         grasp_primitive(action_primitives, env, robot, episode_memory)
-        episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-        # save the end simulator state
-        og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-        arr = scene.dump_state(serialized=True)
-        with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-            pickle.dump(arr, f)
+        # # save the end simulator state
+        # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
+        # arr = scene.dump_state(serialized=True)
+        # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+        #     pickle.dump(arr, f)
 
         # # save video of the episode
         # save_video(np.array(episode_memory.data['observations']['rgb']), save_folder)
