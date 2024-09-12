@@ -6,11 +6,13 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import cv2
 from argparse import ArgumentParser
+from scipy.spatial.transform import Rotation as R
 
 import omnigibson as og
 import omnigibson.lazy as lazy
 from omnigibson.macros import gm
 from omnigibson.action_primitives.starter_semantic_action_primitives import StarterSemanticActionPrimitives, StarterSemanticActionPrimitiveSet
+from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 from omnigibson.utils.ui_utils import choose_from_options, KeyboardRobotController
 
 # Don't use GPU dynamics and use flatcache for performance boost
@@ -37,28 +39,54 @@ def print_dict_keys(dictionary, indent=0):
             print_dict_keys(value, indent + 4)
 
 def custom_reset(env, robot):
+    proprio = robot._get_proprioception_dict()
+    curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
+    # default_joint_pos = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
+
+    # print("proprio: ", proprio.keys())
+    noise_1 = np.random.uniform(-0.2, 0.2, 3)
+    # noise_2 = np.random.uniform(-0.1, 0.1, 4)
+    noise_2 = np.random.uniform(-0.01, 0.01, 4)
+    noise = np.concatenate((noise_1, noise_2))
+    # print("arm_qpos.shape, noise.shape: ", curr_right_arm_joints.shape, noise.shape)
+    # right_hand_joints_pos = default_joint_pos + noise 
+    # right_hand_joints_pos = default_joint_pos
+    right_hand_joints_pos = curr_right_arm_joints + noise
+
+    scene_initial_state = env.scene._initial_state
+    # for manipulation
+    base_pos = np.array([-0.05, -0.4, 0.0])
+    base_x_noise = np.random.uniform(-0.15, 0.15)
+    base_y_noise = np.random.uniform(-0.15, 0.15)
+    base_noise = np.array([base_x_noise, base_y_noise, 0.0])
+    base_pos += base_noise 
+    scene_initial_state['object_registry']['robot0']['root_link']['pos'] = base_pos
+    
+    base_yaw = -120
+    base_yaw_noise = np.random.uniform(-15, 15)
+    base_yaw += base_yaw_noise
+    r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
+    r_quat = R.as_quat(r_euler)
+    scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
+    # print("r_quat: ", r_quat)
+
+    # Randomizing head pose
+    # default_head_joints = np.array([-0.20317451, -0.7972661])
+    default_head_joints = np.array([-0.5031718015670776, -0.9972541332244873])
+    noise_1 = np.random.uniform(-0.1, 0.1, 1)
+    noise_2 = np.random.uniform(-0.1, 0.1, 1)
+    noise = np.concatenate((noise_1, noise_2))
+    head_joints = default_head_joints + noise
+    # print("Head joint positions: ", head_joints)
+
     # Reset environment and robot
     env.reset()
-    robot.reset()
+    robot.reset(right_hand_joints_pos=right_hand_joints_pos, head_joints_pos=head_joints)
+    # robot.reset()
 
-    # Other helpful user info
-    print("Running demo.")
-    print("Press ESC to quit")
-
-    # set head pos
-    for _ in range(5):
-        action = np.zeros(22)
-        action[4] = -0.1
-        action = action.tolist()
-        env.step(action=action)
-    
-    # # close gripper
-    # for _ in range(100):
-    #     action = np.zeros(22)
-    #     action[11] = -0.02
-    #     action[12] = -0.02
-    #     action = action.tolist()
-    #     env.step(action=action)
+    # Step simulator a few times so that the effects of "reset" take place
+    for _ in range(10):
+        og.sim.step()
 
 
 def main():
@@ -116,109 +144,46 @@ def main():
     # # Allow user to move camera more easily
     # og.sim.enable_viewer_camera_teleoperation()
 
-
-    # initializations for saving to file
-    save_path = 'output_assisted'
-    os.makedirs(f'{save_path}', exist_ok=True)
-    # # Define the video codec, frame rate, and output video file
-    # video_codec_mp4 = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'H264' codec for MP4 files
-    # video_codec_avi = cv2.VideoWriter_fourcc(*'DIVX')
-    # fps = 5  # Adjust the frame rate as needed
-
-    # Load action and repeat it
-    with open(f'{save_path}/goal_traj.pickle', 'rb') as f:
-        teleop_traj = pickle.load(f)
-
-    # Record various noisy trajs and save the obs and traj
-    for i in range(1):
-        i = 'goal_traj'
-        custom_reset(env, robot)
-        os.makedirs(f'{save_path}/{i}/rgb', exist_ok=True)
-        os.makedirs(f'{save_path}/{i}/seg', exist_ok=True)
-        os.makedirs(f'{save_path}/{i}/obs', exist_ok=True)
-
-        new_traj = []
-        traj_info = {}
-        for step, action in enumerate(teleop_traj):
-            # # add noise when ee pos is being controlled
-            # if action[5] != 0.0 or action[6] != 0.0 or action[7] != 0.0:
-            #     noise_pos = np.random.uniform(-1.0, 1.0, 3)
-            #     noise_orn = np.random.uniform(-2.5, 2.5, 3)
-            #     action[5:8] += noise_pos
-            #     action[8:11] += noise_orn
-
-            new_traj.append(action)
-            obs, _, _, _ = env.step(action=action)
-            # print("obs:")
-            # print_dict_keys(obs)
-            
-            # save obs to file
-            if args.save_traj:
-                rgb = obs['robot0']['robot0:eyes:Camera:0']['rgb']
-                rgb_pil = Image.fromarray(rgb[:,:,:3])
-                rgb_pil.save(f"{save_path}/{i}/rgb/{step:04d}.jpg")
-                seg_sem = obs['robot0']['robot0:eyes:Camera:0']['seg_semantic']
-                plt.imshow(seg_sem)
-                plt.savefig(f"{save_path}/{i}/seg/{step:04d}.jpg")
-                with open(f"{save_path}/{i}/obs/{step:04d}.pickle", 'wb') as f:
-                    pickle.dump(obs, f)
-
-            # # covert rgb to video and save it as well
-            # video_mp4.write(rgb[:,:,:3])
-            # video_avi.write(rgb[:,:,:3])
-
-            # fig, ax = plt.subplots(1,2)
-            # ax[0].imshow(rgb)
-            # ax[1].imshow(seg_sem)
-            # plt.show()
-        if args.save_traj:
-            obj_in_hand = robot._ag_obj_in_hand['left']
-            traj_info['obj_in_hand'] = obj_in_hand.name if obj_in_hand is not None else obj_in_hand
-            traj_info['traj'] = new_traj
-            with open(f"{save_path}/{i}/traj_info.pickle", 'wb') as f:
-                pickle.dump(traj_info, f)
-
-    # # Teleop robot
-    # custom_reset(env, robot)
+    # Teleop robot
+    custom_reset(env, robot)
     
-    # # add orientations and base mvmt
-    # action_keys = ['P', 'SEMICOLON', 'RIGHT_BRACKET', 'LEFT_BRACKET', 'LEFT', 'RIGHT', 'UP', 'DOWN', 'Y', 'B', 'N', 'O', 'U', 'C', 'V']
-    # teleop_traj = []
+    # add orientations and base mvmt
+    action_keys = ['P', 'SEMICOLON', 'RIGHT_BRACKET', 'LEFT_BRACKET', 'LEFT', 'RIGHT', 'UP', 'DOWN', 'Y', 'B', 'N', 'O', 'U', 'C', 'V']
+    teleop_traj = []
     
-    # # Create teleop controller
-    # action_generator = KeyboardRobotController(robot=robot)
+    # Create teleop controller
+    action_generator = KeyboardRobotController(robot=robot)
 
-    # # Register custom binding to reset the environment
-    # action_generator.register_custom_keymapping(
-    #     key=lazy.carb.input.KeyboardInput.R,
-    #     description="Reset the robot",
-    #     callback_fn=lambda: env.reset(),
-    # )
+    # Register custom binding to reset the environment
+    action_generator.register_custom_keymapping(
+        key=lazy.carb.input.KeyboardInput.R,
+        description="Reset the robot",
+        callback_fn=lambda: env.reset(),
+    )
 
-    # # Print out relevant keyboard info if using keyboard teleop
-    # action_generator.print_keyboard_teleop_info()
+    # Print out relevant keyboard info if using keyboard teleop
+    action_generator.print_keyboard_teleop_info()
 
-    # max_steps = -1
-    # step = 0
-    # while step != max_steps:
-    #     action, keypress_str = action_generator.get_teleop_action()
-    #     # print("keypress_str: ", step, keypress_str)
-    #     # print("action: ", action, len(action))
-    #     if keypress_str == 'TAB':
-    #         break
-    #     obs, _, _, _ = env.step(action=action)
-    #     step += 1
-    #     if keypress_str in action_keys:
-    #         print("action: ", action)
-    #         teleop_traj.append(action)
-    #     # if step % 50 == 0:
-    #         # print("proprio_dict: ", robot._get_proprioception_dict().keys())
-    #         # print("joint_qpos: ", robot._get_proprioception_dict()['joint_qpos'], robot._get_proprioception_dict()['joint_qpos'].shape)
-    #         # print("camera_qpos: ", robot._get_proprioception_dict()['camera_qpos'], robot._get_proprioception_dict()['camera_qpos'].shape)
+    max_steps = -1
+    step = 0
+    while step != max_steps:
+        action, keypress_str = action_generator.get_teleop_action()
+        # print("keypress_str: ", step, keypress_str)
+        # print("action: ", action, len(action))
+        if keypress_str == 'TAB':
+            break
+        obs, _, _, _ = env.step(action=action)
+        step += 1
+        # if keypress_str in action_keys:
+        #     print("action: ", action)
+        #     teleop_traj.append(action)
+        if step % 50 == 0:
+            is_collision = detect_robot_collision_in_sim(robot, ignore_obj_in_hand=True)
+            print("is_collision: ", is_collision)            
+            # print("proprio_dict: ", robot._get_proprioception_dict().keys())
+            # print("joint_qpos: ", robot._get_proprioception_dict()['joint_qpos'], robot._get_proprioception_dict()['joint_qpos'].shape)
+            # print("camera_qpos: ", robot._get_proprioception_dict()['camera_qpos'], robot._get_proprioception_dict()['camera_qpos'].shape)
     
-    # # Save traj to file
-    # with open(f'{save_path}/goal_traj.pickle', 'wb') as f:
-    #     pickle.dump(teleop_traj, f)
 
     # Always shut down the environment cleanly at the end
     env.close()

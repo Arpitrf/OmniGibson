@@ -180,90 +180,49 @@ def dump_to_memory(env, robot, episode_memory):
 
 def custom_reset(env, robot, episode_memory):
     proprio = robot._get_proprioception_dict()
-    # print("proprio.keys: ", proprio.keys())
-    # curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
-    # to start at the same joint pos
-    curr_right_arm_joints = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
+    curr_right_arm_joints = np.array(proprio['arm_right_qpos'])
+    # default_joint_pos = robot.untucked_default_joint_pos[robot.arm_control_idx['right']]
 
-    # Randomizing right arm pose
-    noise_1 = np.random.uniform(-0.2, 0.1, 1)
-    noise_2 = np.random.uniform(-0.1, 0.1, 2)
-    noise_3 = np.random.uniform(-0.01, 0.01, 4)
-    noise = np.concatenate((noise_1, noise_2, noise_3))
+    # print("proprio: ", proprio.keys())
+    noise_1 = np.random.uniform(-0.2, 0.2, 3)
+    # noise_2 = np.random.uniform(-0.1, 0.1, 4)
+    noise_2 = np.random.uniform(-0.01, 0.01, 4)
+    noise = np.concatenate((noise_1, noise_2))
     # print("arm_qpos.shape, noise.shape: ", curr_right_arm_joints.shape, noise.shape)
-    right_hand_joints_pos = curr_right_arm_joints + noise 
-    # right_hand_joints_pos = curr_right_arm_joints  
-    # print("right_hand_joints_pos: ", right_hand_joints_pos)
+    # right_hand_joints_pos = default_joint_pos + noise 
+    # right_hand_joints_pos = default_joint_pos
+    right_hand_joints_pos = curr_right_arm_joints + noise
+
+    scene_initial_state = env.scene._initial_state
+    # for manipulation
+    base_pos = np.array([-0.05, -0.4, 0.0])
+    base_x_noise = np.random.uniform(-0.05, 0.05)
+    base_y_noise = np.random.uniform(-0.05, 0.05)
+    base_noise = np.array([base_x_noise, base_y_noise, 0.0])
+    base_pos += base_noise 
+    scene_initial_state['object_registry']['robot0']['root_link']['pos'] = base_pos
+    
+    base_yaw = -120
+    base_yaw_noise = np.random.uniform(-5, 5)
+    base_yaw += base_yaw_noise
+    r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
+    r_quat = R.as_quat(r_euler)
+    scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
+    # print("r_quat: ", r_quat)
 
     # Randomizing head pose
     # default_head_joints = np.array([-0.20317451, -0.7972661])
     default_head_joints = np.array([-0.5031718015670776, -0.9972541332244873])
-    # noise_1 = np.random.uniform(-0.1, 0.1, 1)
-    # noise_2 = np.random.uniform(-0.1, 0.1, 1)
-    # noise = np.concatenate((noise_1, noise_2))
-    # head_joints = default_head_joints + noise
-    head_joints = default_head_joints
+    noise_1 = np.random.uniform(-0.1, 0.1, 1)
+    noise_2 = np.random.uniform(-0.1, 0.1, 1)
+    noise = np.concatenate((noise_1, noise_2))
+    head_joints = default_head_joints + noise
     # print("Head joint positions: ", head_joints)
 
     # Reset environment and robot
-    # print("env initial state: ", env.scene._initial_state)
-    scene_initial_state = env.scene._initial_state
-
-    # for manipulation
-    # scene_initial_state['object_registry']['robot0']['joints']['head_2_joint']['target_pos'] = np.array([-0.83])
-    # scene_initial_state['object_registry']['robot0']['root_link']['pos'] = [-0.05, -0.4, 0.0]
-    # r_euler = R.from_euler('z', -100, degrees=True) # or -120
-
-    # Randomizing object pose
-
-    # # Randomizing object sizes
-    # table_x_scale = np.random.uniform(1.17, 1.29)
-    # table_y_scale = np.random.uniform(1.36, 1.46)
-    # table_z_scale = np.random.uniform(1.09, 1.19)
-    # # table_x_scale, table_y_scale, table_z_scale = 1.24218432, 1.41714099, 1.14723922
-    # # apple_z_pos = table_z_scale * 0.8       # table_z_scale=1 is 0.8 height for apple
-    # og.sim.stop()
-    # for o in env.scene.objects:
-    #     if o.name == 'coffee_table_fqluyq_0':
-    #         o.scale = np.array([table_x_scale, table_y_scale, table_z_scale])
-    #     if o.name == 'box':
-    #         box_scale_x = np.random.uniform(0.08, 0.12)
-    #         box_scale_y = np.random.uniform(0.04, 0.06)
-    #         box_scale_z = np.random.uniform(0.08, 0.12)
-    #         o.scale = np.array([box_scale_x, box_scale_y, box_scale_z])
-    #         # apple_pos = o.get_position()
-    #         # target_pos = np.array([apple_pos[0], apple_pos[1], apple_z_pos])
-    #         # print("target_pos: ", target_pos)
-    #         # o.set_position_orientation(position=target_pos)
-    # og.sim.play()
-
-    # for o in env.scene.objects:
-    #     if o.name == 'apple':
-    #         print("o.pos: ", o.get_position())
-    #         input()
-
-    # Randomizing starting pos of robot
-    start_pos = np.array([-0.05, 0.35, 0.0])
-    x_noise = np.random.uniform(-0.5, 0.7) # previously -0.3 to 0.8
-    # x_noise = 0.7
-    start_pos[0] += x_noise
-    y_noise = np.random.uniform(-0.3, 0.5)
-    # for random nav
-    y_noise = np.random.uniform(-0.7, 0.3)
-    # y_noise = 0.5
-    start_pos[1] += y_noise
-    scene_initial_state['object_registry']['robot0']['root_link']['pos'] = start_pos
-
-    # Ramdomizing starting orientation of robot
-    yaw = np.random.uniform(-70, -110) #previous -80 to -120
-    r_euler = R.from_euler('z', yaw, degrees=True)
-    r_quat = R.as_quat(r_euler)
-    scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
-
     env.reset()
-    # TODO: Change this through the same interface (using scene_initial_state)
     robot.reset(right_hand_joints_pos=right_hand_joints_pos, head_joints_pos=head_joints)
-
+    # robot.reset()
 
     # Step simulator a few times so that the effects of "reset" take place
     for _ in range(10):
@@ -427,6 +386,7 @@ def main():
     config["scene"]["scene_model"] = "Rs_int"
     config["scene"]["load_object_categories"] = ["floors", "ceilings", "walls", "coffee_table"]
     
+    rot = np.array(R.from_euler('z', 90, degrees=True).as_quat())
     config["objects"] = [
         {
             "type": "PrimitiveObject",
@@ -441,12 +401,39 @@ def main():
                         -0.11094563454389572,
                         0.9938263297080994]
         },
+        {
+            "type": "DatasetObject",
+            "name": "table",
+            "category": "shelf",
+            "model": "lbbims",
+            "scale": [3.0, 1.5, 1.5],
+            "position": [-1.0, -0.7, 0.9],
+            "orientation": rot
+        }
     ]
 
     # Load the environment
     env = og.Environment(configs=config)
     scene = env.scene
     robot = env.robots[0]
+
+    # Set friction
+    state = og.sim.dump_state()
+    og.sim.stop()
+    from omni.isaac.core.materials import PhysicsMaterial
+    gripper_mat = PhysicsMaterial(
+        prim_path=f"{robot.prim_path}/gripper_mat",
+        name="gripper_material",
+        static_friction=20.0,
+        dynamic_friction=20.0,
+        restitution=None,
+    )
+    for arm, links in robot.finger_links.items():
+        for link in links:
+            for msh in link.collision_meshes.values():
+                msh.apply_physics_material(gripper_mat)
+    og.sim.play()
+    og.sim.load_state(state)
 
     action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
@@ -526,8 +513,8 @@ def main():
         # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
         #     pickle.dump(arr, f)
         
-        navigate_primitive(action_primitives, env, robot, episode_memory)
-        grasp_primitive(action_primitives, env, robot, episode_memory)
+        # navigate_primitive(action_primitives, env, robot, episode_memory)
+        # grasp_primitive(action_primitives, env, robot, episode_memory)
         # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
         # # save the end simulator state

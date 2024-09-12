@@ -539,6 +539,7 @@ def detect_robot_collision_in_sim(robot, filter_objs=[], ignore_obj_in_hand=True
     if obj_in_hand is not None and ignore_obj_in_hand:
         filter_objs.append(obj_in_hand)
 
+    print("---------- obj_in_hand: ", obj_in_hand)
     collision_prims = list(robot.states[ContactBodies].get_value(ignore_objs=tuple(filter_objs)))
 
     for col_prim in collision_prims:
