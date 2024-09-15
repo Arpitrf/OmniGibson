@@ -902,14 +902,14 @@ class KeyboardRobotController:
                     binary_gripper
                 ]
 
-        # Print out the user what is being pressed / controlled
-        sys.stdout.write("\033[K")
+        # # Print out the user what is being pressed / controlled
+        # sys.stdout.write("\033[K")
         keypress_str = self.current_keypress.__str__().split(".")[-1]
-        print("Pressed {}. Action: {}".format(keypress_str, action.tolist()))
-        sys.stdout.write("\033[F")
+        # print("Pressed {}. Action: {}".format(keypress_str, action.tolist()))
+        # sys.stdout.write("\033[F")
 
         # Return action
-        return action
+        return action, keypress_str
 
     def print_keyboard_teleop_info(self):
         """

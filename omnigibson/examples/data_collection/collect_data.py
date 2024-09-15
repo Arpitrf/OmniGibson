@@ -14,8 +14,9 @@ gm.USE_GPU_DYNAMICS = True
 
 def main():
     config_filename = os.path.join(og.example_config_path, "fetch_behavior.yaml")
+    print("config_filename: ", config_filename)
     cfg = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
-    cfg["task"]["activity_name"] = "test_pen_book"
+    cfg["task"]["activity_name"] = "test_open_drawer"
     cfg["task"]["online_object_sampling"] = False
     cfg["env"]["flatten_obs_space"] = True
     cfg["env"]["action_frequency"] = 30
@@ -23,7 +24,7 @@ def main():
     cfg["env"]["physics_frequency"] = 120
     cfg["robots"][0]["default_reset_mode"] = "untuck"
 
-    collect_hdf5_path = "test_pen_book.hdf5"
+    collect_hdf5_path = "test_open_drawer2.hdf5"
 
     # Load the environment
     env = og.Environment(configs=cfg)
@@ -34,6 +35,24 @@ def main():
         optimize_sim=False,
     )
     robot = env.robots[0]
+
+    state = og.sim.dump_state()
+    og.sim.stop()
+    # Set friction
+    from omni.isaac.core.materials import PhysicsMaterial
+    gripper_mat = PhysicsMaterial(
+        prim_path=f"{robot.prim_path}/gripper_mat",
+        name="gripper_material",
+        static_friction=100.0,
+        dynamic_friction=100.0,
+        restitution=None,
+    )
+    for arm, links in robot.finger_links.items():
+        for link in links:
+            for msh in link.collision_meshes.values():
+                msh.apply_physics_material(gripper_mat)
+    og.sim.play()
+    og.sim.load_state(state)
 
     # Create teleop controller
     action_generator = KeyboardRobotController(robot=robot)
@@ -47,17 +66,17 @@ def main():
     action_generator.print_keyboard_teleop_info()
 
     print("Getting ready")
-    pdb.set_trace()
+    # pdb.set_trace()
     n_episodes = 1
     for i in range(n_episodes):
         print(f"Episode {i} starts")
         env.reset()
         while True:
-            action = action_generator.get_teleop_action()
+            action, keypress_str = action_generator.get_teleop_action()
             next_obs, reward, terminated, truncated, info = env.step(action=action)
             success = info["done"]["success"]
             print("success:", success)
-            if success:
+            if success or keypress_str == 'TAB':
                 break
 
         # Take 5 more zero actions
@@ -65,7 +84,7 @@ def main():
         for _ in range(5):
             next_obs, reward, terminated, truncated, info = env.step(action=action)
             success = info["done"]["success"]
-        assert success
+        # assert success
 
     print("Data saved")
     env.save_data()
