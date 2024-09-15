@@ -516,7 +516,8 @@ class ManipulationRobot(BaseRobot):
         Returns:
             str: Default arm name for this robot, corresponds to the first entry in @arm_names by default
         """
-        return self.arm_names[0]
+        # return self.arm_names[0]
+        return self.arm_names[1]
 
     @property
     def arm_action_idx(self):

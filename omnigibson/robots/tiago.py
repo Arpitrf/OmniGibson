@@ -253,7 +253,7 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         """
         self.set_joint_positions(self.untucked_default_joint_pos)
 
-    def reset(self):
+    def reset(self, right_hand_joints_pos=None, head_joints_pos=None):
         """
         Reset should not change the robot base pose.
         We need to cache and restore the base joints to the world.
@@ -261,6 +261,18 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         base_joint_positions = self.get_joint_positions()[self.base_idx]
         super().reset()
         self.set_joint_positions(base_joint_positions, indices=self.base_idx)
+        
+        # set the head pose
+        if head_joints_pos is not None: 
+            head_joints_pos = th.from_numpy(head_joints_pos)
+            head_joints_pos = th.tensor(head_joints_pos, dtype=th.float32)
+            self.set_joint_positions(head_joints_pos, indices=self.camera_control_idx)
+
+        # reset the hand joints to a specific position
+        if right_hand_joints_pos is not None:
+            right_hand_joints_pos = th.from_numpy(right_hand_joints_pos)
+            right_hand_joints_pos = th.tensor(right_hand_joints_pos, dtype=th.float32)
+            self.set_joint_positions(right_hand_joints_pos, indices=self.arm_control_idx['right'])
 
     def _post_load(self):
         super()._post_load()
@@ -746,3 +758,11 @@ class Tiago(ManipulationRobot, LocomotionRobot, ActiveCameraRobot):
         action = ManipulationRobot.teleop_data_to_action(self, teleop_action)
         action[self.base_action_idx] = teleop_action.base * 0.1
         return action
+    
+    def custom_is_grasping(self):
+        gripper_right_qpos = self._get_proprioception_dict()['gripper_right_qpos']
+        if (gripper_right_qpos[0] > 0.044 and gripper_right_qpos[1] > 0.044) or \
+            (gripper_right_qpos[0] < 0.0001 and gripper_right_qpos[1] < 0.0001):
+            return th.tensor(False)
+        else:
+            return th.tensor(True)

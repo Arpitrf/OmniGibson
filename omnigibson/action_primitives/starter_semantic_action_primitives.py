@@ -21,6 +21,7 @@ from matplotlib import pyplot as plt
 import omnigibson as og
 import omnigibson.lazy as lazy
 import omnigibson.utils.transform_utils as T
+from scipy.spatial.transform import Rotation
 from omnigibson import object_states
 from omnigibson.action_primitives.action_primitive_set_base import (
     ActionPrimitiveError,
@@ -75,9 +76,11 @@ m.KP_ANGLE_VEL = {
 
 m.MAX_STEPS_FOR_SETTLING = 500
 
-m.MAX_CARTESIAN_HAND_STEP = 0.002
+# m.MAX_CARTESIAN_HAND_STEP = 0.002
+m.MAX_CARTESIAN_HAND_STEP = 0.07
 m.MAX_STEPS_FOR_HAND_MOVE_JOINT = 500
-m.MAX_STEPS_FOR_HAND_MOVE_IK = 1000
+# m.MAX_STEPS_FOR_HAND_MOVE_IK = 1000
+m.MAX_STEPS_FOR_HAND_MOVE_IK = 50
 m.MAX_STEPS_FOR_GRASP_OR_RELEASE = 250
 m.MAX_STEPS_FOR_WAYPOINT_NAVIGATION = 500
 m.MAX_ATTEMPTS_FOR_OPEN_CLOSE = 20
@@ -1114,7 +1117,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         ignore_failure=False,
         pos_thresh=0.02,
         ori_thresh=0.4,
-        in_world_frame=True,
+        in_world_frame=False,
         stop_if_stuck=False,
     ):
         """
@@ -1140,7 +1143,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         assert (
             controller_config["name"] == "InverseKinematicsController"
         ), "Controller must be InverseKinematicsController"
-        assert controller_config["mode"] == "pose_absolute_ori", "Controller must be in pose_absolute_ori mode"
+        # Modified by Arpit
+        assert controller_config["mode"] == "pose_absolute_ori" or controller_config["mode"] == "pose_delta_ori", "Controller must be in pose_absolute_ori mode"
         if in_world_frame:
             target_pose = self._get_pose_in_robot_frame(target_pose)
         target_pos = target_pose[0]
@@ -1158,7 +1162,15 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             current_orn = current_pose[1]
 
             delta_pos = target_pos - current_pos
+            delta_pos = th.tensor(delta_pos, dtype=th.float32)
             target_pos_diff = th.norm(delta_pos)
+
+            # Added by Arpit
+            delta_ori = Rotation.from_quat(target_orn) * Rotation.from_quat(current_orn).inv()
+            delta_ori = delta_ori.as_rotvec()
+            delta_ori = th.from_numpy(delta_ori)
+            delta_ori = th.tensor(delta_ori, dtype=th.float32)
+
             target_orn_diff = T.get_orientation_diff_in_radian(current_orn, target_orn)
             reached_goal = target_pos_diff < pos_thresh and target_orn_diff < ori_thresh
             if reached_goal:
@@ -1177,7 +1189,11 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             prev_pos = current_pos
             prev_orn = current_orn
 
-            action[control_idx] = th.cat([delta_pos, target_orn_axisangle])
+            # Added by Arpit
+            if self.robot._controller_config["arm_" + self.arm]["mode"] == 'pose_absolute_ori':
+                action[control_idx] = th.cat([delta_pos, target_orn_axisangle])
+            elif self.robot._controller_config["arm_" + self.arm]["mode"] == 'pose_delta_ori':
+                action[control_idx] = th.cat([delta_pos, delta_ori])
             yield self._postprocess_action(action)
 
         if not ignore_failure:
@@ -1187,7 +1203,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             )
 
     def _move_hand_linearly_cartesian(
-        self, target_pose, stop_on_contact=False, ignore_failure=False, stop_if_stuck=False
+        self, target_pose, stop_on_contact=False, ignore_failure=False, stop_if_stuck=False, in_world_frame=False, episode_memory=None, gripper_closed=None
     ):
         """
         Yields action for the robot to move its arm to reach the specified target pose by moving the eef along a line in cartesian
@@ -1200,13 +1216,20 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
 
         Returns:
             th.tensor or None: Action array for one step for the robot to move arm or None if its at the target pose
-        """
+        """        
+        # Added by Arpit
+        if not in_world_frame:
+            start_pos, start_orn = self._get_pose_in_robot_frame((self.robot.get_eef_position(), self.robot.get_eef_orientation()))
+        else:
+            start_pos, start_orn = self.robot.eef_links[self.arm].get_position_orientation()
+        
         # To make sure that this happens in a roughly linear fashion, we will divide the trajectory
         # into 1cm-long pieces
-        start_pos, start_orn = self.robot.eef_links[self.arm].get_position_orientation()
         travel_distance = th.norm(target_pose[0] - start_pos)
-        num_poses = th.max([2, int(travel_distance / m.MAX_CARTESIAN_HAND_STEP) + 1]).item()
-        pos_waypoints = th.linspace(start_pos, target_pose[0], num_poses)
+        num_poses = int(
+            th.max(th.tensor([2, int(travel_distance / m.MAX_CARTESIAN_HAND_STEP) + 1], dtype=th.float32)).item()
+        )
+        pos_waypoints = self.linspace_1d_tensor(start_pos, target_pose[0], num_poses)
 
         # Also interpolate the rotations
         t_values = th.linspace(0, 1, num_poses)
@@ -1986,3 +2009,24 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 break
             empty_action = self._empty_action()
             yield self._postprocess_action(empty_action)
+
+    def linspace_1d_tensor(self, start_pos, target_pose, num_poses):
+        """
+        Create evenly spaced samples between two 1D tensors.
+
+        :param start_pos: Starting 1D tensor
+        :param target_pose: Ending 1D tensor
+        :param num_poses: Number of poses (samples) to generate
+        :return: Tensor of shape (num_poses, dim) where dim is the dimension of input tensors
+        """
+        # Ensure inputs are 1D tensors
+        assert start_pos.dim() == 1 and target_pose.dim() == 1, "Input tensors must be 1D"
+        assert start_pos.shape == target_pose.shape, "Input tensors must have the same shape"
+
+        # Create a tensor of interpolation factors
+        t = th.linspace(0, 1, num_poses)
+
+        # Perform the interpolation
+        interpolated_points = start_pos.unsqueeze(0) + (target_pose - start_pos).unsqueeze(0) * t.unsqueeze(1)
+
+        return interpolated_points

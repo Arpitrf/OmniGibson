@@ -547,18 +547,31 @@ def detect_robot_collision_in_sim(robot, filter_objs=None, ignore_obj_in_hand=Tr
     if obj_in_hand is not None and ignore_obj_in_hand:
         filter_objs.append(obj_in_hand)
 
-    # Use the RigidCollisionAPI to get the things this robot is colliding with
-    scene_idx = robot.scene.idx
-    link_paths = set(robot.link_prim_paths)
-    collision_body_paths = {
-        row
-        for row, _ in GripperRigidContactAPI.get_contact_pairs(scene_idx, column_prim_paths=link_paths)
-        if row not in link_paths
-    }
+    
+    # ------ From main branch as a temp fix as the new code is giving error ------
+    collision_prims = list(robot.states[ContactBodies].get_value(ignore_objs=tuple(filter_objs)))
 
-    # Convert to prim objects and filter out the necessary objects.
-    rigid_prims = prim_paths_to_rigid_prims(collision_body_paths, robot.scene)
-    return any(o not in filter_objs and o.category not in filter_categories for o, p in rigid_prims)
+    for col_prim in collision_prims:
+        tokens = col_prim.prim_path.split("/")
+        obj_prim_path = "/".join(tokens[:-1])
+        col_obj = og.sim.scenes[0].object_registry("prim_path", obj_prim_path)
+        if col_obj.category in filter_categories:
+            collision_prims.remove(col_prim)
+    return len(collision_prims) > 0
+    # ---------------------------------------------------------------
+    
+    # # Use the RigidCollisionAPI to get the things this robot is colliding with
+    # scene_idx = robot.scene.idx
+    # link_paths = set(robot.link_prim_paths)
+    # collision_body_paths = {
+    #     row
+    #     for row, _ in GripperRigidContactAPI.get_contact_pairs(scene_idx, column_prim_paths=link_paths)
+    #     if row not in link_paths
+    # }
+
+    # # Convert to prim objects and filter out the necessary objects.
+    # rigid_prims = prim_paths_to_rigid_prims(collision_body_paths, robot.scene)
+    # return th.tensor(any(o not in filter_objs and o.category not in filter_categories for o, p in rigid_prims))
 
 
 def astar(search_map, start, goal, eight_connected=True):

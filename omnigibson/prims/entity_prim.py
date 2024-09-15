@@ -908,10 +908,48 @@ class EntityPrim(XFormPrim):
         # Run sanity checks -- make sure we are articulated
         assert self.n_joints > 0, "Tried to call method not intended for entity prim with no joints!"
 
+        # print("joint_efforts: ", self._articulation_view.get_measured_joint_efforts().shape)
         joint_efforts = self._articulation_view.get_measured_joint_efforts().view(self.n_dof)
 
         # Possibly normalize values when returning
         return self._normalize_efforts(efforts=joint_efforts) if normalized else joint_efforts
+    
+    def get_joint_forces(self, normalized=False):
+        """
+        Grabs this entity's "measured" joint efforts
+
+        Args:
+            normalized (bool): Whether returned values should be normalized to range [-1, 1] based on limits or not.
+
+        Returns:
+            n-array: n-DOF length array of efforts
+        """
+        # Run sanity checks -- make sure we are articulated
+        assert self.n_joints > 0, "Tried to call method not intended for entity prim with no joints!"
+
+        # print("n_dof: ", self.n_dof)
+        joint_forces = self._articulation_view.get_measured_joint_forces() #.view(self.n_dof)
+        
+        # stage = lazy.omni.isaac.core.utils.stage.get_current_stage()
+        # joint_link_id = dict()
+        # joint_paths = self._articulation_view._dof_paths[0]
+        # print("len(joint_paths): ", len(joint_paths))
+        # input()        
+        # for i, joint_name in enumerate(self._articulation_view.joint_names):
+        #     joint_path = joint_paths[i]
+        #     print("joint_name: ", i, joint_name, joint_path)
+        #     joint = lazy.pxr.UsdPhysics.Joint.Get(stage, joint_path)
+        #     body_1_path = joint.GetBody1Rel().GetTargets()[0]
+        #     body_1_name = stage.GetPrimAtPath(body_1_path).GetName()
+        #     child_link_index = self._articulation_view.get_link_index(body_1_name)
+        #     joint_link_id[joint_name] = child_link_index
+
+        # wrist_right_ft_joint
+        # print(joint_forces[joint_link_id["wrist_right_ft_joint"]])
+        print("joint_forces[53]: ", th.norm(joint_forces[0][53][:3]))
+
+        # Possibly normalize values when returning
+        return self._normalize_efforts(efforts=joint_forces) if normalized else joint_forces
 
     def get_joint_position_targets(self, normalized=False):
         """
