@@ -933,11 +933,13 @@ class EntityPrim(XFormPrim):
         # stage = lazy.omni.isaac.core.utils.stage.get_current_stage()
         # joint_link_id = dict()
         # joint_paths = self._articulation_view._dof_paths[0]
-        # print("len(joint_paths): ", len(joint_paths))
+        # joint_names = self._articulation_view.joint_names
+        # print("joint_forces.shape: ", joint_forces.shape)
+        # print("len(joint_paths), len(joint_names): ", len(joint_paths), len(joint_names))
         # input()        
         # for i, joint_name in enumerate(self._articulation_view.joint_names):
         #     joint_path = joint_paths[i]
-        #     print("joint_name: ", i, joint_name, joint_path)
+        #     # print("joint_name: ", i, joint_name, joint_path)
         #     joint = lazy.pxr.UsdPhysics.Joint.Get(stage, joint_path)
         #     body_1_path = joint.GetBody1Rel().GetTargets()[0]
         #     body_1_name = stage.GetPrimAtPath(body_1_path).GetName()
@@ -946,10 +948,13 @@ class EntityPrim(XFormPrim):
 
         # wrist_right_ft_joint
         # print(joint_forces[joint_link_id["wrist_right_ft_joint"]])
-        print("joint_forces[53]: ", th.norm(joint_forces[0][53][:3]))
+        print("joint_forces[42, 43]: ", th.norm(joint_forces[0][42][:3]), th.norm(joint_forces[0][43][:3]),
+              th.norm(joint_forces[0][44][:3]), th.norm(joint_forces[0][46][:3]), th.norm(joint_forces[0][47][:3]),
+              th.norm(joint_forces[0][48][:3]))
 
         # Possibly normalize values when returning
-        return self._normalize_efforts(efforts=joint_forces) if normalized else joint_forces
+        return th.norm(joint_forces[0][44][:3])
+        # return self._normalize_efforts(efforts=joint_forces) if normalized else joint_forces
 
     def get_joint_position_targets(self, normalized=False):
         """

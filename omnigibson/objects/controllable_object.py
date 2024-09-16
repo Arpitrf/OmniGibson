@@ -158,6 +158,7 @@ class ControllableObject(BaseObject):
             self._reset_joint_pos = self._default_joint_pos
 
         # Load controllers
+        # print("----- loading controllers for ", self.name)
         self._load_controllers()
 
         # Setup action space
@@ -254,9 +255,13 @@ class ControllableObject(BaseObject):
         Helper function to force the joints to use the internal specified control mode and gains
         """
         # Update the control modes of each joint based on the outputted control from the controllers
+        # print("in update_controller_mode: ")
         for name in self._controllers:
+            # print("name: ", name)
             for dof in self._controllers[name].dof_idx:
                 control_type = self._controllers[name].control_type
+                # print("control_type: ", self.dof_names_ordered[dof], control_type)
+                # print("type: ", type(self._joints[self.dof_names_ordered[dof]]))
                 self._joints[self.dof_names_ordered[dof]].set_control_type(
                     control_type=control_type,
                     kp=self.default_kp if control_type == ControlType.POSITION else None,
@@ -820,7 +825,9 @@ class ControllableObject(BaseObject):
             float: Default kp gain to apply to any DOF when switching control modes (e.g.: switching from a
                 velocity control mode to a position control mode)
         """
-        return 1e7
+        # return 1e7
+        # Changed by Arpit
+        return 1e5
 
     @property
     def default_kd(self):

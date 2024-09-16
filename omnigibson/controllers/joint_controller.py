@@ -106,6 +106,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
             assert kp is None, "Cannot set kp for JointController with motor_type=effort!"
             assert damping_ratio is None, "Cannot set damping_ratio for JointController with motor_type=effort!"
         self.kp = kp
+        print("kp: ", kp)
         self.kd = None if damping_ratio is None else 2 * math.sqrt(self.kp) * damping_ratio
         self._use_impedances = use_impedances
         self._use_gravity_compensation = use_gravity_compensation
