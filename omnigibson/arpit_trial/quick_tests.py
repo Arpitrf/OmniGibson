@@ -1,13 +1,16 @@
 import h5py
 import numpy as np
+np.set_printoptions(suppress=True, precision=3)
 
-f = h5py.File('temp/dataset.hdf5', "r")
+f = h5py.File('moma_pick_and_place/dataset.hdf5', "r")
 # ======================== Basic hdf5 testing ======================
 # f = h5py.File('prior/dataset.hdf5', "r")
 print("len: ", len(f['data']))
+print("--", f['data/episode_00000/observations'].keys())
+print("--", np.array(f['data/episode_00000/observations/rgb']).shape)
 print(np.array(f['data/episode_00000/actions/actions']))
-print("--", np.array(f[f'data/episode_00000/observations_info']['seg_semantic']))
-print("joint efforts: ", np.array(f[f'data/episode_00000/proprioceptions/joint_qeffort']).shape)
+# print("--", np.array(f[f'data/episode_00000/observations_info']['seg_semantic']))
+# print("joint efforts: ", np.array(f[f'data/episode_00000/proprioceptions/joint_qeffort']).shape)
 # print("--", np.array(f[f'data/episode_00001/observations_info']['seg_instance_id_strings']))
 # for ep in f['data'].keys():
 #     print(ep, np.array(f['data'][f'{ep}/actions/actions']).shape)

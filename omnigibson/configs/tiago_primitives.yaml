@@ -68,6 +68,9 @@ robots:
         # name: JointController
         # use_delta_commands: true
         name: InverseKinematicsController
+        # mode: absolute_pose
+        # command_input_limits: null
+        # command_output_limits: null
         # name: OperationalSpaceController
       gripper_left:
         name: MultiFingerGripperController

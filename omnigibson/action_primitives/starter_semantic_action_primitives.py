@@ -15,6 +15,7 @@ from functools import cached_property
 import cv2
 import gymnasium as gym
 import torch as th
+import numpy as np
 from aenum import IntEnum, auto
 from matplotlib import pyplot as plt
 
@@ -77,10 +78,10 @@ m.KP_ANGLE_VEL = {
 m.MAX_STEPS_FOR_SETTLING = 500
 
 # m.MAX_CARTESIAN_HAND_STEP = 0.002
-m.MAX_CARTESIAN_HAND_STEP = 0.07
+m.MAX_CARTESIAN_HAND_STEP = 0.2
 m.MAX_STEPS_FOR_HAND_MOVE_JOINT = 500
 # m.MAX_STEPS_FOR_HAND_MOVE_IK = 1000
-m.MAX_STEPS_FOR_HAND_MOVE_IK = 50
+m.MAX_STEPS_FOR_HAND_MOVE_IK = 200
 m.MAX_STEPS_FOR_GRASP_OR_RELEASE = 250
 m.MAX_STEPS_FOR_WAYPOINT_NAVIGATION = 500
 m.MAX_ATTEMPTS_FOR_OPEN_CLOSE = 20
@@ -93,7 +94,7 @@ m.PREDICATE_SAMPLING_Z_OFFSET = 0.02
 m.GRASP_APPROACH_DISTANCE = 0.2
 m.OPEN_GRASP_APPROACH_DISTANCE = 0.4
 
-m.DEFAULT_DIST_THRESHOLD = 0.05
+m.DEFAULT_DIST_THRESHOLD = 0.02
 m.DEFAULT_ANGLE_THRESHOLD = 0.05
 m.LOW_PRECISION_DIST_THRESHOLD = 0.1
 m.LOW_PRECISION_ANGLE_THRESHOLD = 0.2
@@ -1115,7 +1116,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         target_pose,
         stop_on_contact=False,
         ignore_failure=False,
-        pos_thresh=0.02,
+        pos_thresh=0.01,
         ori_thresh=0.4,
         in_world_frame=False,
         stop_if_stuck=False,
@@ -1151,6 +1152,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         target_orn = target_pose[1]
         target_orn_axisangle = T.quat2axisangle(target_pose[1])
         action = self._empty_action()
+        # print("initial_action: ", action)
         control_idx = self.robot.controller_action_idx["arm_" + self.arm]
         prev_pos = prev_orn = None
 
@@ -1174,7 +1176,9 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             target_orn_diff = T.get_orientation_diff_in_radian(current_orn, target_orn)
             reached_goal = target_pos_diff < pos_thresh and target_orn_diff < ori_thresh
             if reached_goal:
-                return
+                yield "Done"
+                return "Done"
+                # return
 
             if stop_on_contact and detect_robot_collision_in_sim(self.robot, ignore_obj_in_hand=False):
                 return
@@ -1235,11 +1239,37 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         t_values = th.linspace(0, 1, num_poses)
         quat_waypoints = [T.quat_slerp(start_orn, target_pose[1], t) for t in t_values]
 
+        # remove the first waypoint as it is the starting pose
+        pos_waypoints = pos_waypoints[1:]
+        quat_waypoints = quat_waypoints[1:]
+
         controller_config = self.robot._controller_config["arm_" + self.arm]
         if controller_config["name"] == "InverseKinematicsController":
             waypoints = list(zip(pos_waypoints, quat_waypoints))
 
             for i, waypoint in enumerate(waypoints):
+                
+                if episode_memory is not None:
+                    # Save action to memory
+                    if not in_world_frame:
+                        curr_pos, curr_orn = self._get_pose_in_robot_frame((self.robot.get_eef_position(), self.robot.get_eef_orientation()))
+                    else:
+                        curr_pos, curr_orn = self.robot.eef_links[self.arm].get_position_orientation()
+
+                    delta_ori = Rotation.from_quat(waypoints[i][1]) * Rotation.from_quat(curr_orn).inv()
+                    delta_ori = np.array(delta_ori.as_rotvec())
+                    # if i > 0:
+                    #     print("intended waypoint pos, reached pos: ", waypoints[i-1][0], curr_pos)
+                    delta_pos = waypoints[i][0] - curr_pos
+                    gripper_action = 1.0
+                    if gripper_closed:
+                        gripper_action = -1.0
+                    nav_action = np.array([0.0, 0.0, 0.0])
+                    action = np.concatenate((nav_action, delta_pos, delta_ori, np.array([gripper_action])))
+                    episode_memory.add_action('actions', action)
+                    # pos_norm = np.linalg.norm(action[3:6])
+                    # orn_angle = np.linalg.norm(action[6:])
+
                 if i < len(waypoints) - 1:
                     yield from self._move_hand_direct_ik(
                         waypoint,
@@ -1451,10 +1481,10 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             th.tensor or None: Action array for one step for the robot to do nothing
         """
         action = th.zeros(self.robot.action_dim)
-        for name, controller in self.robot._controllers.items():
-            action_idx = self.robot.controller_action_idx[name]
-            no_op_action = controller.compute_no_op_action(self.robot.get_control_dict())
-            action[action_idx] = no_op_action
+        # for name, controller in self.robot._controllers.items():
+        #     action_idx = self.robot.controller_action_idx[name]
+        #     no_op_action = controller.compute_no_op_action(self.robot.get_control_dict())
+        #     action[action_idx] = no_op_action
         return action
 
     def _reset_hand(self):
@@ -1643,6 +1673,110 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         pose = self._sample_pose_near_object(obj, pose_on_obj=pose_on_obj, **kwargs)
         yield from self._navigate_to_pose(pose)
 
+    
+    def _navigate_to_pose_linearly_cartesian(self, pose_2d, low_precision=False, episode_memory=None):
+        """
+        Yields action to navigate the robot to the 2d pose by moving the base in a line in cartesian
+        space from its current pose
+
+        Args:
+            pose_2d (Iterable): (x, y, yaw) 2d pose
+            low_precision (bool): Determines whether to navigate to the pose within a large range (low precision) or small range (high precison)
+        
+        Returns:
+            np.array or None: Action array for one step for the robot to navigate or None if it is done navigatin
+        """
+        # To make sure that this happens in a roughly linear fashion, we will divide the trajectory
+        # into ~10cm-long pieces
+        dist_threshold = m.LOW_PRECISION_DIST_THRESHOLD if low_precision else m.DEFAULT_DIST_THRESHOLD
+        angle_threshold = m.LOW_PRECISION_ANGLE_THRESHOLD if low_precision else m.DEFAULT_ANGLE_THRESHOLD
+
+        end_pose = self._get_robot_pose_from_2d_pose(pose_2d)
+        body_target_pose = self._get_pose_in_robot_frame(end_pose)
+
+        # interpolate the x-y motion
+        start_pos = self.robot.get_position()
+        # travel_distance = np.linalg.norm(end_pose[0][:2] - start_pos[:2])
+        # print("start_pos, end_pos: ", start_pos[:2], end_pose[0][:2])
+        # print("travel_distance: ", travel_distance)
+        # desired_step = np.random.uniform(0.2, 0.25)
+        # num_poses = np.max([2, int(travel_distance / desired_step) + 1])
+        # TODO: Think about this logic. How many waypoints for navigation would we want
+        num_poses = 2
+        # pos_waypoints = np.linspace(start_pos[:2], end_pose[0][:2], num_poses)
+        pos_waypoints = self.linspace_1d_tensor(start_pos[:2], end_pose[0][:2], num_poses)
+        # Skip the first wapypoint as it is the current pos
+        pos_waypoints = pos_waypoints[1:]
+        print("pos_waypoints:" , pos_waypoints)
+
+        diff_pos = end_pose[0] - self.robot.get_position()
+        euler = th.tensor([0, 0, th.arctan2(diff_pos[1], diff_pos[0])])
+        intermediate_pose = (end_pose[0], T.euler2quat(euler))
+        body_intermediate_pose = self._get_pose_in_robot_frame(intermediate_pose)
+        diff_yaw = T.quat2euler(body_intermediate_pose[1])[2]
+        if abs(diff_yaw) > m.DEFAULT_ANGLE_THRESHOLD:
+            print("diff_yaw and intermediate_pose: ", diff_yaw, intermediate_pose)
+            yield from self._rotate_in_place(intermediate_pose, angle_threshold=m.DEFAULT_ANGLE_THRESHOLD, episode_memory=episode_memory)
+            # yield from self._rotate_in_place_linearly_cartesian(goal_pose=intermediate_pose, episode_memory=episode_memory)
+
+        for pos_waypoint in pos_waypoints:
+            current_yaw = Rotation.from_quat(self.robot.get_orientation()).as_euler('XYZ')[2]
+            current_pos = self.robot.get_position()
+            # print("pos_waypoint: ", pos_waypoint)
+            # input("Press enter")
+            pose_2d_waypoint = th.tensor([pos_waypoint[0], pos_waypoint[1], current_yaw])
+            pose_waypoint = self._get_robot_pose_from_2d_pose(pose_2d_waypoint)
+            body_waypoint_pose = self._get_pose_in_robot_frame(pose_waypoint)
+            
+            if episode_memory is not None:
+                # Save action to memory
+                curr_pos = self.robot.get_position()
+                delta_pos = pose_2d_waypoint[:2] - curr_pos[:2]
+                # TODO: Confirm what are the limits of the yaw value? (360, -ve values?)
+                delta_yaw = pose_2d_waypoint[2] - current_yaw
+                # TODO change grasp action
+                action = np.array([delta_pos[0], delta_pos[1], delta_yaw, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+                episode_memory.add_action('actions', action)
+            # pos_norm = np.linalg.norm(action[:2])
+            # orn_angle = action[2]
+            # input(f"Moving to waypoint {pose_2d_waypoint}. Norm of waypoint: pos_norm: {pos_norm} orn_angle: {orn_angle}. Press enter")
+            
+            yield from self._navigate_to_pos_direct(body_waypoint_pose, pose_waypoint)
+
+            # body_target_pose = self._get_pose_in_robot_frame(pose_waypoint)
+            # if np.linalg.norm(body_target_pose[0][:2]) < dist_threshold:
+            #     print("IN DONEEEEEEEEE")
+            #     return "Done"
+        
+        # TODO: Change this Rotate in place to final orientation once at location
+        # yield from self._rotate_in_place(end_pose, angle_threshold=angle_threshold)
+        # diff_pos = end_pose[0] - self.robot.get_position()
+        yield from self._rotate_in_place(end_pose, episode_memory=episode_memory)
+
+    def _navigate_to_pos_direct(self, body_target_pose, end_pose, low_precision=False):
+        dist_threshold = m.LOW_PRECISION_DIST_THRESHOLD if low_precision else m.DEFAULT_DIST_THRESHOLD
+        for _ in range(m.MAX_STEPS_FOR_WAYPOINT_NAVIGATION):
+            # counter += 1
+            # print("counter: ", counter)
+            # print("diff_to_go, thresh: ", np.linalg.norm(body_target_pose[0][:2]), dist_threshold)
+            if th.linalg.norm(body_target_pose[0][:2]) < dist_threshold:
+                yield "Done"
+                return "Done"
+            
+            action = self._empty_action()
+            if self._base_controller_is_joint:
+                direction_vec = body_target_pose[0][:2] / th.linalg.norm(body_target_pose[0][:2]) * m.KP_LIN_VEL[type(self.robot)]
+                base_action = th.tensor([direction_vec[0], direction_vec[1], 0.0])
+                curr_pos = self.robot.get_position()
+                # print("curr_pos, base_action: ", curr_pos[:2], base_action[:2])
+                # print("--", self.robot.controller_action_idx["base"])
+                action[self.robot.controller_action_idx["base"]] = base_action
+            else:
+                base_action = [m.KP_LIN_VEL[type(self.robot)], 0.0]
+                action[self.robot.controller_action_idx["base"]] = base_action
+            yield self._postprocess_action(action)
+            body_target_pose = self._get_pose_in_robot_frame(end_pose)
+    
     def _navigate_to_pose_direct(self, pose_2d, low_precision=False):
         """
         Yields action to navigate the robot to the 2d pose without planning
@@ -1702,7 +1836,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # Rotate in place to final orientation once at location
         yield from self._rotate_in_place(end_pose, angle_threshold=angle_threshold)
 
-    def _rotate_in_place(self, end_pose, angle_threshold=m.DEFAULT_ANGLE_THRESHOLD):
+    def _rotate_in_place(self, end_pose, angle_threshold=m.DEFAULT_ANGLE_THRESHOLD, episode_memory=None):
         """
         Yields action to rotate the robot to the 2d end pose
 
@@ -1716,8 +1850,15 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         body_target_pose = self._get_pose_in_robot_frame(end_pose)
         diff_yaw = T.quat2euler(body_target_pose[1])[2].item()
 
+        if abs(diff_yaw) > m.DEFAULT_ANGLE_THRESHOLD and episode_memory is not None:
+            # Save action to memory
+            # TODO: Make sure diff_yaw is in between (-180, 180]
+            action = np.array([0.0, 0.0, diff_yaw, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+            episode_memory.add_action('actions', action)
+
         for _ in range(m.MAX_STEPS_FOR_WAYPOINT_NAVIGATION):
             if abs(diff_yaw) < angle_threshold:
+                yield "Done"
                 break
 
             action = self._empty_action()
