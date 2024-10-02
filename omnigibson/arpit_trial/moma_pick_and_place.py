@@ -68,6 +68,14 @@ def custom_reset(env, robot, episode_memory):
     r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
     r_quat = R.as_quat(r_euler)
     scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
+
+    # # remove later
+    # base_pos = np.array([-0.05, -0.4, 0.0])
+    # base_x_noise = np.random.uniform(-0.15, 0.15)
+    # base_y_noise = np.random.uniform(-0.15, 0.15)
+    # base_noise = np.array([base_x_noise, base_y_noise, 0.0])
+    # base_pos += base_noise 
+    # scene_initial_state['object_registry']['robot0']['root_link']['pos'] = base_pos
     
     head_joints = np.array([-0.5031718015670776, -0.9972541332244873])
 
@@ -106,6 +114,14 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory=None
 
 def primitive(episode_memory):
     gripper_closed = False
+
+    # # remove later
+    # obj = env.scene.object_registry("name", "box")
+    # execute_controller(action_primitives._navigate_to_obj(obj), 
+    #                    env, 
+    #                    robot, 
+    #                    gripper_closed) 
+
     # ======================= Move hand to grasp pose ================================    
     # w.r.t world
     # target_pose = (th.tensor([0.1829, 0.4876, 0.4051]), th.tensor([-0.0342, -0.0020,  0.9958,  0.0846]))
@@ -169,6 +185,9 @@ def primitive(episode_memory):
     curr_base_pos = robot.get_position()
     print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
     # ============================================
+
+    # remove later
+    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_before_place.json'])
 
     # ======================= Move hand to place pose ================================
     # w.r.t world
@@ -319,38 +338,38 @@ save_folder = 'moma_pick_and_place'
 os.makedirs(save_folder, exist_ok=True)
 episode_number = 0
 
-# save the start simulator state
-og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-arr = scene.dump_state(serialized=True)
-with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-    pickle.dump(arr, f)
+# # save the start simulator state
+# og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+# arr = scene.dump_state(serialized=True)
+# with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+#     pickle.dump(arr, f)
 
-primitive(episode_memory)
-episode_memory.dump(f'{save_folder}/dataset.hdf5')
+# primitive(episode_memory)
+# episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-# save the end simulator state
-og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-arr = scene.dump_state(serialized=True)
-with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-    pickle.dump(arr, f)
+# # save the end simulator state
+# og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+# arr = scene.dump_state(serialized=True)
+# with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+#     pickle.dump(arr, f)
 
-# # Teleop
-# max_steps = -1 
-# step = 0
-# # # pdb.set_trace()
-# while step != max_steps:
-#     action, keypress_str = action_generator.get_teleop_action()
-#     # remov later
-#     action[20] = -1
-#     env.step(action=action)
-#     if keypress_str == 'TAB':
-#         right_eef_pose = robot.get_relative_eef_pose(arm='right')
-#         right_eef_pose_world = robot.eef_links["right"].get_position_orientation()
-#         base_pose = robot.get_position_orientation()
-#         print("right_eef_pose: ", right_eef_pose)
-#         print("right_eef_pose_world: ", right_eef_pose_world)
-#         print("base_pose: ", base_pose)
-#     step += 1
+# Teleop
+max_steps = -1 
+step = 0
+# # pdb.set_trace()
+while step != max_steps:
+    action, keypress_str = action_generator.get_teleop_action()
+    # # remove later
+    # action[20] = -1
+    env.step(action=action)
+    if keypress_str == 'TAB':
+        right_eef_pose = robot.get_relative_eef_pose(arm='right')
+        right_eef_pose_world = robot.eef_links["right"].get_position_orientation()
+        base_pose = robot.get_position_orientation()
+        print("right_eef_pose: ", right_eef_pose)
+        print("right_eef_pose_world: ", right_eef_pose_world)
+        print("base_pose: ", base_pose)
+    step += 1
 
 for _ in range(5000):
     og.sim.step()

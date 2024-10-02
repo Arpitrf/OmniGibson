@@ -125,7 +125,7 @@ def force_data_generator():
     step = 0
     # # pdb.set_trace()
     while step != max_steps:
-        action = action_generator.get_teleop_action()
+        action, keypress_str = action_generator.get_teleop_action()
         env.step(action=action)
         step += 1
         proprio = robot._get_proprioception_dict()

@@ -85,10 +85,21 @@ max_steps = -1
 step = 0
 # # pdb.set_trace()
 while step != max_steps:
-    action = action_generator.get_teleop_action()
+    action, keypress_str = action_generator.get_teleop_action()
     env.step(action=action)
     step += 1
-
+    if keypress_str == 'TAB':
+        obs, info = env.get_obs()
+        rgb = obs['robot0']['robot0:eyes:Camera:0']['rgb'].cpu().numpy()
+        seg_semantic = obs['robot0']['robot0:eyes:Camera:0']['seg_semantic'].cpu().numpy()
+        seg_instance = obs['robot0']['robot0:eyes:Camera:0']['seg_instance'].cpu().numpy()
+        seg_instance_id = obs['robot0']['robot0:eyes:Camera:0']['seg_instance_id'].cpu().numpy()
+        fig, ax = plt.subplots(2, 2)
+        ax[0][0].imshow(rgb)
+        ax[0][1].imshow(seg_semantic)
+        ax[1][0].imshow(seg_instance)
+        ax[1][1].imshow(seg_instance_id)
+        plt.show()
 
 # Always shut down the environment cleanly at the end
 og.clear()

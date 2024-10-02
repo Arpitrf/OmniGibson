@@ -126,6 +126,8 @@ rot_euler = [0.0, 0.0, 180.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
 box_euler = [0.0, 0.0, 0.0]
 box_quat = np.array(R.from_euler('XYZ', box_euler, degrees=True).as_quat())
+saucepan_euler = [0.0, 0.0, 90.0]
+saucepan_quat = np.array(R.from_euler('XYZ', saucepan_euler, degrees=True).as_quat())
 config["objects"] = [
     {
         "type": "DatasetObject",
@@ -145,16 +147,24 @@ config["objects"] = [
         "orientation": [0, 0, 0, 1]
     },
     {
-        "type": "PrimitiveObject",
-        "name": "box",
-        "primitive_type": "Cube",
-        "rgba": [1.0, 0, 0, 1.0],
-        "scale": [0.1, 0.05, 0.1],
-        "mass": 1e-6,
-        "position": [0.1, 0.5, 0.5],
-        "orientation": box_quat
-
+        "type": "DatasetObject",
+        "name": "saucepan",
+        "category": "saucepan",
+        "model": "fsinsu",
+        "position": [0.1, 0.6, 0.5],
+        "orientation": saucepan_quat
     },
+    # {
+    #     "type": "PrimitiveObject",
+    #     "name": "box",
+    #     "primitive_type": "Cube",
+    #     "rgba": [1.0, 0, 0, 1.0],
+    #     "scale": [0.1, 0.05, 0.1],
+    #     "mass": 1e-6,
+    #     "position": [0.1, 0.5, 0.5],
+    #     "orientation": box_quat
+
+    # },
 ]
 
 env = og.Environment(configs=config)
@@ -201,16 +211,22 @@ depth = obs['robot0']['robot0:eyes:Camera:0']['depth'].cpu().numpy()
 # ax[1].imshow(depth)
 # plt.show()
 
-import pickle
-pickle_dict = {
-    'depth': depth,
-    'intr': intr
-}
-with open(f'temp_depth_img.pkl', 'wb') as f:
-    # Serialize and save the updated data to the pickle file
-    pickle.dump(pickle_dict, f)
+save_folder = "saucepan_data"
+os.makedirs(save_folder, exist_ok=True)
+episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-point_cloud = generate_point_cloud_from_depth(depth, intr)
-o3d.visualization.draw_geometries([point_cloud])
+for _ in range(10000):
+    og.sim.step()
 
-# TODO: remove floor
+# import pickle
+# pickle_dict = {
+#     'depth': depth,
+#     'intr': intr
+# }
+# with open(f'temp_depth_img.pkl', 'wb') as f:
+#     # Serialize and save the updated data to the pickle file
+#     pickle.dump(pickle_dict, f)
+
+# point_cloud = generate_point_cloud_from_depth(depth, intr)
+# o3d.visualization.draw_geometries([point_cloud])
+

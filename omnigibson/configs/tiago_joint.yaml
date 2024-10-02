@@ -41,7 +41,7 @@ robots:
     rigid_trunk: true
     default_trunk_offset: 0.15 #0.15
     # default_reset_mode: tuck
-    default_arm_pose: horizonatal
+    default_arm_pose: horizontal
     sensor_config:
       VisionSensor:
         sensor_kwargs:
@@ -53,9 +53,9 @@ robots:
         # use_delta_commands: True
         # command_output_limits: null
       arm_left:
-        name: NullJointController
+        # name: NullJointController
         # name: InverseKinematicsController
-        # name: JointController
+        name: JointController
         # use_delta_commands: true
         # name: OperationalSpaceController
         # command_output_limits:
@@ -66,8 +66,8 @@ robots:
         # kp: 300.0
       arm_right:
         # name: NullJointController
-        # name: JointController
-        # motor_type: position
+        name: JointController
+        motor_type: position
         # use_delta_commands: true
         name: InverseKinematicsController
         # mode: absolute_pose

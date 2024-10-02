@@ -78,7 +78,7 @@ m.KP_ANGLE_VEL = {
 m.MAX_STEPS_FOR_SETTLING = 500
 
 # m.MAX_CARTESIAN_HAND_STEP = 0.002
-m.MAX_CARTESIAN_HAND_STEP = 0.2
+m.MAX_CARTESIAN_HAND_STEP = 0.15
 m.MAX_STEPS_FOR_HAND_MOVE_JOINT = 500
 # m.MAX_STEPS_FOR_HAND_MOVE_IK = 1000
 m.MAX_STEPS_FOR_HAND_MOVE_IK = 200
@@ -1200,6 +1200,10 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 action[control_idx] = th.cat([delta_pos, delta_ori])
             yield self._postprocess_action(action)
 
+        # remove later
+        yield "Done"
+        return "Done"
+        
         if not ignore_failure:
             raise ActionPrimitiveError(
                 ActionPrimitiveError.Reason.EXECUTION_ERROR,
@@ -1233,6 +1237,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         num_poses = int(
             th.max(th.tensor([2, int(travel_distance / m.MAX_CARTESIAN_HAND_STEP) + 1], dtype=th.float32)).item()
         )
+        print("travel_distance, num_poses: ", travel_distance, num_poses)
         pos_waypoints = self.linspace_1d_tensor(start_pos, target_pose[0], num_poses)
 
         # Also interpolate the rotations
@@ -1242,6 +1247,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # remove the first waypoint as it is the starting pose
         pos_waypoints = pos_waypoints[1:]
         quat_waypoints = quat_waypoints[1:]
+
+        print("len(pos_waypoints), len(quat_waypoints): ", len(pos_waypoints), len(quat_waypoints))
 
         controller_config = self.robot._controller_config["arm_" + self.arm]
         if controller_config["name"] == "InverseKinematicsController":

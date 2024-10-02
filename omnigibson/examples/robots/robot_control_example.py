@@ -159,7 +159,8 @@ def main(random_selection=False, headless=False, short_exec=False, quickstart=Fa
         action = (
             action_generator.get_random_action() if control_mode == "random" else action_generator.get_teleop_action()
         )
-        env.step(action=action)
+        print("action: ", action)
+        env.step(action=action[0])
         step += 1
 
     # Always shut down the environment cleanly at the end
