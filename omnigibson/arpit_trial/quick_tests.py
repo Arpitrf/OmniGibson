@@ -6,18 +6,18 @@ import matplotlib.pyplot as plt
 
 np.set_printoptions(suppress=True, precision=3)
 
-f = h5py.File('place_in_shelf_data/dataset.hdf5', "r")
+f = h5py.File('moma_pick_and_place/dataset.hdf5', "r")
 # ======================== Basic hdf5 testing ======================
 print("len: ", len(f['data']))
 # print("--", f['data/episode_00002/observations'].keys())
 # print("--", np.array(f['data/episode_00002/observations/seg_semantic']).shape)
-# print(np.array(f['data/episode_00002/actions/actions']))
+print(np.array(f['data/episode_00000/actions/actions']))
 # print(np.array(f['data/episode_00003/extras/contacts']))
 # print("--", np.array(f[f'data/episode_00000/observations_info']['seg_semantic']))
 # print("joint efforts: ", np.array(f[f'data/episode_00000/proprioceptions/joint_qeffort']).shape)
 # print("--", np.array(f[f'data/episode_00001/observations_info']['seg_instance_id_strings']))
-for ep in f['data'].keys():
-    print(ep, np.array(f['data'][f'{ep}/actions/actions']).shape, np.array(f['data'][f'{ep}/observations/rgb']).shape, np.array(f['data'][f'{ep}/extras/contacts']).shape)
+# for ep in f['data'].keys():
+#     print(ep, np.array(f['data'][f'{ep}/actions/actions']).shape, np.array(f['data'][f'{ep}/observations/rgb']).shape, np.array(f['data'][f'{ep}/extras/contacts']).shape)
 #     print("ep: ", ep)
     # print("--", f[f'data/{ep}/observations_info'].keys())
 # obs_info = f['data/episode_00000/observations_info'].keys()

@@ -41,7 +41,7 @@ robots:
     rigid_trunk: true
     default_trunk_offset: 0.15 #0.15
     # default_reset_mode: tuck
-    default_arm_pose: horizonatal
+    default_arm_pose: horizontal
     sensor_config:
       VisionSensor:
         sensor_kwargs:

@@ -300,7 +300,7 @@ og.sim.play()
 og.sim.load_state(state)
 
 # og.clear()
-og.sim.restore(["moma_pick_and_place/episode_00000_before_place.json"])
+og.sim.restore(["episode_00000_before_place.json"])
 
 # getting all objects in scene
 # env.scene.objects
