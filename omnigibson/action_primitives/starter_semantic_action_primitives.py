@@ -80,7 +80,7 @@ m.MAX_STEPS_FOR_SETTLING = 500
 
 m.MAX_CARTESIAN_HAND_STEP = 0.002
 m.MAX_STEPS_FOR_HAND_MOVE_JOINT = 500
-m.MAX_STEPS_FOR_HAND_MOVE_IK = 1000
+m.MAX_STEPS_FOR_HAND_MOVE_IK = 200
 m.MAX_STEPS_FOR_GRASP_OR_RELEASE = 250
 m.MAX_STEPS_FOR_WAYPOINT_NAVIGATION = 500
 m.MAX_ATTEMPTS_FOR_OPEN_CLOSE = 20
@@ -351,7 +351,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
     def arm(self):
         if not isinstance(self.robot, ManipulationRobot):
             raise ValueError("Cannot use arm for non-manipulation robot")
-        return self.robot.default_arm
+        # return self.robot.default_arm
+        return "right"
 
     @property
     def _base_controller_is_joint(self):
