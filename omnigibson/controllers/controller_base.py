@@ -191,6 +191,7 @@ class BaseController(Serializable, Registerable, Recreatable):
                     command - self._command_input_transform
                 ) * self._command_scale_factor + self._command_output_transform
 
+        # print("command: ", command)
         # Return processed command
         return command
 

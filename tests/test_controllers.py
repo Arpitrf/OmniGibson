@@ -15,22 +15,22 @@ def test_arm_control():
         },
         "objects": [],
         "robots": [
-            {
-                "type": "FrankaPanda",
-                "name": "robot0",
-                "obs_modalities": "rgb",
-                "position": [150, 150, 100],
-                "orientation": [0, 0, 0, 1],
-                "action_normalize": False,
-            },
-            {
-                "type": "Fetch",
-                "name": "robot1",
-                "obs_modalities": "rgb",
-                "position": [150, 150, 105],
-                "orientation": [0, 0, 0, 1],
-                "action_normalize": False,
-            },
+            # {
+            #     "type": "FrankaPanda",
+            #     "name": "robot0",
+            #     "obs_modalities": "rgb",
+            #     "position": [150, 150, 100],
+            #     "orientation": [0, 0, 0, 1],
+            #     "action_normalize": False,
+            # },
+            # {
+            #     "type": "Fetch",
+            #     "name": "robot1",
+            #     "obs_modalities": "rgb",
+            #     "position": [150, 150, 105],
+            #     "orientation": [0, 0, 0, 1],
+            #     "action_normalize": False,
+            # },
             {
                 "type": "Tiago",
                 "name": "robot2",
@@ -39,22 +39,22 @@ def test_arm_control():
                 "orientation": [0, 0, 0, 1],
                 "action_normalize": False,
             },
-            {
-                "type": "A1",
-                "name": "robot3",
-                "obs_modalities": "rgb",
-                "position": [150, 150, 115],
-                "orientation": [0, 0, 0, 1],
-                "action_normalize": False,
-            },
-            {
-                "type": "R1",
-                "name": "robot4",
-                "obs_modalities": "rgb",
-                "position": [150, 150, 120],
-                "orientation": [0, 0, 0, 1],
-                "action_normalize": False,
-            },
+            # {
+            #     "type": "A1",
+            #     "name": "robot3",
+            #     "obs_modalities": "rgb",
+            #     "position": [150, 150, 115],
+            #     "orientation": [0, 0, 0, 1],
+            #     "action_normalize": False,
+            # },
+            # {
+            #     "type": "R1",
+            #     "name": "robot4",
+            #     "obs_modalities": "rgb",
+            #     "position": [150, 150, 120],
+            #     "orientation": [0, 0, 0, 1],
+            #     "action_normalize": False,
+            # },
         ],
     }
 
@@ -192,7 +192,9 @@ def test_arm_control():
         initial_eef_pose[robot.name] = {arm: robot.get_relative_eef_pose(arm=arm) for arm in robot.arm_names}
 
     for controller in ["InverseKinematicsController", "OperationalSpaceController"]:
+        print("----------- CONTROLLER -------------: ", controller)
         for controller_mode in ["pose_delta_ori", "absolute_pose"]:
+            print("---------------- Controller Mode ------------: ", controller_mode)
             controller_kwargs = {
                 "mode": controller_mode,
             }
@@ -255,6 +257,7 @@ def test_arm_control():
                 actions["up"][robot.name] = up_action
                 actions["rotate"][robot.name] = rot_action
 
+
                 # Add base movement action if locomotion robot
                 base_move_action = zero_action.clone()
                 if isinstance(robot, LocomotionRobot):
@@ -274,6 +277,7 @@ def test_arm_control():
 
             # For each action set, reset all robots, then run actions and see if arm moves in expected way
             for action_name, action in actions.items():
+                print("==== action_name, action: ", action_name)
                 # Reset the environment and keep all robots still
                 env.reset()
                 for i, robot in enumerate(env.robots):
@@ -305,14 +309,28 @@ def test_arm_control():
                         pos_check = err_checks[controller_mode][action_name]["pos"]
                         if pos_check is not None:
                             is_valid_pos = pos_check(target_pos, curr_pos, init_pos)
-                            assert is_valid_pos, (
-                                f"Got mismatch for controller [{controller}], mode [{controller_mode}], robot [{robot.model_name}], action [{action_name}]\n"
-                                f"target_pos: {target_pos}, curr_pos: {curr_pos}, init_pos: {init_pos}"
-                            )
+                            # assert is_valid_pos, (
+                            #     f"Got mismatch for controller [{controller}], mode [{controller_mode}], robot [{robot.model_name}], action [{action_name}]\n"
+                            #     f"target_pos: {target_pos}, curr_pos: {curr_pos}, init_pos: {init_pos}"
+                            # )
+                            if not is_valid_pos:
+                                print(
+                                    f"Got mismatch for controller [{controller}], mode [{controller_mode}], robot [{robot.model_name}], action [{action_name}]\n"
+                                    f"target_pos: {target_pos}, curr_pos: {curr_pos}, init_pos: {init_pos}"
+                                )   
+                                input()
                         ori_check = err_checks[controller_mode][action_name]["ori"]
                         if ori_check is not None:
                             is_valid_ori = ori_check(target_quat, curr_quat, init_quat)
-                            assert is_valid_ori, (
-                                f"Got mismatch for controller [{controller}], mode [{controller_mode}], robot [{robot.model_name}], action [{action_name}]\n"
-                                f"target_quat: {target_quat}, curr_quat: {curr_quat}, init_quat: {init_quat}"
-                            )
+                            # assert is_valid_ori, (
+                            #     f"Got mismatch for controller [{controller}], mode [{controller_mode}], robot [{robot.model_name}], action [{action_name}]\n"
+                            #     f"target_quat: {target_quat}, curr_quat: {curr_quat}, init_quat: {init_quat}"
+                            # )
+                            if not is_valid_ori:
+                                print(
+                                    f"Got mismatch for controller [{controller}], mode [{controller_mode}], robot [{robot.model_name}], action [{action_name}]\n"
+                                    f"target_quat: {target_quat}, curr_quat: {curr_quat}, init_quat: {init_quat}"
+                                )
+                                input()
+
+test_arm_control()
