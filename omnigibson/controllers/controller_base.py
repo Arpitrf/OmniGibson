@@ -191,6 +191,7 @@ class BaseController(Serializable, Registerable, Recreatable):
                     command - self._command_input_transform
                 ) * self._command_scale_factor + self._command_output_transform
 
+        # print("command: ", command)
         # Return processed command
         return command
 
@@ -223,7 +224,7 @@ class BaseController(Serializable, Registerable, Recreatable):
 
         return original_command
 
-    def update_goal(self, command, control_dict):
+    def update_goal(self, command, control_dict, explicit_joints=None):
         """
         Updates inputted @command internally, writing any necessary internal variables as needed.
 
@@ -238,9 +239,9 @@ class BaseController(Serializable, Registerable, Recreatable):
         ), f"Commands must be dimension {self.command_dim}, got dim {len(command)} instead."
 
         # Preprocess and run internal command
-        self._goal = self._update_goal(command=self._preprocess_command(command), control_dict=control_dict)
+        self._goal = self._update_goal(command=self._preprocess_command(command), control_dict=control_dict, explicit_joints=explicit_joints)
 
-    def _update_goal(self, command, control_dict):
+    def _update_goal(self, command, control_dict, explicit_joints=None):
         """
         Updates inputted @command internally, writing any necessary internal variables as needed.
 
@@ -303,6 +304,10 @@ class BaseController(Serializable, Registerable, Recreatable):
         Returns:
             Array[float]: numpy array of outputted control signals
         """
+        # # remove later
+        # if self._goal is not None:
+        #     print(self._goal)
+        
         # Generate no-op goal if not specified
         if self._goal is None:
             self._goal = self.compute_no_op_goal(control_dict=control_dict)
@@ -313,6 +318,8 @@ class BaseController(Serializable, Registerable, Recreatable):
             len(control) == self.control_dim
         ), f"Control signal must be of length {self.control_dim}, got {len(control)} instead."
         self._control = self.clip_control(control=control)
+        # remove later
+        # self._control = control
         return self._control
 
     def reset(self):

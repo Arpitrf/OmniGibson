@@ -2,6 +2,7 @@ import os
 import yaml
 import  pdb
 import pickle
+import h5py
 
 import numpy as np
 import torch as th
@@ -10,6 +11,7 @@ import matplotlib.animation as animation
 import omnigibson as og
 import omnigibson.lazy as lazy
 
+from filelock import FileLock
 from scipy.spatial.transform import Rotation as R
 from omnigibson.utils.asset_utils import decrypt_file
 from omnigibson.utils.ui_utils import KeyboardRobotController
@@ -96,7 +98,7 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory=None
         if action == 'Done':
             if episode_memory is not None:
                 dump_to_memory(env, robot, episode_memory) 
-            continue
+            continue 
         if gripper_closed:
             # if left hand is ik
             # action[18] = -1
@@ -105,8 +107,12 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory=None
         else: 
             # action[18] = 1
             action[20] = 1
-        # print("action: ", action[:3])
+        # print("action: ", action[14:17])
         env.step(action)
+        # input("----")
+        # for i in range(1):
+        #     og.sim.step()
+        #     input(f"completed {i} step")
 
         # debugging:
         # current_pos_world = robot.eef_links["right"].get_position_orientation()
@@ -116,6 +122,7 @@ def execute_controller(ctrl_gen, env, robot, gripper_closed, episode_memory=None
 def primitive(episode_memory):
     gripper_closed = False
 
+    # ======================= Move base ================================  
     # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
     target_base_pose = th.tensor([0.0, 0.0, 1.57])
     execute_controller(action_primitives._navigate_to_pose_linearly_cartesian(target_base_pose, episode_memory=episode_memory), 
@@ -127,8 +134,16 @@ def primitive(episode_memory):
     #     og.sim.step()
     curr_base_pos = robot.get_position()
     print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
+    # =================================================================================
+    
+    # action = th.zeros(robot.action_dim)
+    # action[:2] = th.tensor([-0.1, 0.0])
+    # env.step(action)
+    # for _ in range(200):
+    #     og.sim.step()
 
     # ======================= Move hand to grasp pose ================================    
+    print("init_hand_pose: ", robot.get_relative_eef_pose(arm='right')[0])
     # w.r.t world
     target_pose = (th.tensor([0.1829, 0.4876, 0.4051]), th.tensor([-0.0342, -0.0020,  0.9958,  0.0846]))
     # w.r.t robot
@@ -142,7 +157,7 @@ def primitive(episode_memory):
     for _ in range(40):
         og.sim.step()
     current_pose_world = robot.eef_links["right"].get_position_orientation()
-    print("move hand down completed. Desired and Reached right eef pose reached: ", target_pose[0], current_pose_world[0])
+    # print("move hand down completed. Desired and Reached right eef pose reached: ", target_pose[0], current_pose_world[0])
     # =================================================================================
 
     # ============= Perform grasp ===================
@@ -164,17 +179,28 @@ def primitive(episode_memory):
         
     # ======================= Move hand up ================================  
     curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-    new_pos = curr_pos + th.tensor([0.0, 0.0, 0.4])
+    new_pos = curr_pos + th.tensor([0.0, 0.0, 0.1])
     target_pose = (new_pos, curr_orn)
-    execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, gripper_closed=gripper_closed, episode_memory=episode_memory), 
+    execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, in_world_frame=False, ignore_failure=True, gripper_closed=gripper_closed, episode_memory=episode_memory), 
                        env, 
                        robot, 
                        gripper_closed,
                        episode_memory)
+    # execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
+    #                    env, 
+    #                    robot, 
+    #                    gripper_closed)
+    
+
     for _ in range(50):
         og.sim.step()
-    current_pose_world = robot.eef_links["right"].get_position_orientation()
-    print("move hand up completed. Desired and Reached right eef pose reached: ", target_pose[0], current_pose_world[0])
+    
+    # Debugging
+    post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # input()
     # =================================================================================
 
     # ============= Move base ===================
@@ -183,7 +209,7 @@ def primitive(episode_memory):
     
     gripper_closed = True
     # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
-    target_base_pose = th.tensor([0.526, 0.0257, 0.0])
+    target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
     execute_controller(action_primitives._navigate_to_pose_linearly_cartesian(target_base_pose, episode_memory=episode_memory), 
                        env, 
                        robot, 
@@ -196,27 +222,38 @@ def primitive(episode_memory):
     
     # Debugging
     ee_pose_after_nav = robot.get_relative_eef_pose(arm='right')
-    pos_error = np.linalg.norm(ee_pose_after_nav[0] - ee_pose_after_nav[0])
+    pos_error = np.linalg.norm(ee_pose_after_nav[0] - ee_pose_before_nav[0])
     orn_error = T.get_orientation_diff_in_radian(ee_pose_after_nav[1], ee_pose_before_nav[1])
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    input()
+    # input()
     # ============================================
 
-    # # remove later
-    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_before_place.json'])
+    # action = th.zeros(robot.action_dim)
+    # action[:2] = th.tensor([0.1, 0.0])
+    # env.step(action)
+    # for _ in range(200):
+    #     og.sim.step()
+
+    # # # remove later
+    # # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_before_place.json'])
 
     # ======================= Move hand to place pose ================================
     # w.r.t world
-    # place_pose =  (np.array([ 1.1888, -0.1884,  0.8387]), np.array([-0.0489, -0.0063,  0.5555,  0.8301]))
+    place_pose =  (th.tensor([ 1.0702, -0.1873,  0.9063]), th.tensor([-0.0488, -0.0116,  0.5546,  0.8306])) # [ 1.1602, -0.1873,  0.8463]
     # w.r.t robot
-    place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
-    execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=False, episode_memory=episode_memory, gripper_closed=gripper_closed), 
+    # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
+    execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=True, episode_memory=episode_memory, gripper_closed=gripper_closed), 
                        env, 
                        robot, 
                        gripper_closed,
                        episode_memory)
+    # execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=True), 
+    #                    env, 
+    #                    robot, 
+    #                    gripper_closed)
     current_pose_world = robot.eef_links["right"].get_position_orientation()
-    print("move hand to place location completed. Desired and Reached right eef pose reached: ", place_pose[0], current_pose_world[0])
+    print("move hand to place location completed. Desired and Reached right eef pose reached: ", place_pose[0], current_pose_world)
+    # input()
     # ====================================================================================
 
     # ============= Open grasp =================
@@ -236,12 +273,19 @@ def primitive(episode_memory):
     episode_memory.add_action('actions', action_to_add)
     # ==========================================
 
+    for _ in range(50):
+        og.sim.step()
+
 
 
 config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
 config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
 config["scene"] = dict()
 config["scene"]["type"] = "Scene"
+
+# config['robots'][0]['controller_config']['arm_right']['mode'] = 'pose_absolute_ori'
+# config['robots'][0]['controller_config']['arm_right']['command_input_limits'] = None
+# config['robots'][0]['controller_config']['arm_right']['command_output_limits'] = None
 
 # Create and load this object into the simulator
 rot_euler = [0.0, 0.0, 180.0]
@@ -277,10 +321,6 @@ config["objects"] = [
         "mass": 1e-6,
         "position": [0.1, 0.5, 0.5],
         "orientation": box_quat
-        # "orientation": [0.0004835024010390043,
-        #             -0.00029672126402147114,
-        #             -0.11094563454389572,
-        #             0.9938263297080994]
     },
     # {
     #     "type": "DatasetObject",
@@ -300,7 +340,6 @@ print(robot.name)
 # pdb.set_trace()
 
 episode_memory = Memory()
-custom_reset(env, robot, episode_memory)
 
 # scene_initial_state = env.scene._initial_state
 # base_yaw = 90
@@ -346,28 +385,46 @@ action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=Fa
 # obj.root_link.mass = 1e-2
 # print("obj.mass: ", obj.mass)
 
+# Set viewer camera
+og.sim.viewer_camera.set_position_orientation(
+    th.tensor([-0.7563,  1.1324,  1.0464]),
+    th.tensor([-0.2168,  0.5182,  0.7632, -0.3193]),
+)
+
 
 for _ in range(50):
         og.sim.step()
 
 save_folder = 'moma_pick_and_place'
 os.makedirs(save_folder, exist_ok=True)
+# Obtain the number of episodes
+
 episode_number = 0
+if os.path.isfile(f'{save_folder}/dataset.hdf5'):
+    with FileLock(f'{save_folder}/dataset.hdf5' + ".lock"):
+        with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
+            episode_number = len(file['data'].keys())
+            print("episode_number: ", episode_number)
 
-# # save the start simulator state
-# og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
-# arr = scene.dump_state(serialized=True)
-# with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-#     pickle.dump(arr, f)
 
-primitive(episode_memory)
-# episode_memory.dump(f'{save_folder}/dataset.hdf5')
+for _ in range(1):
+    custom_reset(env, robot, episode_memory)
 
-# # save the end simulator state
-# og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
-# arr = scene.dump_state(serialized=True)
-# with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-#     pickle.dump(arr, f)
+    # save the start simulator state
+    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+    arr = scene.dump_state(serialized=True)
+    with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+        pickle.dump(arr, f)
+
+    primitive(episode_memory)
+
+    episode_memory.dump(f'{save_folder}/dataset.hdf5')
+
+    # save the end simulator state
+    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+    arr = scene.dump_state(serialized=True)
+    with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+        pickle.dump(arr, f)
 
 # # Teleop
 # max_steps = -1 

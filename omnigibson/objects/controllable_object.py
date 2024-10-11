@@ -363,7 +363,7 @@ class ControllableObject(BaseObject):
             dtype=NumpyTypes.FLOAT32,
         )
 
-    def apply_action(self, action):
+    def apply_action(self, action, explicit_joints=None):
         """
         Converts inputted actions into low-level control signals
 
@@ -394,10 +394,17 @@ class ControllableObject(BaseObject):
         idx = 0
 
         for name, controller in self._controllers.items():
-            # Set command, then take a controller step
-            controller.update_goal(
-                command=action[idx : idx + controller.command_dim], control_dict=self.get_control_dict()
-            )
+            # print("name, controller: ", name, controller)
+            if name == "arm_right":
+                # Set command, then take a controller step
+                controller.update_goal(
+                    command=action[idx : idx + controller.command_dim], control_dict=self.get_control_dict(), explicit_joints=explicit_joints
+                )  
+            else:
+                # Set command, then take a controller step
+                controller.update_goal(
+                    command=action[idx : idx + controller.command_dim], control_dict=self.get_control_dict()
+                )
             # Update idx
             idx += controller.command_dim
 
@@ -513,6 +520,9 @@ class ControllableObject(BaseObject):
         pos_vec, pos_idxs, using_pos = [], [], False
         vel_vec, vel_idxs, using_vel = [], [], False
         eff_vec, eff_idxs, using_eff = [], [], False
+        # trial
+        eff_vec_base, eff_idxs_base, eff_vec_rest, eff_idxs_rest = [], [], [], []
+        
         cur_indices_idx = 0
         while cur_indices_idx != n_indices:
             # Grab the current DOF index we're controlling and find the corresponding joint
@@ -549,6 +559,14 @@ class ControllableObject(BaseObject):
                 eff_vec.append(ctrl)
                 eff_idxs.append(cur_ctrl_idx)
                 using_eff = True
+                # trial
+                if "base" in joint.name:
+                    eff_vec_base.append(ctrl)
+                    eff_idxs_base.append(cur_ctrl_idx)
+                else:
+                    eff_vec_rest.append(ctrl)
+                    eff_idxs_rest.append(cur_ctrl_idx)
+
             elif ctrl_type == ControlType.VELOCITY:
                 vel_vec.append(ctrl)
                 vel_idxs.append(cur_ctrl_idx)
@@ -562,6 +580,9 @@ class ControllableObject(BaseObject):
                 eff_vec.append(0)
                 eff_idxs.append(cur_ctrl_idx)
                 using_eff = True
+                # trial
+                eff_vec_base.append(0)
+                eff_idxs_base.append(cur_ctrl_idx)
             else:
                 raise ValueError("Invalid control type specified: {}".format(ctrl_type))
             # Finally, increment the current index based on how many DOFs were just controlled
@@ -578,8 +599,18 @@ class ControllableObject(BaseObject):
             )
         if using_eff:
             ControllableObjectViewAPI.set_joint_efforts(
+                # self.articulation_root_path, efforts=th.tensor(eff_vec, dtype=th.float), indices=th.tensor(eff_idxs)
                 self.articulation_root_path, efforts=th.tensor(eff_vec, dtype=th.float), indices=th.tensor(eff_idxs)
             )
+            # trial
+            # compensation = self._articulation_view.get_measured_joint_efforts().flatten()
+            # ControllableObjectViewAPI.set_joint_efforts(
+            #     self.articulation_root_path, efforts=th.tensor(eff_vec_base, dtype=th.float), indices=th.tensor(eff_idxs_base)
+            # )
+            # ControllableObjectViewAPI.set_joint_efforts(
+            #     self.articulation_root_path, efforts=th.tensor(eff_vec_rest, dtype=th.float) + compensation[eff_idxs_rest], indices=th.tensor(eff_idxs_rest)
+            # )
+
 
     def get_control_dict(self):
         """

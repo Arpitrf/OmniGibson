@@ -20,7 +20,7 @@ log = create_module_logger(module_name=__name__)
 # Create settings for this module
 m = create_module_macros(module_path=__file__)
 # m.DEFAULT_JOINT_POS_KP = 50.0
-m.DEFAULT_JOINT_POS_KP = 4000.0
+m.DEFAULT_JOINT_POS_KP = 500.0
 
 m.DEFAULT_JOINT_POS_DAMPING_RATIO = 1.0  # critically damped
 m.DEFAULT_JOINT_VEL_KP = 2.0
@@ -136,7 +136,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
             command_output_limits=command_output_limits,
         )
 
-    def _update_goal(self, command, control_dict):
+    def _update_goal(self, command, control_dict, explicit_joints=None):
         # Compute the base value for the command
         base_value = control_dict[f"joint_{self._motor_type}"][self.dof_idx]
 
@@ -194,6 +194,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
         """
         base_value = control_dict[f"joint_{self._motor_type}"][self.dof_idx]
         target = goal_dict["target"]
+        # print("self._motor_typeeeeeeeeeeeeeeeeeeeeeeeeeeeee: ", self._motor_type, goal_dict["target"])
 
         # Convert control into efforts
         if self._use_impedances:
@@ -224,7 +225,10 @@ class JointController(LocomotionController, ManipulationController, GripperContr
         else:
             # Desired is the exact goal
             u = target
+            # velocity_error = target - base_value
+            # u = velocity_error * self.kp
 
+        # print("=========u: ", u)
         # Return control
         return u
 

@@ -137,7 +137,7 @@ class MultiFingerGripperController(GripperController):
         # Return from super method
         return super()._preprocess_command(command=command)
 
-    def _update_goal(self, command, control_dict):
+    def _update_goal(self, command, control_dict, explicit_joints=None):
         # Directly store command as the goal
         return dict(target=command)
 
@@ -266,7 +266,9 @@ class MultiFingerGripperController(GripperController):
 
     def compute_no_op_goal(self, control_dict):
         # Just use a zero vector
-        return dict(target=th.zeros(self.command_dim))
+        return dict(target=control_dict["joint_position"][self.dof_idx])
+        # print("control_dict: ", control_dict)
+        # return dict(target=th.zeros(self.command_dim))
 
     def _compute_no_op_action(self, control_dict):
         return self._goal["target"]

@@ -144,13 +144,6 @@ def move_primitive(action):
     # print("current_pose: ", current_pose)
     print("target_pose: ", target_pose)
     print("current_joint_pos: ", robot.get_joint_positions()[robot.arm_control_idx["right"]])
-    # test_joint_pos = action_primitives._ik_solver_cartesian_to_joint_space(target_pose)
-    # print("test_joint_pos: ", test_joint_pos)
-    # action = action_primitives._empty_action()
-    # env.step(action, explicit_joints=test_joint_pos)
-    # total_collisions1 = 0
-    # for _ in range(40):
-    #     og.sim.step()
 
     obs, info, total_collisions1 = execute_controller(action_primitives._move_hand_direct_ik(target_pose,
                                                                             stop_on_contact=False,
@@ -191,8 +184,7 @@ def move_primitive(action):
     # print("total_collisions1, total_collisions2, total_collisions3: ", total_collisions1, total_collisions2, total_collisions3)
     total_collisions = max(total_collisions1, total_collisions2, total_collisions3)
 
-    for _ in range(50):
-        print(robot._controllers["arm_right"]._goal)
+    for _ in range(40):
         og.sim.step()
 
     ee_pose_after = robot.get_relative_eef_pose(arm='right')
@@ -398,32 +390,20 @@ def safe(action, use_hack=False):
         total_collisions = 0
         print("Opening gripper")
         robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=robot.gripper_control_idx['right'])
-        # for name, controller in robot._controllers.items():
-        #     controller.reset()
-        action = action_primitives._empty_action()
-        action[robot.gripper_action_idx["right"]] = 1.0
-        env.step(action)
         for _ in range(40):
-            # print(robot._controllers["arm_right"]._goal)
             og.sim.step()
-        print("gripper finger joint positions after opening: ", robot.get_joint_positions()[robot.gripper_control_idx["right"]])
+        # print("gripper finger joint positions after opening: ", robot.get_joint_positions()[robot.gripper_control_idx["right"]])
     else:
         _, _, total_collisions = move_primitive(action)
-        # # remove later
-        temp_state = og.sim.dump_state()
-        x = input("Press o to open gripper")
-        if x == 'o':
-            robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=robot.gripper_control_idx['right'])
-            for name, controller in robot._controllers.items():
-                controller.reset()
-            action = action_primitives._empty_action()
-            action[robot.gripper_action_idx["right"]] = 1.0
-            env.step(action)
-            for i in range(5):
-                print(i, robot._controllers["gripper_right"]._goal)
-                og.sim.step()
-            print("gripper finger joint positions after opening: ", robot.get_joint_positions()[robot.gripper_control_idx["right"]])
-            og.sim.load_state(temp_state)
+        # remove later
+        # temp_state = og.sim.dump_state()
+        # x = input("Press o to open gripper")
+        # if x == 'o':
+        #     robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=robot.gripper_control_idx['right'])
+        #     for _ in range(40):
+        #         og.sim.step()
+        #     print("gripper finger joint positions after opening: ", robot.get_joint_positions()[robot.gripper_control_idx["right"]])
+        #     og.sim.load_state(temp_state)
     
     obj_in_hand_pos_after = box.get_position()
     delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 

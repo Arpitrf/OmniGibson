@@ -30,6 +30,10 @@ def custom_reset(env, robot):
     env.reset()
     robot.reset()
 
+    # Step simulator a few times so that the effects of "reset" take place
+    for _ in range(10):
+        og.sim.step()
+
 def execute_controller(ctrl_gen, env, robot, gripper_closed):
     for action in ctrl_gen:
         if action == 'Done':
@@ -148,85 +152,116 @@ og.sim.load_state(state)
 normalized_qpos = robot.get_joint_positions(normalized=True)[robot.arm_control_idx[arm]]
 print("normalized_qpos: ", normalized_qpos)
 
+
+# ============ Move hand to grasp pose =============
+curr_eef_pose = robot.get_relative_eef_pose(arm='right')
+print("intial_pose: ", curr_eef_pose[0])
+if args.default_arm_pose == 'horizontal':
+    target_pose = (th.tensor([ 0.4876, -0.2129,  0.4346]), curr_eef_pose[1])
+else:
+    target_pose = (th.tensor([ 0.4876, -0.0829,  0.5246]), curr_eef_pose[1])
+
 action = th.zeros(robot.action_dim)
-action[:2] = th.tensor([-0.5, 0.0])
+if args.delta_pos:
+    # pose_delta_ori mode
+    delta_pos = target_pose[0] - curr_eef_pose[0] 
+    print("delta_pos: ", delta_pos)
+    delta_orn = th.zeros(3)
+    action[14:17] = th.tensor(delta_pos)
+    action[17:20] = th.tensor(delta_orn)
+else:
+    # absolute_pose mode
+    orn = R.from_quat(target_pose[1]).as_rotvec()
+    action[14:17] = th.tensor(target_pose[0])
+    action[17:20] = th.tensor(orn)
+
+print("action: ", action)
+env.step(action)
+for i in range(30):
+    og.sim.step()
+    # input(f"Step {i}")
+
+reached_right_eef_pose = robot.get_relative_eef_pose(arm='right')
+print("desired_right_eef_pose, reached_right_eef_pose: ", target_pose[0], reached_right_eef_pose[0])
+input("Hereee")
+# ===========================================
+
+# ============ Close gripper =============
+action = th.zeros(robot.action_dim)
+# only if absolute pose
+if not args.delta_pos:
+    orn = R.from_quat(target_pose[1]).as_rotvec()
+    action[14:17] = th.tensor(target_pose[0])
+    action[17:20] = th.tensor(orn)
+action[20] = -1
+
 env.step(action)
 for _ in range(100):
     og.sim.step()
-
-# # ============ Move hand to grasp pose =============
-# curr_eef_pose = robot.get_relative_eef_pose(arm='right')
-# print("intial_pose: ", curr_eef_pose[0])
-# if args.default_arm_pose == 'horizontal':
-#     target_pose = (th.tensor([ 0.4976, -0.2129,  0.4346]), curr_eef_pose[1])
-# else:
-#     target_pose = (th.tensor([ 0.4976, -0.0829,  0.5246]), curr_eef_pose[1])
-
-# action = th.zeros(robot.action_dim)
-# if args.delta_pos:
-#     # pose_delta_ori mode
-#     delta_pos = target_pose[0] - curr_eef_pose[0] 
-#     print("delta_pos: ", delta_pos)
-#     delta_orn = th.zeros(3)
-#     action[14:17] = th.tensor(delta_pos)
-#     action[17:20] = th.tensor(delta_orn)
-# else:
-#     # absolute_pose mode
-#     orn = R.from_quat(target_pose[1]).as_rotvec()
-#     action[14:17] = th.tensor(target_pose[0])
-#     action[17:20] = th.tensor(orn)
-
-# env.step(action)
-# for _ in range(100):
-#     og.sim.step()
-
-# reached_right_eef_pose = robot.get_relative_eef_pose(arm='right')
-# print("desired_right_eef_pose, reached_right_eef_pose: ", target_pose[0], reached_right_eef_pose[0])
-# # ===========================================
-
-# # ============ Close gripper =============
-# action = th.zeros(robot.action_dim)
-# # only if absolute pose
-# if not args.delta_pos:
-#     orn = R.from_quat(target_pose[1]).as_rotvec()
-#     action[14:17] = th.tensor(target_pose[0])
-#     action[17:20] = th.tensor(orn)
-# action[20] = -1
-
-# env.step(action)
-# for _ in range(100):
-#     og.sim.step()
-# # ======================================
+# ======================================
     
-# # ============ Move hand to post-grasp pose =============
-# curr_eef_pose = robot.get_relative_eef_pose(arm='right')
-# target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.4]), curr_eef_pose[1])
-# action = th.zeros(robot.action_dim)
-# if args.delta_pos:
-#     # pose_delta_ori mode
-#     delta_pos = target_pose[0] - curr_eef_pose[0] 
-#     print("delta_pos: ", delta_pos)
-#     delta_orn = th.zeros(3)
-#     action[14:17] = th.tensor(delta_pos)
-#     action[17:20] = th.tensor(delta_orn)
-#     action[20] = -1
-# else:
-#     # absolute_pose mode
-#     orn = R.from_quat(target_pose[1]).as_rotvec()
-#     action[14:17] = th.tensor(target_pose[0])
-#     action[17:20] = th.tensor(orn)
-#     action[20] = -1
+# ============ Move hand to post-grasp pose =============
+curr_eef_pose = robot.get_relative_eef_pose(arm='right')
+target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.4]), curr_eef_pose[1])
+action = th.zeros(robot.action_dim)
+if args.delta_pos:
+    # pose_delta_ori mode
+    delta_pos = target_pose[0] - curr_eef_pose[0] 
+    print("delta_pos: ", delta_pos)
+    delta_orn = th.zeros(3)
+    action[14:17] = th.tensor(delta_pos)
+    action[17:20] = th.tensor(delta_orn)
+    action[20] = -1
+else:
+    # absolute_pose mode
+    orn = R.from_quat(target_pose[1]).as_rotvec()
+    action[14:17] = th.tensor(target_pose[0])
+    action[17:20] = th.tensor(orn)
+    action[20] = -1
 
-# env.step(action)
-# for _ in range(300):
-#     og.sim.step()
+env.step(action)
+for i in range(300):
+    og.sim.step()
+    # input(f"Step {i}")
 
-# reached_right_eef_pose = robot.get_relative_eef_pose(arm='right')
-# print("desired_right_eef_pose, reached_right_eef_pose: ", target_pose[0], reached_right_eef_pose[0])
-# pos_error = np.linalg.norm(target_pose[0] - reached_right_eef_pose[0])
-# orn_error = T.get_orientation_diff_in_radian(target_pose[1], reached_right_eef_pose[1])
-# print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-# # =========================================================
+reached_right_eef_pose = robot.get_relative_eef_pose(arm='right')
+print("desired_right_eef_pose, reached_right_eef_pose: ", target_pose[0], reached_right_eef_pose[0])
+pos_error = np.linalg.norm(target_pose[0] - reached_right_eef_pose[0])
+orn_error = T.get_orientation_diff_in_radian(target_pose[1], reached_right_eef_pose[1])
+print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+input()
+# =========================================================
+
+# for delta in range(4 if args.default_arm_pose == "horizontal" else 2):
+#     curr_eef_pose = robot.get_relative_eef_pose(arm='right')
+#     curr_target = (target_pose[0] + th.tensor([0.0, 0.0, 0.1 * (delta + 1)]), curr_eef_pose[1])
+
+#     action = th.zeros(robot.action_dim)
+#     if args.delta_pos:
+#         # pose_delta_ori mode
+#         delta_pos = curr_target[0] - curr_eef_pose[0]
+#         print("delta_pos: ", delta_pos)
+#         delta_orn = th.zeros(3)
+#         action[14:17] = th.tensor(delta_pos)
+#         action[17:20] = th.tensor(delta_orn)
+#         action[20] = -1
+#     else:
+#         # absolute_pose mode
+#         orn = R.from_quat(curr_target[1]).as_rotvec()
+#         action[14:17] = th.tensor(curr_target[0])
+#         action[17:20] = th.tensor(orn)
+#         action[20] = -1
+
+#     env.step(action)
+#     for i in range(20):
+#         og.sim.step()
+#         input(f"Step {i}")
+
+#     reached_right_eef_pose = robot.get_relative_eef_pose(arm='right')
+#     print("desired_right_eef_pose, reached_right_eef_pose: ", curr_target[0], reached_right_eef_pose[0])
+#     pos_error = np.linalg.norm(curr_target[0] - reached_right_eef_pose[0])
+#     orn_error = T.get_orientation_diff_in_radian(target_pose[1], reached_right_eef_pose[1])
+#     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
 
 for _ in range(500):
     og.sim.step()

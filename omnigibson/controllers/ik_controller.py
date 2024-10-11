@@ -138,6 +138,7 @@ class InverseKinematicsController(JointController, ManipulationController):
         self.task_name = task_name
         self.reset_joint_pos = reset_joint_pos[dof_idx]
         self.condition_on_current_position = condition_on_current_position
+        self._explicit_joints = None
 
         # Other variables that will be filled in at runtime
         self._fixed_quat_target = None
@@ -180,9 +181,9 @@ class InverseKinematicsController(JointController, ManipulationController):
             dof_idx=dof_idx,
             kp=kp,
             damping_ratio=damping_ratio,
-            motor_type="position",
+            motor_type="position", #position
             use_delta_commands=False,
-            use_impedances=use_impedances,
+            use_impedances=use_impedances, 
             command_input_limits=command_input_limits,
             command_output_limits=command_output_limits,
         )
@@ -242,15 +243,17 @@ class InverseKinematicsController(JointController, ManipulationController):
 
         return state_dict, idx + deserialized_items
 
-    def _update_goal(self, command, control_dict):
+    def _update_goal(self, command, control_dict, explicit_joints=None):
         # Grab important info from control dict
         pos_relative = control_dict[f"{self.task_name}_pos_relative"]
         quat_relative = control_dict[f"{self.task_name}_quat_relative"]
 
         # Convert position command to absolute values if needed
         if self.mode == "absolute_pose":
+            # print("in absolute mode")
             target_pos = command[:3]
         else:
+            # print("in delta mode", command[:3])
             dpos = command[:3]
             target_pos = pos_relative + dpos
 
@@ -279,6 +282,10 @@ class InverseKinematicsController(JointController, ManipulationController):
             target_pos=target_pos,
             target_quat=target_quat,
         )
+        # print("In IK controller _update_goal(). target_pos: ", target_pos)
+        # input()
+
+        self._explicit_joints = explicit_joints
 
         return goal_dict
 
@@ -309,6 +316,7 @@ class InverseKinematicsController(JointController, ManipulationController):
         pos_relative = control_dict[f"{self.task_name}_pos_relative"]
         quat_relative = control_dict[f"{self.task_name}_quat_relative"]
         target_pos = goal_dict["target_pos"]
+        # print("------target_pos: ", target_pos)
         target_quat = goal_dict["target_quat"]
 
         # Calculate and return IK-backed out joint angles
@@ -341,6 +349,9 @@ class InverseKinematicsController(JointController, ManipulationController):
         if self.control_filter is not None:
             target_joint_pos = self.control_filter.estimate(target_joint_pos)
 
+        if self._explicit_joints is not None:
+            target_joint_pos = self._explicit_joints
+        
         # Run super to reach desired position / velocity setpoint
         return super().compute_control(goal_dict=dict(target=target_joint_pos), control_dict=control_dict)
 

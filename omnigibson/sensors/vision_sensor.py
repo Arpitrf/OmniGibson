@@ -384,10 +384,11 @@ class VisionSensor(BaseSensor):
         # assert set(image_keys.tolist()).issubset(
         #     set(replicator_mapping.keys())
         # ), "Semantic segmentation image does not match the original id_to_labels mapping."
-        if not set(image_keys.tolist()).issubset(set(replicator_mapping.keys())):
-            log.warning(
-                "Some semantic IDs in the image are not in the id_to_labels mapping. This is a known issue with the replicator and should only affect a few pixels. These pixels will be marked as unlabelled."
-            )
+        
+        # if not set(image_keys.tolist()).issubset(set(replicator_mapping.keys())):
+        #     log.warning(
+        #         "Some semantic IDs in the image are not in the id_to_labels mapping. This is a known issue with the replicator and should only affect a few pixels. These pixels will be marked as unlabelled."
+        #     )
 
         return VisionSensor.SEMANTIC_REMAPPER.remap(replicator_mapping, semantic_class_id_to_name(), img, image_keys)
 

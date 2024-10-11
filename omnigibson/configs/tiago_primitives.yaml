@@ -67,9 +67,10 @@ robots:
       arm_right:
         # name: NullJointController
         # name: JointController
-        # motor_type: position
+        # motor_type: velocity
         # use_delta_commands: true
         name: InverseKinematicsController
+        # use_impedances: False
         # mode: absolute_pose
         # command_input_limits: null
         # command_output_limits: null
@@ -85,6 +86,11 @@ robots:
       #   use_delta_commands: true
       gripper_right:
         name: MultiFingerGripperController
+        # name: JointController
+        # motor_type: position
+        # command_input_limits: [-1, 1]
+        # command_output_limits: null
+        # use_delta_commands: true
       camera:
         name: JointController
         # motor_type: position

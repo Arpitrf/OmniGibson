@@ -539,7 +539,7 @@ class Environment(gym.Env, GymObservable, Recreatable):
         if self._scene_graph_builder is not None:
             info["scene_graph"] = self.get_scene_graph()
 
-    def _pre_step(self, action):
+    def _pre_step(self, action, explicit_joints=None):
         """Apply the pre-sim-step part of an environment step, i.e. apply the robot actions."""
         # If the action is not a dictionary, convert into a dictionary
         if not isinstance(action, dict) and not isinstance(action, gym.spaces.Dict):
@@ -555,7 +555,7 @@ class Environment(gym.Env, GymObservable, Recreatable):
 
         # Iterate over all robots and apply actions
         for robot in self.robots:
-            robot.apply_action(action_dict[robot.name])
+            robot.apply_action(action_dict[robot.name], explicit_joints)
 
     def _post_step(self, action):
         """Apply the post-sim-step part of an environment step, i.e. grab observations and return the step results."""
@@ -591,7 +591,7 @@ class Environment(gym.Env, GymObservable, Recreatable):
         self._current_step += 1
         return obs, reward, terminated, truncated, info
 
-    def step(self, action, n_render_iterations=1):
+    def step(self, action, n_render_iterations=1, explicit_joints=None):
         """
         Apply robot's action and return the next state, reward, done and info,
         following OpenAI Gym's convention
@@ -611,10 +611,14 @@ class Environment(gym.Env, GymObservable, Recreatable):
                 - dict: info, i.e. dictionary with any useful information
         """
         # Pre-processing before stepping simulation
-        self._pre_step(action)
+        # print("before pre steppppppppppppp")
+        self._pre_step(action, explicit_joints)
+        # print("after pre steppppppppppppp")
 
         # Step simulation
+        # print("before og.sim.step")
         og.sim.step()
+        # print("after og.sim.step")
 
         # Render any additional times requested
         for _ in range(n_render_iterations - 1):

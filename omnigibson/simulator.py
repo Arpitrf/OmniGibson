@@ -1066,6 +1066,7 @@ def _launch_simulator(*args, **kwargs):
             """
             Step the simulation at self.get_sim_step_dt() rate
             """
+            # print("in simulator steppppp")
             render = self._render_on_step
             if self.stage is None:
                 raise Exception("There is no stage currently opened, init_stage needed before calling this func")
