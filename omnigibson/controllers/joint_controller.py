@@ -19,7 +19,8 @@ log = create_module_logger(module_name=__name__)
 
 # Create settings for this module
 m = create_module_macros(module_path=__file__)
-m.DEFAULT_JOINT_POS_KP = 50.0
+# m.DEFAULT_JOINT_POS_KP = 50.0
+m.DEFAULT_JOINT_POS_KP = 1000.0
 m.DEFAULT_JOINT_POS_DAMPING_RATIO = 1.0  # critically damped
 m.DEFAULT_JOINT_VEL_KP = 2.0
 
@@ -191,6 +192,7 @@ class JointController(LocomotionController, ManipulationController, GripperContr
         """
         base_value = control_dict[f"joint_{self._motor_type}"][self.dof_idx]
         target = goal_dict["target"]
+        # print("-=---------------", target.shape, base_value.shape)
 
         # Convert control into efforts
         if self._use_impedances:

@@ -479,3 +479,11 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
             arm: os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_eef.usd")
             for arm in self.arm_names
         }
+
+    def custom_is_grasping(self):
+        gripper_right_qpos = self._get_proprioception_dict()['gripper_right_qpos']
+        if (gripper_right_qpos[0] > 0.044 and gripper_right_qpos[1] > 0.044) or \
+            (gripper_right_qpos[0] < 0.0001 and gripper_right_qpos[1] < 0.0001):
+            return th.tensor(False)
+        else:
+            return th.tensor(True)

@@ -138,6 +138,7 @@ class InverseKinematicsController(JointController, ManipulationController):
         self.task_name = task_name
         self.reset_joint_pos = reset_joint_pos[dof_idx]
         self.condition_on_current_position = condition_on_current_position
+        self.singularity = False
 
         # Other variables that will be filled in at runtime
         self._fixed_quat_target = None
@@ -327,6 +328,34 @@ class InverseKinematicsController(JointController, ManipulationController):
 
             # Use the jacobian to compute a local approximation
             j_eef = control_dict[f"{self.task_name}_jacobian_relative"][:, self.dof_idx]
+            import numpy as np
+            # print("j_eef.shape: ", j_eef.shape, np.linalg.matrix_rank(j_eef), j_eef)
+            # Compute the rank
+            J = j_eef
+            rank = np.linalg.matrix_rank(J)
+
+            # Perform Singular Value Decomposition
+            U, S, V = np.linalg.svd(J)
+
+            # Check the smallest singular value
+            smallest_singular_value = min(S)
+
+            # Check the condition number
+            condition_number = np.linalg.cond(J)
+
+            # print(f"Rank of Jacobian: {rank}")
+            # print(f"Smallest singular value: {smallest_singular_value}")
+            # print(f"Condition number: {condition_number}")
+
+            if condition_number > 100 and smallest_singular_value < 1e-2: 
+                self.singularity = True
+            else: 
+                self.singularity = False
+
+            # # Threshold for singularity detection (for small singular values)
+            # if smallest_singular_value < 1e-2:
+            #     print("Warning: Robot arm is near a singularity!")
+
             j_eef_pinv = th.linalg.pinv(j_eef)
             delta_j = j_eef_pinv @ err
             target_joint_pos = current_joint_pos + delta_j
@@ -346,6 +375,7 @@ class InverseKinematicsController(JointController, ManipulationController):
 
     def compute_no_op_goal(self, control_dict):
         # No-op is maintaining current pose
+
         return dict(
             target_pos=control_dict[f"{self.task_name}_pos_relative"],
             target_quat=control_dict[f"{self.task_name}_quat_relative"],

@@ -91,7 +91,7 @@ config["scene"] = dict()
 config["scene"]["type"] = "Scene"
 
 config['robots'][0]['controller_config']['arm_right']['mode'] = 'pose_absolute_ori'
-config['robots'][0]['default_arm_pose'] = 'diagonal45'
+# config['robots'][0]['default_arm_pose'] = 'diagonal45'
 
 # config['robots'][0]['controller_config']['arm_right']['command_input_limits'] = None
 # config['robots'][0]['controller_config']['arm_right']['command_output_limits'] = None
@@ -121,20 +121,20 @@ config["objects"] = [
         "position": [0, 0.6, 0.3],
         "orientation": [0, 0, 0, 1]
     },
-    # {
-    #     "type": "PrimitiveObject",
-    #     "name": "box",
-    #     "primitive_type": "Cube",
-    #     "rgba": [1.0, 0, 0, 1.0],
-    #     "scale": [0.1, 0.05, 0.1],
-    #     # "size": 0.05,
-    #     "position": [0.14, 0.53, 0.5],
-    #     "orientation": box_quat
-    #     # "orientation": [0.0004835024010390043,
-    #     #             -0.00029672126402147114,
-    #     #             -0.11094563454389572,
-    #     #             0.9938263297080994]
-    # },
+    {
+        "type": "PrimitiveObject",
+        "name": "box",
+        "primitive_type": "Cube",
+        "rgba": [1.0, 0, 0, 1.0],
+        "scale": [0.1, 0.05, 0.1],
+        # "size": 0.05,
+        "position": [0.14, 0.53, 0.5],
+        "orientation": box_quat
+        # "orientation": [0.0004835024010390043,
+        #             -0.00029672126402147114,
+        #             -0.11094563454389572,
+        #             0.9938263297080994]
+    },
 ]
 
 env = og.Environment(configs=config)

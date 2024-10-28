@@ -170,6 +170,7 @@ class MultiFingerGripperController(GripperController):
                     if self._open_qpos is None
                     else self._open_qpos
                 )
+                # print("u: ", u)
             else:
                 u = (
                     self._control_limits[ControlType.get_type(self._motor_type)][0][self.dof_idx]
@@ -194,6 +195,7 @@ class MultiFingerGripperController(GripperController):
         # Update whether we're grasping or not
         self._update_grasping_state(control_dict=control_dict)
 
+        # print("u: ", u)
         # Return control
         return u
 

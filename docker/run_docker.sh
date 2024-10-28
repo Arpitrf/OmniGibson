@@ -78,7 +78,10 @@ docker run \
     -v $DATA_PATH/isaac-sim/config:/root/.nvidia-omniverse/config:rw \
     -v $DATA_PATH/isaac-sim/data:/root/.local/share/ov/data:rw \
     -v $DATA_PATH/isaac-sim/documents:/root/Documents:rw \
-    --network=host --rm -it stanfordvl/omnigibson:latest
+    -v $PWD/:/code \
+    -v /home/arpit/mambaforge/:/home/arpit/mambaforge \
+    -v /home/arpit/test_projects/:/home/arpit/test_projects \
+    --network=host -it stanfordvl/omnigibson:latest
 if [ "$GUI" = true ] ; then
     xhost -local:root
 fi

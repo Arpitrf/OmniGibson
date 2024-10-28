@@ -908,9 +908,10 @@ class KeyboardRobotController:
         keypress_str = self.current_keypress.__str__().split(".")[-1]
         print("Pressed {}. Action: {}".format(keypress_str, action.tolist()))
         sys.stdout.write("\033[F")
+        print("keypress_str: ", keypress_str)
 
         # Return action
-        return action
+        return action, keypress_str
 
     def print_keyboard_teleop_info(self):
         """
