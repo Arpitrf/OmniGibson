@@ -3,6 +3,7 @@ import yaml
 import  pdb
 import pickle
 import cv2
+import imageio
 
 import numpy as np
 import torch as th
@@ -20,6 +21,62 @@ from omnigibson.action_primitives.starter_semantic_action_primitives import Star
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 from omnigibson import object_states
 
+def move_to_grasp_pose(grasp_action=1.0):
+    # ======================= Move hand to grasp pose ================================    
+    print("init_hand_pose: ", robot.get_relative_eef_pose(arm='right')[0])
+    robot_to_box = np.array([
+            [ 0.24697646,  0.96798984,  0.04470224, -0.02945701],
+            [ 0.14370723,  0.00903325, -0.98957902,  0.00897374],
+            [-0.95830625,  0.25082675, -0.13687614,  0.12712793],
+            [ 0.        ,  0.        ,  0.        ,  1.        ],
+        ])
+    box_pos, box_orn = box.get_position_orientation()
+    box_to_world = np.eye(4)
+    box_to_world[:3, :3] = R.from_quat(box_orn).as_matrix()
+    box_to_world[:3, 3] = np.transpose(box_pos)
+    robot_to_world = np.dot(box_to_world, robot_to_box)
+    robot_to_world_orn = th.tensor(R.from_matrix(robot_to_world[:3, :3]).as_quat(), dtype=th.float32)
+    robot_to_world_pos = th.tensor(robot_to_world[:3, 3], dtype=th.float32)
+    target_pose = (robot_to_world_pos, robot_to_world_orn)
+    
+    pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
+    execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=True), 
+                    env, 
+                    robot, 
+                    grasp_action, 
+                    ) 
+    
+    execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=True), 
+                    env, 
+                    robot, 
+                    grasp_action, 
+                    ) 
+    for _ in range(40):
+        og.sim.step()
+    
+    # Debugging
+    # post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    post_eef_pose = robot.eef_links["right"].get_position_orientation()
+    pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # =================================================================================
+
+def hori_concatenate_image(images):
+    # Ensure the images have the same height
+    image1 = images[0]
+    concatenated_image = image1
+    for i in range(1, len(images)):
+        image_i = images[i]
+        if image1.shape[0] != image_i.shape[0]:
+            print("Images do not have the same height. Resizing the second image.")
+            height = image1.shape[0]
+            image_i = cv2.resize(image_i, (int(image_i.shape[1] * (height / image_i.shape[0])), height))
+
+        # Concatenate the images side by side
+        concatenated_image = np.concatenate((concatenated_image, image_i), axis=1)
+
+    return concatenated_image
 
 def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     obs, info = env.get_obs()
@@ -28,6 +85,11 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
             continue
         action[robot.gripper_action_idx["right"]] = grasp_action
         obs, reward, terminated, truncated, info = env.step(action)
+        img = obs[f"{env.robots[0].name}"][f"{env.robots[0].name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy() / 255
+        viewer_img = og.sim.viewer_camera._get_obs()[0]['rgb'][:,:,:3] / 255
+        concat_img = hori_concatenate_image([viewer_img, img])
+        writer.append_data(concat_img)
+
     return obs, info
 
 
@@ -90,13 +152,14 @@ def set_all_seeds(seed):
     th.backends.cudnn.deterministic = True
 
 
-set_all_seeds(seed=1)
+set_all_seeds(seed=3)
 config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
 config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
 # config["scene"] = dict()
 # config["scene"]["type"] = "Scene"
 # config["scene"]["scene_model"] = "Rs_int"
-config["scene"]["load_object_categories"] = ["floors", "ceilings", "coffee_table", "breakfast_table", "pot_plant", "laptop", "floor_lamp", "table_lamp"]
+# config["scene"]["load_object_categories"] = ["floors", "ceilings", "coffee_table", "breakfast_table", "pot_plant", "laptop", "floor_lamp", "table_lamp"]
+config["scene"]["load_object_categories"] = ["floors", "ceilings", "coffee_table", "breakfast_table"]
 
 # config['robots'][0]['controller_config']['arm_right']['mode'] = 'pose_absolute_ori'
 # config['robots'][0]['controller_config']['arm_right']['command_input_limits'] = None
@@ -141,6 +204,15 @@ config["objects"] = [
         "category": "box_of_baking_powder",
         "model": "vzgrlv",
         "position": [0.1, 0.5, 0.5],
+        "scale": [0.5, 0.5, 1.0],
+        "orientation": box_quat
+    },
+    {
+        "type": "DatasetObject",
+        "name": "plate",
+        "category": "plate",
+        "model": "ujodgo",
+        "position": [0.1, 0.5, 0.5],
         "orientation": box_quat
     },
 ]
@@ -152,26 +224,29 @@ action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=Fa
 
 # og.sim.restore(["moma_pick_and_place/temp.json"])
 # og.sim.restore(["temp2.json"])
+# og.sim.restore(["nav_test_temp.json"])
 
 
 coffee_table = env.scene.object_registry("name", "coffee_table_fqluyq_0")
 breakfast_table = env.scene.object_registry("name", "breakfast_table_skczfi_0")
 
 # fridge = env.scene.object_registry("name", "fridge_xyejdx_0")
-laptop = env.scene.object_registry("name", "laptop_nvulcs_0")
-table_lamp = env.scene.object_registry("name", "table_lamp_xbfgjc_0")
+# laptop = env.scene.object_registry("name", "laptop_nvulcs_0")
+# table_lamp = env.scene.object_registry("name", "table_lamp_xbfgjc_0")
 box = env.scene.object_registry("name", "box_of_baking_powder")
-pot_plant = env.scene.object_registry("name", "pot_plant_jatssq_0")
-pot_plant2 = env.scene.object_registry("name", "pot_plant_jatssq_1")
-floor_lamp = env.scene.object_registry("name", "floor_lamp_vdxlda_0")
+plate = env.scene.object_registry("name", "plate")
+# pot_plant = env.scene.object_registry("name", "pot_plant_jatssq_0")
+# pot_plant2 = env.scene.object_registry("name", "pot_plant_jatssq_1")
+# floor_lamp = env.scene.object_registry("name", "floor_lamp_vdxlda_0")
 
-box.states[object_states.OnTop].set_value(breakfast_table, True)
+box.states[object_states.OnTop].set_value(coffee_table, True)
+plate.states[object_states.OnTop].set_value(coffee_table, True)
 
-# # Set viewer camera
-# og.sim.viewer_camera.set_position_orientation(
-#     th.tensor([-0.7563,  1.1324,  1.0464]),
-#     th.tensor([-0.2168,  0.5182,  0.7632, -0.3193]),
-# )
+# Set viewer camera
+og.sim.viewer_camera.set_position_orientation(
+    th.tensor([1.34,  -2.5,  1.41]),
+    th.tensor([0.52,  0.24, 0.34, 0.73]),
+)
 
 scene = env.scene
 robot = env.robots[0]
@@ -180,6 +255,18 @@ correct_gripper_friction()
 # shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
 
 init_pose = robot.get_relative_eef_pose(arm='right')
+
+# for saving videos
+current_date = datetime.now().strftime("%Y-%m-%d")  # Format: YYYY-MM-DD
+current_time = datetime.now().strftime("%H-%M-%S")  # Format: HH-MM-SS
+base_folder = f"{current_date}"
+time_folder = os.path.join(base_folder, current_time)
+folder_path = f"outputs_data_gen/{time_folder}"
+os.makedirs(folder_path, exist_ok=True)
+
+imgio_kargs = {'fps': 10, 'quality': 10, 'macro_block_size': None,  'codec': 'h264',  'ffmpeg_params': ['-vf', 'crop=trunc(iw/2)*2:trunc(ih/2)*2']}
+output_path = f'{folder_path}/video.mp4'
+writer = imageio.get_writer(output_path, **imgio_kargs)
 
 
 for _ in range(300):
@@ -203,15 +290,100 @@ init_pose = robot.get_relative_eef_pose(arm='right')
 
 state = og.sim.dump_state()
 
-objs = [pot_plant2, laptop, box, pot_plant, floor_lamp]
-
-for obj in objs:
+# objs = [pot_plant2, laptop, box, pot_plant, floor_lamp]
+objs = [box]
+grasp_action = 1.0
+for i, obj in enumerate(objs):
     print(f"Navigating to {obj.name}")
-    input()
+    # input()
     execute_controller(action_primitives._navigate_to_obj(obj),
-                        env, robot, grasp_action=1.0)
+                        env, robot, grasp_action=grasp_action)
+    
+    if i == 0:
+        move_to_grasp_pose()
+        # ============= Perform grasp ===================
+        grasp_action = -1.0
+        action = action_primitives._empty_action()
+        action[robot.gripper_action_idx["right"]] = grasp_action
+        env.step(action)
+        for _ in range(40):
+            og.sim.step()
+        grasp_action = -1.0
 
-for i in range(50000):
+        # ======================= Move hand up ================================  
+        curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+        new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
+        target_pose = (new_pos, curr_orn)
+        execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
+                        env, 
+                        robot, 
+                        grasp_action, 
+                        )
+        
+        for _ in range(40):
+            og.sim.step()
+
+        
+        # og.sim.save([f'nav_test_temp.json'])
+
+# # ======================= Move hand up ================================  
+# curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+# new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
+# target_pose = (new_pos, curr_orn)
+# execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
+#                 env, 
+#                 robot, 
+#                 grasp_action, 
+#                 )
+# for _ in range(40):
+#     og.sim.step()
+
+print("place insideeeeee")
+execute_controller(action_primitives._place_inside(plate), 
+                        env, 
+                        robot, 
+                        grasp_action=-1.0, 
+                        )
+    
+    # # =============================== Teleop ===============================
+    # # Create teleop controller
+    # action_generator = KeyboardRobotController(robot=robot)
+    # # Register custom binding to reset the environment
+    # action_generator.register_custom_keymapping(
+    #     key=lazy.carb.input.KeyboardInput.R,
+    #     description="Reset the robot",
+    #     callback_fn=lambda: env.reset(),
+    # )
+    # # Print out relevant keyboard info if using keyboard teleop
+    # action_generator.print_keyboard_teleop_info()
+
+    # max_steps = -1 
+    # step = 0
+    # while step != max_steps:
+    #     action, keypress_str = action_generator.get_teleop_action()
+    #     # print("action: ", action)
+    #     env.step(action=action)
+    #     if keypress_str == 'TAB':
+    #         right_eef_pose = robot.get_relative_eef_pose(arm='right')
+    #         right_eef_pose_world = robot.eef_links["right"].get_position_orientation()
+    #         base_pose = robot.get_position_orientation()
+    #         print("right_eef_pose: ", right_eef_pose)
+    #         print("right_eef_pose_world: ", right_eef_pose_world)
+    #         print("base_pose: ", base_pose)
+    #         box_pos, box_orn = box.get_position_orientation()
+    #         robot_to_world = np.eye(4)
+    #         robot_to_world[:3, :3] = R.from_quat(right_eef_pose_world[1]).as_matrix()
+    #         robot_to_world[:3, 3] = np.transpose(right_eef_pose_world[0])
+    #         box_to_world = np.eye(4)
+    #         box_to_world[:3, :3] = R.from_quat(box_orn).as_matrix()
+    #         box_to_world[:3, 3] = np.transpose(box_pos)
+    #         robot_to_box = np.dot(np.linalg.inv(box_to_world), robot_to_world)
+    #         print("robot_to_box: ", robot_to_box)
+    #     step += 1
+    # # ========================================================================
+    
+
+for i in range(200):
     og.sim.step()
 
 

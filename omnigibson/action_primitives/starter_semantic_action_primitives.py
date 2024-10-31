@@ -851,20 +851,34 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # Update the tracking to track the object.
         self._tracking_object = obj
 
-        obj_in_hand = self._get_obj_in_hand()
-        if obj_in_hand is None:
-            raise ActionPrimitiveError(
-                ActionPrimitiveError.Reason.PRE_CONDITION_ERROR,
-                "You need to be grasping an object first to place it somewhere.",
-            )
+        # change later
+        for o in self.env.scene.objects:
+            if o.name == 'box_of_baking_powder':
+                obj_in_hand = o
+        print("self.robot.custom_is_grasping(): ", self.robot.custom_is_grasping())
+        if not self.robot.custom_is_grasping():
+            return
+        # obj_in_hand = self._get_obj_in_hand()
+        # if obj_in_hand is None:
+        #     raise ActionPrimitiveError(
+        #         ActionPrimitiveError.Reason.PRE_CONDITION_ERROR,
+        #         "You need to be grasping an object first to place it somewhere.",
+        #     )
 
         # Sample location to place object
         obj_pose = self._sample_pose_with_object_and_predicate(predicate, obj_in_hand, obj)
         hand_pose = self._get_hand_pose_for_object_pose(obj_pose)
 
         yield from self._navigate_if_needed(obj, pose_on_obj=hand_pose)
-        yield from self._move_hand(hand_pose)
+        # yield from self._move_hand(hand_pose)
+        # change later
+        yield from self._move_hand_direct_ik(hand_pose, ignore_failure=True, in_world_frame=True)
         yield from self._execute_release()
+        # change later
+        self.robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=self.robot.gripper_control_idx['right'])
+        for _ in range(50):
+            og.sim.step()
+
 
         if self._get_obj_in_hand() is not None:
             raise ActionPrimitiveError(
@@ -873,7 +887,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 {"object": self._get_obj_in_hand().name},
             )
 
-        if not obj_in_hand.states[predicate].get_value(obj):
+        print("----", obj_in_hand.states[predicate].get_value(obj))
+        if not obj_in_hand.states[predicate].get_value(obj) and not obj_in_hand.states[object_states.OnTop].get_value(obj):
             raise ActionPrimitiveError(
                 ActionPrimitiveError.Reason.EXECUTION_ERROR,
                 "Failed to place object at the desired place (probably dropped). The object was still released, so you need to grasp it again to continue",
@@ -1408,6 +1423,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         Returns:
             th.tensor or None: Action array for one step for the robot to release or None if its done releasing
         """
+        print("tyring to releasee")
         for _ in range(m.MAX_STEPS_FOR_GRASP_OR_RELEASE):
             joint_position = self.robot.get_joint_positions()[self.robot.gripper_control_idx[self.arm]]
             joint_upper_limit = self.robot.joint_upper_limits[self.robot.gripper_control_idx[self.arm]]
@@ -1420,6 +1436,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             action[self.robot.controller_action_idx[controller_name]] = 1.0
             yield self._postprocess_action(action)
 
+        print("checkingggg")
         if self._get_obj_in_hand() is not None:
             raise ActionPrimitiveError(
                 ActionPrimitiveError.Reason.EXECUTION_ERROR,
@@ -1713,6 +1730,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             th.tensor or None: Action array for one step for the robot to navigate or None if it is done navigating
         """
         if pose_on_obj is not None:
+            print("is target in reach of robot: ", self._target_in_reach_of_robot(pose_on_obj))
             if self._target_in_reach_of_robot(pose_on_obj):
                 # No need to navigate.
                 return
@@ -1973,13 +1991,16 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 - 3-array: (x,y,z) Position in the world frame
                 - 4-array: (x,y,z,w) Quaternion orientation in the world frame
         """
+        # remove later
+        th.manual_seed(16)
+        th.cuda.manual_seed(16)
         with PlanningContext(self.env, self.robot, self.robot_copy, "simplified") as context:
             for _ in range(m.MAX_ATTEMPTS_FOR_SAMPLING_POSE_NEAR_OBJECT):
                 if pose_on_obj is None:
                     pos_on_obj = self._sample_position_on_aabb_side(obj)
                     pose_on_obj = [pos_on_obj, th.tensor([0, 0, 0, 1])]
 
-                distance_lo, distance_hi = 0.0, 5.0
+                distance_lo, distance_hi = 0.0, 2.0 #5.0 originally
                 distance = (th.rand(1) * (distance_hi - distance_lo) + distance_lo).item()
                 yaw_lo, yaw_hi = -math.pi, math.pi
                 yaw = th.rand(1) * (yaw_hi - yaw_lo) + yaw_lo
@@ -2191,6 +2212,11 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 - 4-array: (x,y,z,w) Quaternion orientation of the hand in the world frame
         """
         obj_in_hand = self._get_obj_in_hand()
+
+        # change later
+        for o in self.env.scene.objects:
+            if o.name == 'box_of_baking_powder':
+                obj_in_hand = o
 
         assert obj_in_hand is not None
 

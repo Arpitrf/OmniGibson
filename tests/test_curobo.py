@@ -116,3 +116,5 @@ def test_curobo():
             robot.keep_still()
             og.sim.step()
             assert len(robot.contact_list()) == 0
+
+test_curobo()

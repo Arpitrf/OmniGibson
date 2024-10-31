@@ -538,6 +538,10 @@ robot = env.robots[0]
 correct_gripper_friction()
 # custom_reset(env, robot)
 
+# set head joint positions
+head_joints = th.tensor([-0.503, -0.897])
+robot.set_joint_positions(positions=head_joints, indices=robot.camera_control_idx)
+
 # shelf = env.scene.object_registry("name", "shelf")
 # coffee_table = env.scene.object_registry("name", "coffee_table")
 # shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
