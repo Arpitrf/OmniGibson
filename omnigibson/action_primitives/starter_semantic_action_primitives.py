@@ -1158,7 +1158,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         stop_on_contact=False,
         ignore_failure=False,
         pos_thresh=0.02,
-        ori_thresh=0.4,
+        ori_thresh=0.1,
         in_world_frame=True,
         stop_if_stuck=False,
         episode_memory=None
@@ -1217,6 +1217,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             delta_ori = th.tensor(delta_ori, dtype=th.float32)
 
             target_orn_diff = T.get_orientation_diff_in_radian(current_orn, target_orn)
+            target_orn_diff = target_orn_diff % (2*th.pi)
+            # print("target_orn_diff, ori_thresh: ", target_orn_diff, ori_thresh)
             reached_goal = target_pos_diff < pos_thresh and target_orn_diff < ori_thresh
             if reached_goal:
                 return
@@ -1278,7 +1280,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         num_poses = int(
             th.max(th.tensor([2, int(travel_distance / m.MAX_CARTESIAN_HAND_STEP) + 1], dtype=th.float32)).item()
         )
-        pos_waypoints = multi_dim_linspace(start_pos, target_pose[0], num_poses)
+        # pos_waypoints = multi_dim_linspace(start_pos, target_pose[0], num_poses)
+        pos_waypoints = self.linspace_1d_tensor(start_pos, target_pose[0], num_poses)
 
         # Also interpolate the rotations
         t_values = th.linspace(0, 1, num_poses)
@@ -1288,6 +1291,9 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         pos_waypoints = pos_waypoints[1:]
         quat_waypoints = quat_waypoints[1:]
         # print("len(pos_waypoints): ", len(pos_waypoints))
+
+        # # remove later
+        # quat_waypoints = [th.tensor([-0.0132,  0.0361,  0.6506,  0.7584])] * len(pos_waypoints)
 
         controller_config = self.robot._controller_config["arm_" + self.arm]
         if controller_config["name"] == "InverseKinematicsController":
@@ -1317,6 +1323,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                     # pos_norm = np.linalg.norm(action[3:6])
                     # orn_angle = np.linalg.norm(action[6:])
                 
+                breakpoint()
                 if i < len(waypoints) - 1:
                     yield from self._move_hand_direct_ik(
                         waypoint,
@@ -1787,7 +1794,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         pos_waypoints = self.linspace_1d_tensor(start_pos[:2], end_pose[0][:2], num_poses)
         # Skip the first wapypoint as it is the current pos
         pos_waypoints = pos_waypoints[1:]
-        print("pos_waypoints:" , pos_waypoints)
+        # print("pos_waypoints:" , pos_waypoints)
 
         diff_pos = end_pose[0] - self.robot.get_position()
         euler = th.tensor([0, 0, th.arctan2(diff_pos[1], diff_pos[0])])
@@ -1795,7 +1802,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         body_intermediate_pose = self._get_pose_in_robot_frame(intermediate_pose)
         diff_yaw = T.quat2euler(body_intermediate_pose[1])[2]
         if abs(diff_yaw) > m.DEFAULT_ANGLE_THRESHOLD:
-            print("diff_yaw and intermediate_pose: ", diff_yaw, intermediate_pose)
+            # print("diff_yaw and intermediate_pose: ", diff_yaw, intermediate_pose)
             yield from self._rotate_in_place(intermediate_pose, angle_threshold=m.DEFAULT_ANGLE_THRESHOLD, episode_memory=episode_memory, grasp_action=grasp_action)
             # yield from self._rotate_in_place_linearly_cartesian(goal_pose=intermediate_pose, episode_memory=episode_memory)
 

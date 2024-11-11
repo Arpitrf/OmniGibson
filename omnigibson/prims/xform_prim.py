@@ -287,9 +287,9 @@ class XFormPrim(BasePrim):
         Returns:
             3-array: (x,y,z) global cartesian position of this prim
         """
-        logger.warning(
-            "get_position is deprecated and will be removed in a future release. Use get_position_orientation()[0] instead."
-        )
+        # logger.warning(
+        #     "get_position is deprecated and will be removed in a future release. Use get_position_orientation()[0] instead."
+        # )
         return self.get_position_orientation()[0]
 
     def set_orientation(self, orientation):
@@ -311,9 +311,9 @@ class XFormPrim(BasePrim):
         Returns:
             4-array: (x,y,z,w) global quaternion orientation of this prim
         """
-        logger.warning(
-            "get_orientation is deprecated and will be removed in a future release. Use get_position_orientation()[1] instead"
-        )
+        # logger.""" warning(
+        #     "get_orientation is deprecated and will be removed in a future release. Use get_position_orientation()[1] instead"
+        # ) """
         return self.get_position_orientation()[1]
 
     def get_rpy(self):

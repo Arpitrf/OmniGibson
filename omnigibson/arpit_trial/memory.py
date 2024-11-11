@@ -60,7 +60,7 @@ class Memory:
     def __init__(self):
         self.data = {}
         for key in Memory.base_keys:
-            print("keyy: ", key)
+            # print("keyy: ", key)
             self.data[key] = {}
         for key in Memory.observation_keys:
             self.data['observations'][key] = []

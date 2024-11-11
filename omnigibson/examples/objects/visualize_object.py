@@ -78,7 +78,7 @@ def main(random_selection=False, headless=False, short_exec=False):
         **kwargs,
         name="obj",
         usd_path=usd_path,
-        visual_only=True,
+        visual_only=False,
         position=[0, 0, 10.0],
     )
 
@@ -117,21 +117,22 @@ def main(random_selection=False, headless=False, short_exec=False):
     # Allow the user to easily move the camera around
     og.sim.enable_viewer_camera_teleoperation()
 
-    # Rotate the object in place
-    steps_per_rotate = 360
-    steps_per_joint = steps_per_rotate / 10
-    max_steps = 100 if short_exec else 10000
-    for i in range(max_steps):
-        z_angle = 2 * math.pi * (i % steps_per_rotate) / steps_per_rotate
-        quat = T.euler2quat(th.tensor([0, 0, z_angle]))
-        pos = T.quat2mat(quat) @ center_offset
-        if obj.n_dof > 0:
-            frac = (i % steps_per_joint) / steps_per_joint
-            j_frac = -1.0 + 2.0 * frac if (i // steps_per_joint) % 2 == 0 else 1.0 - 2.0 * frac
-            obj.set_joint_positions(positions=j_frac * th.ones(obj.n_dof), normalized=True, drive=False)
-            obj.keep_still()
-        obj.set_position_orientation(position=pos, orientation=quat)
-        env.step(th.empty(0))
+    breakpoint()
+    # # Rotate the object in place
+    # steps_per_rotate = 360
+    # steps_per_joint = steps_per_rotate / 10
+    # max_steps = 100 if short_exec else 10000
+    # for i in range(max_steps):
+    #     z_angle = 2 * math.pi * (i % steps_per_rotate) / steps_per_rotate
+    #     quat = T.euler2quat(th.tensor([0, 0, z_angle]))
+    #     pos = T.quat2mat(quat) @ center_offset
+    #     if obj.n_dof > 0:
+    #         frac = (i % steps_per_joint) / steps_per_joint
+    #         j_frac = -1.0 + 2.0 * frac if (i // steps_per_joint) % 2 == 0 else 1.0 - 2.0 * frac
+    #         obj.set_joint_positions(positions=j_frac * th.ones(obj.n_dof), normalized=True, drive=False)
+    #         obj.keep_still()
+    #     obj.set_position_orientation(position=pos, orientation=quat)
+    #     env.step(th.empty(0))
 
     # Shut down at the end
     og.clear()

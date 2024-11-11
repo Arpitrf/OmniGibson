@@ -276,6 +276,8 @@ def choose_from_options(options, name, random_selection=False):
     print("\nHere is a list of available {}s:\n".format(name))
 
     for k, option in enumerate(options):
+        # if k > 700:
+        #     continue
         docstring = ": {}".format(options[option]) if isinstance(options, dict) else ""
         print("[{}] {}{}".format(k + 1, option, docstring))
     print()
