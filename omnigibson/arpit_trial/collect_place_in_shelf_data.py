@@ -47,14 +47,15 @@ def dump_to_memory(env, robot, episode_memory, number_of_collisions=0):
     for k in proprio.keys():
         episode_memory.add_proprioception(k, proprio[k].cpu().numpy())
 
-    for k in obs['robot0']['robot0:eyes:Camera:0'].keys():
-        episode_memory.add_observation(k, obs['robot0']['robot0:eyes:Camera:0'][k].cpu().numpy())
+    robot_name = env.robots[0].name
+    for k in obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'].keys():
+        episode_memory.add_observation(k, obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'][k].cpu().numpy())
     # # add gripper+object seg
-    # gripper_obj_seg = obtain_gripper_obj_seg(obs['robot0']['robot0:eyes:Camera:0']['seg_instance_id'], obs_info['robot0']['robot0:eyes:Camera:0']['seg_instance_id'])
+    # gripper_obj_seg = obtain_gripper_obj_seg(obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'], obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'])
     # episode_memory.add_observation('gripper_obj_seg', gripper_obj_seg)
     
-    for k in obs_info['robot0']['robot0:eyes:Camera:0'].keys():
-        episode_memory.add_observation_info(k, obs_info['robot0']['robot0:eyes:Camera:0'][k])
+    for k in obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'].keys():
+        episode_memory.add_observation_info(k, obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'][k])
 
 
     is_grasping = robot.custom_is_grasping()
@@ -125,22 +126,32 @@ def primitive(episode_memory):
     # w.r.t world
     # place_pose =  (np.array([ 1.1888, -0.1884,  0.8387]), np.array([-0.0489, -0.0063,  0.5555,  0.8301]))
     # w.r.t robot
-    place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
+    # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
+    
+    # move the right eef 10 cm forward
+    current_eef_pose = robot.get_relative_eef_pose(arm='right')
+    print("current_eef_pose: ", current_eef_pose)
+    place_pose = (current_eef_pose[0] + th.tensor([0.1, 0.0, 0.0]), current_eef_pose[1])
+    
     # # add noise to place pos
-    place_pos = place_pose[0]
-    place_orn = place_pose[1]
-    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.1, 0.2), np.random.uniform(-0.2, 0.2), np.random.uniform(-0.3, 0.3)
-    place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
-    place_pos += place_noise
-    place_pose = (place_pos, place_orn)
+    # place_pos = place_pose[0]
+    # place_orn = place_pose[1]
+    # place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.1, 0.2), np.random.uniform(-0.2, 0.2), np.random.uniform(-0.3, 0.3)
+    # place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
+    # place_pos += place_noise
+    # place_pose = (place_pos, place_orn)
     execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=False, episode_memory=episode_memory, gripper_closed=gripper_closed), 
                        env, 
                        robot, 
                        gripper_closed,
                        episode_memory)
-    current_pose_world = robot.eef_links["right"].get_position_orientation()
-    current_pose_robot = robot.get_relative_eef_pose(arm='right')
-    print("move hand to place location completed. Desired and Reached right eef pose reached: ", place_pose[0], current_pose_robot[0])
+    
+    # Debugging
+    post_eef_pose_world = robot.eef_links["right"].get_position_orientation()
+    post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    pos_error = np.linalg.norm(post_eef_pose[0] - place_pose[0])
+    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], place_pose[1])
+    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
     # ====================================================================================
 
     #TODO: Add a 0 action here
@@ -186,22 +197,22 @@ def randomize_robot():
 
     # robot.set_position_orientation(base_pos, r_quat)
 
-    action = th.zeros(robot.action_dim)
-    action[20] = -1
-    print("action: ", action)
-    base_x_vel = np.random.uniform(-0.1, 0.05)
-    base_y_vel = np.random.uniform(-0.1, 0.1)
-    base_yaw_vel = np.random.uniform(-0.2, 0.2)
-    # action[:3] = th.tensor([0.0, 0.0, 0.2])
-    action[:3] = th.tensor([base_x_vel, base_y_vel, base_yaw_vel])
-    env.step(action)
-    timesteps = np.random.randint(15, 30)
-    for _ in range(timesteps): # was 30 before
-        og.sim.step()
+    # action = th.zeros(robot.action_dim)
+    # action[20] = -1
+    # print("action: ", action)
+    # base_x_vel = np.random.uniform(-0.1, 0.05)
+    # base_y_vel = np.random.uniform(-0.1, 0.1)
+    # base_yaw_vel = np.random.uniform(-0.2, 0.2)
+    # # action[:3] = th.tensor([0.0, 0.0, 0.2])
+    # action[:3] = th.tensor([base_x_vel, base_y_vel, base_yaw_vel])
+    # env.step(action)
+    # timesteps = np.random.randint(15, 30)
+    # for _ in range(timesteps): # was 30 before
+    #     og.sim.step()
     
-    action = th.zeros(robot.action_dim)
-    action[20] = -1
-    env.step(action)
+    # action = th.zeros(robot.action_dim)
+    # action[20] = -1
+    # env.step(action)
 
     # Randomizing head pose
     # default_head_joints = np.array([-0.20317451, -0.7972661])
@@ -300,7 +311,11 @@ og.sim.play()
 og.sim.load_state(state)
 
 # og.clear()
-og.sim.restore(["episode_00000_before_place.json"])
+# og.sim.restore(["episode_00000_before_place.json"])
+og.sim.restore(["place_start.json"])
+
+scene = env.scene
+robot = env.robots[0]
 
 # getting all objects in scene
 # env.scene.objects
@@ -343,10 +358,10 @@ for i in range(50):
     # randomize base pose and head pose a bit
     randomize_robot()
     
-    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
     primitive(episode_memory)
-    episode_memory.dump(f'{save_folder}/dataset.hdf5')
-    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
     
     og.sim.load_state(state, serialized=False)
     

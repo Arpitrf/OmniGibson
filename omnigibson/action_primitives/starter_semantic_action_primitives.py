@@ -1250,6 +1250,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # remove the first waypoint as it is the starting pose
         pos_waypoints = pos_waypoints[1:]
         quat_waypoints = quat_waypoints[1:]
+        breakpoint()
 
         print("len(pos_waypoints), len(quat_waypoints): ", len(pos_waypoints), len(quat_waypoints))
 
