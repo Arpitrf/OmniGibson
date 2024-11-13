@@ -222,23 +222,19 @@ scene = env.scene
 robot = env.robots[0]
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-# og.sim.restore(["moma_pick_and_place/temp.json"])
-# og.sim.restore(["temp2.json"])
-# og.sim.restore(["nav_test_temp.json"])
-
-
+# Loading objects
 coffee_table = env.scene.object_registry("name", "coffee_table_fqluyq_0")
 breakfast_table = env.scene.object_registry("name", "breakfast_table_skczfi_0")
-
+box = env.scene.object_registry("name", "box_of_baking_powder")
+plate = env.scene.object_registry("name", "plate")
 # fridge = env.scene.object_registry("name", "fridge_xyejdx_0")
 # laptop = env.scene.object_registry("name", "laptop_nvulcs_0")
 # table_lamp = env.scene.object_registry("name", "table_lamp_xbfgjc_0")
-box = env.scene.object_registry("name", "box_of_baking_powder")
-plate = env.scene.object_registry("name", "plate")
 # pot_plant = env.scene.object_registry("name", "pot_plant_jatssq_0")
 # pot_plant2 = env.scene.object_registry("name", "pot_plant_jatssq_1")
 # floor_lamp = env.scene.object_registry("name", "floor_lamp_vdxlda_0")
 
+# Setting object states
 box.states[object_states.OnTop].set_value(coffee_table, True)
 plate.states[object_states.OnTop].set_value(coffee_table, True)
 
@@ -251,10 +247,7 @@ og.sim.viewer_camera.set_position_orientation(
 scene = env.scene
 robot = env.robots[0]
 correct_gripper_friction()
-# shelf = env.scene.object_registry("name", "shelf")
-# shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
 
-init_pose = robot.get_relative_eef_pose(arm='right')
 
 # for saving videos
 current_date = datetime.now().strftime("%Y-%m-%d")  # Format: YYYY-MM-DD
@@ -263,18 +256,12 @@ base_folder = f"{current_date}"
 time_folder = os.path.join(base_folder, current_time)
 folder_path = f"outputs_data_gen/{time_folder}"
 os.makedirs(folder_path, exist_ok=True)
-
 imgio_kargs = {'fps': 10, 'quality': 10, 'macro_block_size': None,  'codec': 'h264',  'ffmpeg_params': ['-vf', 'crop=trunc(iw/2)*2:trunc(ih/2)*2']}
 output_path = f'{folder_path}/video.mp4'
 writer = imageio.get_writer(output_path, **imgio_kargs)
 
 
-for _ in range(300):
-    # for name, ctrl in robot._controllers.items():
-    #     print(name, robot._controllers[name]._goal)
-    # print(robot._controllers["arm_right"]._goal)
-    og.sim.step()
-
+init_pose = robot.get_relative_eef_pose(arm='right')
 post_eef_pose = robot.get_relative_eef_pose(arm='right')
 pos_error = np.linalg.norm(post_eef_pose[0] - init_pose[0])
 orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], init_pose[1])
@@ -283,108 +270,54 @@ print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error
 grasp_action = -1
 init_pose = robot.get_relative_eef_pose(arm='right')
 
-# # If want to run without the object
-# robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=robot.gripper_control_idx['right'])
-# for _ in range(20):
-#     og.sim.step()
-
-state = og.sim.dump_state()
+init_state = og.sim.dump_state()
 
 # objs = [pot_plant2, laptop, box, pot_plant, floor_lamp]
-objs = [box]
-grasp_action = 1.0
-for i, obj in enumerate(objs):
+# objs = [box]
+
+for _ in range(10):
+    obj = env.scene.object_registry("name", "box_of_baking_powder")
+    grasp_action = 1.0
     print(f"Navigating to {obj.name}")
     # input()
     execute_controller(action_primitives._navigate_to_obj(obj),
                         env, robot, grasp_action=grasp_action)
-    
-    if i == 0:
-        move_to_grasp_pose()
-        # ============= Perform grasp ===================
-        grasp_action = -1.0
-        action = action_primitives._empty_action()
-        action[robot.gripper_action_idx["right"]] = grasp_action
-        env.step(action)
-        for _ in range(40):
-            og.sim.step()
-        grasp_action = -1.0
 
-        # ======================= Move hand up ================================  
-        curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-        new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
-        target_pose = (new_pos, curr_orn)
-        execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
-                        env, 
-                        robot, 
-                        grasp_action, 
-                        )
+    move_to_grasp_pose()
+    # ============= Perform grasp ===================
+    grasp_action = -1.0
+    action = action_primitives._empty_action()
+    action[robot.gripper_action_idx["right"]] = grasp_action
+    env.step(action)
+    for _ in range(40):
+        og.sim.step()
+    grasp_action = -1.0
+
+    # ======================= Move hand up ================================  
+    curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+    new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
+    target_pose = (new_pos, curr_orn)
+    execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
+                    env, 
+                    robot, 
+                    grasp_action, 
+                    )
+
+    for _ in range(40):
+        og.sim.step()
+
+
+    execute_controller(action_primitives._place_inside(plate), 
+                            env, 
+                            robot, 
+                            grasp_action=-1.0, 
+                            )
         
-        for _ in range(40):
-            og.sim.step()
+    for i in range(200):
+        og.sim.step()
 
-        
-        # og.sim.save([f'nav_test_temp.json'])
+    og.sim.load_state(init_state)
 
-# # ======================= Move hand up ================================  
-# curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-# new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
-# target_pose = (new_pos, curr_orn)
-# execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
-#                 env, 
-#                 robot, 
-#                 grasp_action, 
-#                 )
-# for _ in range(40):
-#     og.sim.step()
-
-print("place insideeeeee")
-execute_controller(action_primitives._place_inside(plate), 
-                        env, 
-                        robot, 
-                        grasp_action=-1.0, 
-                        )
-    
-    # # =============================== Teleop ===============================
-    # # Create teleop controller
-    # action_generator = KeyboardRobotController(robot=robot)
-    # # Register custom binding to reset the environment
-    # action_generator.register_custom_keymapping(
-    #     key=lazy.carb.input.KeyboardInput.R,
-    #     description="Reset the robot",
-    #     callback_fn=lambda: env.reset(),
-    # )
-    # # Print out relevant keyboard info if using keyboard teleop
-    # action_generator.print_keyboard_teleop_info()
-
-    # max_steps = -1 
-    # step = 0
-    # while step != max_steps:
-    #     action, keypress_str = action_generator.get_teleop_action()
-    #     # print("action: ", action)
-    #     env.step(action=action)
-    #     if keypress_str == 'TAB':
-    #         right_eef_pose = robot.get_relative_eef_pose(arm='right')
-    #         right_eef_pose_world = robot.eef_links["right"].get_position_orientation()
-    #         base_pose = robot.get_position_orientation()
-    #         print("right_eef_pose: ", right_eef_pose)
-    #         print("right_eef_pose_world: ", right_eef_pose_world)
-    #         print("base_pose: ", base_pose)
-    #         box_pos, box_orn = box.get_position_orientation()
-    #         robot_to_world = np.eye(4)
-    #         robot_to_world[:3, :3] = R.from_quat(right_eef_pose_world[1]).as_matrix()
-    #         robot_to_world[:3, 3] = np.transpose(right_eef_pose_world[0])
-    #         box_to_world = np.eye(4)
-    #         box_to_world[:3, :3] = R.from_quat(box_orn).as_matrix()
-    #         box_to_world[:3, 3] = np.transpose(box_pos)
-    #         robot_to_box = np.dot(np.linalg.inv(box_to_world), robot_to_world)
-    #         print("robot_to_box: ", robot_to_box)
-    #     step += 1
-    # # ========================================================================
-    
-
-for i in range(200):
-    og.sim.step()
 
 
 og.shutdown()

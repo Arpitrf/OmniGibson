@@ -26,17 +26,17 @@ from collision_failure_model import CollisionFailureModel
 from utils import correct_gripper_friction, check_success
 
 
-num_samples = 5
+num_samples = 10
 num_top_samples = 3
 epochs = 10
 success = False
 
-mu_x = np.zeros(3)  # Example: 2-dimensional problem
+mu_x = np.zeros(3) + 0.03  # Example: 2-dimensional problem
 sigma_x = np.eye(3) * 0.003
-mu_y = np.zeros(3)  # Example: 2-dimensional problem
-sigma_y = np.eye(3) * 0.003
+mu_y = np.zeros(3) # Example: 2-dimensional problem
+sigma_y = np.eye(3) * 0.001
 mu_z = np.zeros(3)  # Example: 2-dimensional problem
-sigma_z = np.eye(3) * 0.003
+sigma_z = np.eye(3) * 0.001
 
 temp_prior = th.tensor([
     [ 0.   ,  0.,    -0.301,  0.,     0.,     0.,     0.,     0.,     0.,     1.   ],
@@ -47,15 +47,15 @@ temp_prior = th.tensor([
     [ 0.   ,  0.,    -1.456,  0.,     0.,     0.,     0.,     0.,     0.,    -1.   ],
     [ 0.459,  0.034,  0.,     0.,     0.,     0.,     0.,     0.,     0.,    -1.   ],
     [ 0.   ,  0.,    -0.109,  0.,     0.,     0.,     0.,     0.,     0.,    -1.   ],
-    [ 0.   ,  0.,     0.,     0.035, -0.016,  0.135, -0.015, -0.103, -0.065, -1.   ],
+    [ 0.   ,  0.,     0.,     0.035, -0.016,  0.105, -0.015, -0.103, -0.065, -1.   ],
     # [ 0.   ,  0.,     0.,     0.044, -0.017,  0.142, -0.016, -0.095, -0.067, -1.   ],
-    [ 0.   ,  0.,     0.,     0.054, -0.017,  0.102, -0.016, -0.095, -0.067, -1.   ],
+    [ 0.   ,  0.,     0.,     0.074, -0.017,  0.092, -0.016, -0.095, -0.067, -1.   ],
     # [ 0.   ,  0.,     0.,     0.038, -0.017,  0.144, -0.016, -0.103, -0.067, -1.   ],
-    [ 0.   ,  0.,     0.,     0.078, -0.017,  0.094, -0.016, -0.103, -0.067, -1.   ],
+    [ 0.   ,  0.,     0.,     0.078, -0.017,  0.054, -0.016, -0.103, -0.067, -1.   ],
     [ 0.   ,  0.,     0.,     0.,     0.,     0.,     0.,     0.,     0.,     1.   ],
 ])
 
-def expl(t, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start_idx, collision_failure_model=None):
+def expl(t, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start_idx, collision_failure_model=None, grasp_mode=None):
     
     if t == traj_length:
         print("Reached end of recursion")
@@ -63,7 +63,7 @@ def expl(t, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start
         a = th.zeros(10)
         a[-1] = 1.0
         # input("open gripper action")
-        retval = motion_utils.safe(a, use_hack=True, collision_failure_model=collision_failure_model)
+        retval = motion_utils.safe(a, use_hack=True, collision_failure_model=collision_failure_model, grasp_mode=grasp_mode)
         return retval
     
     for action in actions:
@@ -71,9 +71,9 @@ def expl(t, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start
         ee_pose_before = robot.get_relative_eef_pose(arm='right')
         joint_pos_before = robot.get_joint_positions()[robot.arm_control_idx["right"]]
         sim_state_before = og.sim.dump_state()
-        if motion_utils.safe(action[t], collision_failure_model=collision_failure_model):
+        if motion_utils.safe(action[t], collision_failure_model=collision_failure_model, grasp_mode=grasp_mode):
             # In the current implementation I am performing the action (move_primitive) inside the safe action. This will change later.
-            all_failed = expl(t+1, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start_idx, collision_failure_model)
+            all_failed = expl(t+1, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start_idx, collision_failure_model, grasp_mode)
 
             # if task success
             if check_success(env, robot):
@@ -149,7 +149,7 @@ def set_all_seeds(seed):
 
 
 def main():
-    set_all_seeds(seed=3)
+    set_all_seeds(seed=13)
     config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
     config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
     config["scene"] = dict()
@@ -257,7 +257,7 @@ def main():
 
 
     # Try two modes
-    modes = ["horizontal", "vertical"]
+    modes = ["vertical", "horizontal"]
 
     episode_memory = Memory()
     primitive_steps_to_perform = np.arange(1, 6)
@@ -284,7 +284,7 @@ def main():
         actions[:, :, 3:6] = actions[:, :, 3:6] + episode_pos_noise
         print("Start actions shape: ", actions.shape)
 
-        all_failed = expl(t=0, actions=actions, motion_utils=motion_utils, robot=robot, env=env, traj_length=traj_length, shelf_pos_orn=shelf_pos_orn, start_idx=start_idx, collision_failure_model=collision_failure_model)
+        all_failed = expl(t=0, actions=actions, motion_utils=motion_utils, robot=robot, env=env, traj_length=traj_length, shelf_pos_orn=shelf_pos_orn, start_idx=start_idx, collision_failure_model=collision_failure_model, grasp_mode=grasp_mode)
 
         if not all_failed:
             break

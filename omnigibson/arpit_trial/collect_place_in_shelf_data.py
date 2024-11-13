@@ -120,27 +120,21 @@ def primitive(episode_memory):
     # w.r.t world
     # place_pose =  (np.array([ 1.1888, -0.1884,  0.8387]), np.array([-0.0489, -0.0063,  0.5555,  0.8301]))
     # w.r.t robot
-    # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
+    place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
 
-    # move the right eef 10 cm forward
-    current_eef_pose = robot.get_relative_eef_pose(arm='right')
-    print("current_eef_pose: ", current_eef_pose)
-    place_pose = (current_eef_pose[0] + th.tensor([0.1, 0.0, 0.0]), current_eef_pose[1])
+    # # move the right eef 10 cm forward
+    # current_eef_pose = robot.get_relative_eef_pose(arm='right')
+    # # current_eef_pose = action_primitives._get_pose_in_robot_frame((robot.get_eef_position(), robot.get_eef_orientation()))
+    # print("current_eef_pose: ", current_eef_pose)
+    # place_pose = (current_eef_pose[0] + th.tensor([0.1, 0.0, 0.0]), current_eef_pose[1])
 
     # add noise to place pos
-    # # add noise to place pos
-    # place_pos = place_pose[0]
-    # place_orn = place_pose[1]
-    # place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.1, 0.2), np.random.uniform(-0.2, 0.2), np.random.uniform(-0.3, 0.3)
-    # place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
-    # place_pos += place_noise
-    # place_pose = (place_pos, place_orn)
-    # execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=False, episode_memory=episode_memory), 
-    #                    env, 
-    #                    robot, 
-    #                    grasp_action,
-    #                    episode_memory)
-    
+    place_pos = place_pose[0]
+    place_orn = place_pose[1]
+    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.1, 0.2), np.random.uniform(-0.2, 0.2), np.random.uniform(-0.1, 0.05)
+    place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
+    place_pos += place_noise
+    place_pose = (place_pos, place_orn)    
     execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=False, episode_memory=episode_memory, grasp_action=grasp_action), 
                        env, 
                        robot, 
@@ -153,6 +147,7 @@ def primitive(episode_memory):
     pos_error = np.linalg.norm(post_eef_pose[0] - place_pose[0])
     orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], place_pose[1])
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    breakpoint()
     # ====================================================================================
 
     #TODO: Add a 0 action here
@@ -198,18 +193,18 @@ def randomize_robot():
 
     # robot.set_position_orientation(base_pos, r_quat)
 
-    # action = th.zeros(robot.action_dim)
-    # action[robot.gripper_action_idx["right"]] = -1
-    # print("action: ", action)
-    # base_x_vel = np.random.uniform(-0.1, 0.05)
-    # base_y_vel = np.random.uniform(-0.1, 0.1)
-    # base_yaw_vel = np.random.uniform(-0.2, 0.2)
-    # # action[:3] = th.tensor([0.0, 0.0, 0.2])
-    # action[:3] = th.tensor([base_x_vel, base_y_vel, base_yaw_vel])
-    # env.step(action)
-    # timesteps = np.random.randint(15, 30)
-    # for _ in range(timesteps): # was 30 before
-    #     og.sim.step()
+    action = th.zeros(robot.action_dim)
+    action[robot.gripper_action_idx["right"]] = -1
+    print("action: ", action)
+    base_x_vel = np.random.uniform(-0.01, 0.05)
+    base_y_vel = np.random.uniform(-0.1, 0.1)
+    base_yaw_vel = np.random.uniform(-0.01, 0.01) # 0.2 originally
+    # action[:3] = th.tensor([0.0, 0.0, 0.2])
+    action[:3] = th.tensor([base_x_vel, base_y_vel, base_yaw_vel])
+    env.step(action)
+    timesteps = np.random.randint(15, 30)
+    for _ in range(timesteps): # was 30 before
+        og.sim.step()
     
     # action = th.zeros(robot.action_dim)
     # action[robot.gripper_action_idx["right"]] = -1
@@ -218,9 +213,9 @@ def randomize_robot():
     # Randomizing head pose
     # default_head_joints = np.array([-0.20317451, -0.7972661])
     # default_head_joints = np.array([-0.5031718015670776, -0.9972541332244873])
-    default_head_joints = np.array([-0.503, -0.897])
+    default_head_joints = np.array([-0.503, -0.797])
     noise_1 = np.random.uniform(-0.05, 0.05, 1)
-    noise_2 = np.random.uniform(-0.05, 0.05, 1)
+    noise_2 = np.random.uniform(-0.05, 0.1, 1)
     noise = np.concatenate((noise_1, noise_2))
     head_joints_pos = default_head_joints + noise
     # head_joints_pos = np.array([0.0, -0.5])
@@ -231,8 +226,8 @@ def randomize_robot():
     # add to memory
     dump_to_memory(env, robot, episode_memory)
 
-    # for _ in range(50):
-    #     og.sim.step()
+    for _ in range(50):
+        og.sim.step()
     # # robot.reset(head_joints_pos=head_joints)
 
 def set_all_seeds(seed):

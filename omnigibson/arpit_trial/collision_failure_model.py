@@ -72,7 +72,7 @@ class CollisionFailureModel:
         pcd['normals'] = pcd_normals
         return pcd
     
-    def check_collision(self, obs, obs_info, actions, robot_name):
+    def check_collision(self, obs, obs_info, actions, robot_name, threshold):
         mean_correct = []
         collision_count, false_negative, false_positive = 0, 0, 0  
         pcd = self.get_pcd(obs, obs_info, robot_name)
@@ -111,7 +111,7 @@ class CollisionFailureModel:
             preds.append(pred)
             probabilities = torch.sigmoid(pred)
             # Changed from 0.5
-            pred_choice = (probabilities >= 0.5).float()
+            pred_choice = (probabilities >= threshold).float()
             pred_choices.append(pred_choice.item())
     
 

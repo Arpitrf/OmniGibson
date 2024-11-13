@@ -1270,7 +1270,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         """
         # Added by Arpit
         if not in_world_frame:
-            start_pos, start_orn = self._get_pose_in_robot_frame((self.robot.get_eef_position(), self.robot.get_eef_orientation()))
+            start_pos, start_orn = self._get_pose_in_robot_frame((self.robot.get_eef_position(arm=self.arm), self.robot.get_eef_orientation(arm=self.arm)))
+            # start_pos, start_orn  = self.robot.get_relative_eef_pose(arm='right')
         else:
             start_pos, start_orn = self.robot.eef_links[self.arm].get_position_orientation()
         
@@ -1305,7 +1306,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 if episode_memory is not None:
                     # Save action to memory
                     if not in_world_frame:
-                        curr_pos, curr_orn = self._get_pose_in_robot_frame((self.robot.get_eef_position(), self.robot.get_eef_orientation()))
+                        curr_pos, curr_orn = self._get_pose_in_robot_frame((self.robot.get_eef_position(arm=self.arm), self.robot.get_eef_orientation(arm=self.arm)))
+                        # curr_pos, curr_orn  = self.robot.get_relative_eef_pose(arm='right')
                     else:
                         curr_pos, curr_orn = self.robot.eef_links[self.arm].get_position_orientation()
 
@@ -1323,7 +1325,6 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                     # pos_norm = np.linalg.norm(action[3:6])
                     # orn_angle = np.linalg.norm(action[6:])
                 
-                breakpoint()
                 if i < len(waypoints) - 1:
                     yield from self._move_hand_direct_ik(
                         waypoint,
@@ -1998,9 +1999,9 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 - 3-array: (x,y,z) Position in the world frame
                 - 4-array: (x,y,z,w) Quaternion orientation in the world frame
         """
-        # remove later
-        th.manual_seed(16)
-        th.cuda.manual_seed(16)
+        # # remove later
+        # th.manual_seed(16)
+        # th.cuda.manual_seed(16)
         with PlanningContext(self.env, self.robot, self.robot_copy, "simplified") as context:
             for _ in range(m.MAX_ATTEMPTS_FOR_SAMPLING_POSE_NEAR_OBJECT):
                 if pose_on_obj is None:

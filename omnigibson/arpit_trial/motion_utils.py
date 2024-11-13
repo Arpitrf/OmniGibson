@@ -116,6 +116,7 @@ class MotionUtils:
 
         total_collisions = max(total_collisions1, total_collisions2, total_collisions3)
         reached_singularity = reached_singularity1 or reached_singularity2 or reached_singularity3
+        print("total_collisions: ", total_collisions)
 
         for _ in range(50):
             og.sim.step()
@@ -193,7 +194,7 @@ class MotionUtils:
             # debugging
             ee_pose_before_nav = self.robot.get_relative_eef_pose(arm='right')
             # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
-            target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
+            target_base_pose = th.tensor([0.486, 0.0257, 0.0]) # [0.456, 0.0257, 0.0] [0.526, 0.0257, 0.0]
             self.execute_controller(self.action_primitives._navigate_to_pose_linearly_cartesian(target_base_pose, episode_memory=episode_memory, grasp_action=grasp_action),
                             grasp_action, 
                             episode_memory)    
@@ -281,29 +282,34 @@ class MotionUtils:
         # robot.reset()
 
         # set head joint positions
-        head_joints = th.tensor([-0.503, -0.897])
+        head_joints = th.tensor([-0.503, -0.857]) #-0.503, -0.897
         robot.set_joint_positions(positions=head_joints, indices=robot.camera_control_idx)
 
         # Step simulator a few times so that the effects of "reset" take place
         for _ in range(10):
             og.sim.step()
 
-    def safe(self, action, use_hack=False, collision_failure_model=None):
+    def safe(self, action, use_hack=False, collision_failure_model=None, grasp_mode=None):
         safe = True
         unsafe_reasons = []
         prev_state = og.sim.dump_state()
         box = self.env.scene.object_registry("name", "box")
         obj_in_hand_pos_before = box.get_position_orientation()[0]
 
-        # remove later ------
+        # Using model to check for collisions ------
         obs, obs_info = self.env.get_obs()
         if collision_failure_model is not None:
-            check_collision = collision_failure_model.check_collision(obs, obs_info, action, self.env.robots[0].name)
+            if grasp_mode == "vertical":
+                threshold = 0.0
+            elif grasp_mode == "horizontal":
+                threshold = 0.6
+            check_collision = collision_failure_model.check_collision(obs, obs_info, action, self.env.robots[0].name, threshold=threshold)
             if check_collision == 1.0:
                 safe = False
                 unsafe_reasons.append("Model says will collide") 
-        breakpoint()
+                return safe
         # --------------------------------
+        
         
         _, _, total_collisions, incorrect_control, reached_singularity = self.move_primitive(action)
 
@@ -344,14 +350,14 @@ class MotionUtils:
             safe = False 
             unsafe_reasons.append("Will drop object") 
 
-        # collisions
-        if total_collisions > 0:
-            safe = False
-            unsafe_reasons.append("Will collide") 
-            print("In realitytotal_collisions: ", total_collisions)
-        else:
-            print("In reality, no collisions")
-        breakpoint()
+        # # collisions
+        # if total_collisions > 0:
+        #     safe = False
+        #     unsafe_reasons.append("Will collide") 
+        #     print("In reality total_collisions: ", total_collisions)
+        # else:
+        #     print("In reality, no collisions")
+        # breakpoint()
 
         # # replace collision checking with a learned model
         # obs, obs_info = self.env.get_obs()
@@ -379,7 +385,7 @@ class MotionUtils:
             for _ in range(30):
                 og.sim.step()
             print("Reset state via og.sim.load_state()")
-            breakpoint()
+            # breakpoint()
         
         # input()
         return safe
