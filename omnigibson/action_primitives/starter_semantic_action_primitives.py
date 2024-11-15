@@ -1221,7 +1221,9 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             # print("target_orn_diff, ori_thresh: ", target_orn_diff, ori_thresh)
             reached_goal = target_pos_diff < pos_thresh and target_orn_diff < ori_thresh
             if reached_goal:
-                return
+                yield "Done"
+                return "Done"
+                # return
 
             if stop_on_contact and detect_robot_collision_in_sim(self.robot, ignore_obj_in_hand=False):
                 return
@@ -1247,6 +1249,9 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             action = self._empty_action()
             yield self._postprocess_action(action)
 
+        yield "Done"
+        return "Done"
+        
         if not ignore_failure:
             raise ActionPrimitiveError(
                 ActionPrimitiveError.Reason.EXECUTION_ERROR,

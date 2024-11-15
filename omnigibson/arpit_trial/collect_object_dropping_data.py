@@ -37,7 +37,7 @@ from memory import Memory
 #     target_pose = (th.from_numpy(target_pos), th.from_numpy(target_orn))
 #     print("target_pos: ", target_pos, target_orn)
 
-def dump_to_memory(env, robot, episode_memory, number_of_collisions=0):
+def dump_to_memory(env, robot, episode_memory, number_of_collisions=0, delta_pos_z=0.0):
     obs, obs_info = env.get_obs()
 
     proprio = robot._get_proprioception_dict()
@@ -69,6 +69,11 @@ def dump_to_memory(env, robot, episode_memory, number_of_collisions=0):
 
     episode_memory.add_extra('grasps', is_grasping.numpy())
     episode_memory.add_extra('contacts', is_in_collision)
+
+    object_dropped = False
+    if delta_pos_z > 0.35:
+        object_dropped = True
+    episode_memory.add_extra('object_dropped', object_dropped)
 
 # def custom_reset(env, robot, episode_memory): 
 #     scene_initial_state = env.scene._initial_state
@@ -146,11 +151,15 @@ def primitive(episode_memory):
     place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
     place_pos += place_noise
     place_pose = (place_pos, place_orn)    
-    execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=False, episode_memory=episode_memory, grasp_action=grasp_action), 
+    # execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=False, episode_memory=episode_memory, grasp_action=grasp_action), 
+    #                    env, 
+    #                    robot, 
+    #                    grasp_action,
+    #                    episode_memory)
+    execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=False), 
                        env, 
                        robot, 
-                       grasp_action,
-                       episode_memory)
+                       grasp_action)
 
     # Debugging
     post_eef_pose_world = robot.eef_links["right"].get_position_orientation()
@@ -163,22 +172,27 @@ def primitive(episode_memory):
 
     #TODO: Add a 0 action here
 
-    # # ============= Open grasp =================
-    # gripper_closed = False
-    # action = action_primitives._empty_action()
-    # # if left hand is IK
-    # # action[18] = -1
-    # # if left has is joint controller
-    # action[20] = 1
-    # execute_controller([action], env, robot, gripper_closed, episode_memory)
-    # # step the simulator a few steps to let the gripper close completely
-    # for _ in range(40):
-    #     og.sim.step()
-    # # save everything to memory
-    # dump_to_memory(env, robot, episode_memory)
-    # action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
-    # episode_memory.add_action('actions', action_to_add)
-    # # ==========================================
+    # ============= Open grasp =================
+    box = env.scene.object_registry("name", "box")
+    obj_in_hand_pos_before = box.get_position_orientation()[0]
+    gripper_closed = False
+    action = action_primitives._empty_action()
+    action[robot.gripper_action_idx["right"]] = 1
+    execute_controller([action], env, robot, gripper_closed, episode_memory)
+    # step the simulator a few steps to let the gripper close completely
+    for _ in range(40):
+        og.sim.step()
+    # save everything to memory
+    obj_in_hand_pos_after = box.get_position_orientation()[0]
+    delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 
+    print("delta_pos_z: ", delta_pos_z)
+    dump_to_memory(env, robot, episode_memory, delta_pos_z)
+    # concatenate right arm and right griper indices
+    breakpoint()
+    indices = th.cat((robot.arm_control_idx["right"], robot.gripper_action_idx["right"]))
+    action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
+    episode_memory.add_action('actions', action_to_add)
+    # ==========================================
 
 def randomize_robot():
     # for manipulation
@@ -249,8 +263,8 @@ def randomize_robot():
     for _ in range(50):
         og.sim.step()
 
-    # add to memory
-    dump_to_memory(env, robot, episode_memory)
+    # # add to memory
+    # dump_to_memory(env, robot, episode_memory)
 
 def set_all_seeds(seed):
     import random
@@ -348,7 +362,7 @@ print("box.mass: ", box.mass)
 
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-save_folder = 'place_in_shelf_data'
+save_folder = 'object_dropping_data'
 os.makedirs(save_folder, exist_ok=True)
 
 # Obtain the number of episodes
@@ -377,10 +391,10 @@ for i in range(250):
     randomize_robot()
     # breakpoint()
     
-    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
     primitive(episode_memory)
-    episode_memory.dump(f'{save_folder}/dataset.hdf5')
-    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
     
     og.sim.load_state(state, serialized=False)
     

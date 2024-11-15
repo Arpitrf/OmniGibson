@@ -36,6 +36,7 @@ class Memory:
     extra_keys = [
         'grasps',
         'contacts',
+        'object_dropped'
     ]
     observation_info_keys = [
         'seg_semantic',
@@ -146,20 +147,26 @@ class Memory:
             # Convert the array to a NumPy array with dtype=object to handle varying sizes
             np_array = np.array(arr, dtype=object)
 
-            # Get the shapes of all elements at this level
-            shapes = [np.shape(sub_array) for sub_array in np_array]
-            
-            # If there is more than one unique shape, the array is of variable length
-            if len(set(shapes)) > 1:
-                return True
-            
-            # Recursively check the next level if it's deeper than a single level (not scalar)
-            for sub_array in np_array:
-                if isinstance(sub_array, np.ndarray) or isinstance(sub_array, list):
-                    if check_shapes(sub_array):
-                        return True
-            
-            return False
+            if np_array.size == 0:
+                return False
+            try:
+                # Get the shapes of all elements at this level
+                shapes = [np.shape(sub_array) for sub_array in np_array]
+                
+                # If there is more than one unique shape, the array is of variable length
+                if len(set(shapes)) > 1:
+                    return True
+                
+                    # Recursively check the next level if it's deeper than a single level (not scalar)
+                    for sub_array in np_array:
+                        if isinstance(sub_array, np.ndarray) or isinstance(sub_array, list):
+                            if check_shapes(sub_array):
+                                return True
+                    
+                    return False
+            except Exception as e:
+                print("error: ", e)
+                breakpoint()
         
         return check_shapes(array)
         
@@ -203,7 +210,7 @@ class Memory:
                 # value = value.astype(np.float64)
                 # print("22", key)
                 # HDF5 Can't save variable length arrays/lists. i.e. say shape is (9,) and the first element has len=7 and second element has len=6
-                variable_length = self.has_variable_length_array(np.array(value))
+                variable_length = self.has_variable_length_array(value)
                 if variable_length:
                     self.add_variable_length_dataset(group, key, value)
                 else:
