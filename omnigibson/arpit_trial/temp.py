@@ -62,21 +62,76 @@ import pickle
 
 import h5py
 import numpy as np
-with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data/dataset.hdf5", "r") as f:
+with h5py.File("/home/arpit/test_projects/OmniGibson/temp/dataset.hdf5", "r") as f:
     print(len(f["data"].keys()))
-    # print(np.array(f["data"]["episode_00000"]["actions"]["actions"][0]))
-    # print(np.array(f["data"]["episode_00000"]["proprioceptions"]["robot_2d_ori"]).shape)
-    # print(np.array(f["data"]["episode_00024"]["extras"]["contacts"]).shape)
+    # breakpoint()
+    for i in range(len(f["data"])):
+        print("actions: ", np.array(f["data"]["episode_{:05d}".format(i)]["actions"]["actions"]).shape)
+        print("rgb: ", np.array(f["data"]["episode_{:05d}".format(i)]["observations"]["rgb"]).shape)
+        print("contacts: ", np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"]).shape)
+        print("singularities: ", np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["singularities"]).shape)
+        print("extrinsic_matrix: ", np.array(f["data"]["episode_{:05d}".format(i)]["proprioceptions"]["extrinsic_matrix"]).shape)
+        print(("--------------"))
+
+#     print(np.array(f["data"]["episode_00250"]["actions"]["actions"]))
+#     print(np.array(f["data"]["episode_00250"]["proprioceptions"]["right_eef_pos"]).shape)
+#     print(np.array(f["data"]["episode_00250"]["extras"]["contacts"]))
 
     # # count the number of contacts in the entire dataset
     # total_data_points = 0
     # total_contacts = 0
     # for i in range(len(f["data"])):
-    #     if f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"][0]:
-    #         print(f"Episode {i} has contacts in the first timestep")
+    #     # if f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"][0]:
+    #     #     print(f"Episode {i} has contacts in the first timestep")
+    #     if len(f["data"]["episode_{:05d}".format(i)]['extras']['contacts']) == 1:
+    #         print(f"Ignoring episode {i}")
+    #         continue
     #     for j in range(1, len(f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"])):
     #         contact = f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"][j]
     #         total_data_points += 1
     #         if contact:
     #             total_contacts += 1
     # print(f"Total data points: {total_data_points}, Total contacts: {total_contacts}")
+
+
+
+# def filter_hdf5_episodes(input_path, output_path, episode_keys):
+#     """
+#     Read a hdf5 file and create a new hdf5 file containing only specified episodes.
+    
+#     Args:
+#         input_path (str): Path to input hdf5 file
+#         output_path (str): Path where filtered hdf5 file will be saved
+#         episode_keys (list): List of episode keys to keep in filtered file
+#     """
+#     # Open input file in read mode
+#     with h5py.File(input_path, 'r') as src:
+#         # Create output file
+#         with h5py.File(output_path, 'w') as dst:
+#             # Copy over all attributes from source file
+#             for key, val in src.attrs.items():
+#                 dst.attrs[key] = val
+            
+#             # Copy data group
+#             if 'data' in src:
+#                 data_group = dst.create_group('data')
+#                 # Only copy specified episodes
+#                 for ep in episode_keys:
+#                     if ep in src['data']:
+#                         src.copy(f'/data/{ep}', data_group)
+            
+#             # Copy mask group if it exists
+#             if 'mask' in src:
+#                 mask_group = dst.create_group('mask')
+#                 # Copy all mask datasets
+#                 for key in src['mask'].keys():
+#                     # Get original mask data
+#                     orig_mask = src['mask'][key][:]
+#                     # Filter to only include specified episodes
+#                     filtered_mask = [x for x in orig_mask if x.decode('utf-8') in episode_keys]
+#                     # Create new dataset with filtered mask
+#                     mask_group.create_dataset(key, data=filtered_mask)
+
+#     return
+
+# filter_hdf5_episodes("/home/arpit/test_projects/OmniGibson/place_in_shelf_data/dataset.hdf5", "/home/arpit/test_projects/OmniGibson/place_in_shelf_data/filtered_dataset.hdf5", ["episode_00250"])

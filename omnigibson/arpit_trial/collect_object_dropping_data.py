@@ -103,7 +103,7 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     for action in ctrl_gen:
         if action == 'Done':
             if episode_memory is not None:
-                dump_to_memory(env, robot, episode_memory, number_of_collisions) 
+                dump_to_memory(env, robot, episode_memory, number_of_collisions=number_of_collisions) 
             number_of_collisions = 0
             continue
         action[robot.gripper_action_idx["right"]] = grasp_action
@@ -123,14 +123,18 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
 
         if sum(singularities) > 3:
             reached_singularity = True
+            print("Reached singularity!")
             # breakpoint()
             # remove the last action from memory
-            episode_memory.data['actions']['actions'].pop()
-            return
+            # episode_memory.data['actions']['actions'].pop()
+            return reached_singularity
+        
+    return reached_singularity
 
 
 
 def primitive(episode_memory):
+    success = True
     # ======================= Move hand to place pose ================================
     grasp_action = -1.0
     # w.r.t world
@@ -156,10 +160,11 @@ def primitive(episode_memory):
     #                    robot, 
     #                    grasp_action,
     #                    episode_memory)
-    execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=False), 
+    reached_singularity = execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=False), 
                        env, 
                        robot, 
-                       grasp_action)
+                       grasp_action,
+                       episode_memory)
 
     # Debugging
     post_eef_pose_world = robot.eef_links["right"].get_position_orientation()
@@ -170,7 +175,10 @@ def primitive(episode_memory):
     # breakpoint()
     # ====================================================================================
 
-    #TODO: Add a 0 action here
+    if reached_singularity:
+        # breakpoint()
+        success = False
+        return success
 
     # ============= Open grasp =================
     box = env.scene.object_registry("name", "box")
@@ -180,19 +188,21 @@ def primitive(episode_memory):
     action[robot.gripper_action_idx["right"]] = 1
     execute_controller([action], env, robot, gripper_closed, episode_memory)
     # step the simulator a few steps to let the gripper close completely
-    for _ in range(40):
+    for _ in range(100):
         og.sim.step()
     # save everything to memory
     obj_in_hand_pos_after = box.get_position_orientation()[0]
     delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 
     print("delta_pos_z: ", delta_pos_z)
-    dump_to_memory(env, robot, episode_memory, delta_pos_z)
+    dump_to_memory(env, robot, episode_memory, delta_pos_z=delta_pos_z)
     # concatenate right arm and right griper indices
-    breakpoint()
+    # breakpoint()
     indices = th.cat((robot.arm_control_idx["right"], robot.gripper_action_idx["right"]))
     action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
     episode_memory.add_action('actions', action_to_add)
     # ==========================================
+
+    return success
 
 def randomize_robot():
     # for manipulation
@@ -277,7 +287,7 @@ def set_all_seeds(seed):
     th.backends.cudnn.deterministic = True
 
 
-set_all_seeds(seed=7)
+set_all_seeds(seed=1)
 config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
 config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
 config["scene"] = dict()
@@ -372,6 +382,7 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
         with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
             episode_number = len(file['data'].keys())
             print("episode_number: ", episode_number)
+init_episode_number = 0
 
 # # save the start simulator state
 # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
@@ -383,18 +394,20 @@ for _ in range(100):
     og.sim.step()
 
 state = og.sim.dump_state(serialized=False)
-for i in range(250):
-    print(f"---------------- Episode {i} ------------------")
+# for i in range(250):
+while episode_number < init_episode_number + 500:
+    print(f"---------------- Episode {episode_number} ------------------")
     episode_memory = Memory()
     
     # randomize base pose and head pose a bit
     randomize_robot()
     # breakpoint()
     
-    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
-    primitive(episode_memory)
-    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
-    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+    success = primitive(episode_memory)
+    if success:
+        episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
     
     og.sim.load_state(state, serialized=False)
     

@@ -12,7 +12,8 @@ class CollisionFailureModel:
     def __init__(self):  
         '''MODEL LOADING'''
         num_class = 1
-        experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/log/classification/pointnet2_cls_ssg_wo_floors_1000_corrected"
+        # experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/log/classification/pointnet2_cls_ssg_wo_floors_1000_corrected"
+        experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_1200"
         # model_name = os.listdir(experiment_dir + '/logs')[0].split('.')[0]
         # model_type = "action_pointnet2_cls_ssg"
         # model = importlib.import_module(model_type)

@@ -116,6 +116,7 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         # Store args
         assert variant in ("default", "wrist_cam"), f"Invalid Tiago variant specified {variant}!"
         self._variant = variant
+        self._extrinsic_matrix = None
 
         # Run super init
         super().__init__(

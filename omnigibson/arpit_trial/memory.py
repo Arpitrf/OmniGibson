@@ -26,7 +26,7 @@ class Memory:
         'seg_instance_id',
         'gripper_obj_seg'
     ]
-    proprioception_keys = ['joint_qpos', 'joint_qpos_sin', 'joint_qpos_cos', 'joint_qvel', 'joint_qeffort', 'robot_pos', 'robot_ori_cos', 'robot_ori_sin', 'robot_2d_ori', 'robot_2d_ori_cos', 'robot_2d_ori_sin', 'robot_lin_vel', 'robot_ang_vel', 'camera_qpos', 'camera_qpos_sin', 'camera_qpos_cos', 'camera_qvel', 'base_qpos', 'base_qpos_sin', 'base_qpos_cos', 'base_qvel', 'arm_left_qpos', 'arm_left_qpos_sin', 'arm_left_qpos_cos', 'arm_left_qvel', 'eef_left_pos_global', 'eef_left_quat_global', 'eef_left_pos', 'eef_left_quat', 'grasp_left', 'gripper_left_qpos', 'gripper_left_qvel', 'arm_right_qpos', 'arm_right_qpos_sin', 'arm_right_qpos_cos', 'arm_right_qvel', 'eef_right_pos_global', 'eef_right_quat_global', 'eef_right_pos', 'eef_right_quat', 'grasp_right', 'gripper_right_qpos', 'gripper_right_qvel', 'trunk_qpos', 'trunk_qvel', 'left_eef_pos', 'left_eef_orn', 'right_eef_pos', 'right_eef_orn', 'base_pos', 'base_orn']
+    proprioception_keys = ['joint_qpos', 'joint_qpos_sin', 'joint_qpos_cos', 'joint_qvel', 'joint_qeffort', 'robot_pos', 'robot_ori_cos', 'robot_ori_sin', 'robot_2d_ori', 'robot_2d_ori_cos', 'robot_2d_ori_sin', 'robot_lin_vel', 'robot_ang_vel', 'camera_qpos', 'camera_qpos_sin', 'camera_qpos_cos', 'camera_qvel', 'base_qpos', 'base_qpos_sin', 'base_qpos_cos', 'base_qvel', 'arm_left_qpos', 'arm_left_qpos_sin', 'arm_left_qpos_cos', 'arm_left_qvel', 'eef_left_pos_global', 'eef_left_quat_global', 'eef_left_pos', 'eef_left_quat', 'grasp_left', 'gripper_left_qpos', 'gripper_left_qvel', 'arm_right_qpos', 'arm_right_qpos_sin', 'arm_right_qpos_cos', 'arm_right_qvel', 'eef_right_pos_global', 'eef_right_quat_global', 'eef_right_pos', 'eef_right_quat', 'grasp_right', 'gripper_right_qpos', 'gripper_right_qvel', 'trunk_qpos', 'trunk_qvel', 'left_eef_pos', 'left_eef_orn', 'right_eef_pos', 'right_eef_orn', 'base_pos', 'base_orn', 'extrinsic_matrix', 'xtion_rgb_optical_frame', 'xtion_depth_optical_frame']
     action_keys = [        
         'complete_actions',
         'preprocessed_actions',
@@ -36,7 +36,8 @@ class Memory:
     extra_keys = [
         'grasps',
         'contacts',
-        'object_dropped'
+        'object_dropped',
+        'singularities'
     ]
     observation_info_keys = [
         'seg_semantic',

@@ -20,6 +20,21 @@ from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 import omnigibson.utils.transform_utils as T
 from memory import Memory
 
+def set_extrinsic_matrix(robot, camera_link="xtion_link"):
+    # Alternative approach using robot's built-in methods
+    camera_link = robot.links["xtion_optical_frame"]
+    base_link = robot.links["base_footprint"]
+
+    # Get world poses
+    camera_pos, camera_quat = camera_link.get_position_orientation()
+    base_pos, base_quat = base_link.get_position_orientation()
+
+    camera_mat = T.pose2mat((camera_pos, camera_quat))
+    base_mat = T.pose2mat((base_pos, base_quat))
+    camera_to_base = th.linalg.inv(base_mat) @ camera_mat
+
+    robot._extrinsic_matrix = camera_to_base
+
 # def get_pose_wrt_robot():
 #      # obtain target pose w.r.t robot
 #     target_pose = np.eye(4)
@@ -37,7 +52,7 @@ from memory import Memory
 #     target_pose = (th.from_numpy(target_pos), th.from_numpy(target_orn))
 #     print("target_pos: ", target_pos, target_orn)
 
-def dump_to_memory(env, robot, episode_memory, number_of_collisions=0):
+def dump_to_memory(env, robot, episode_memory, number_of_collisions=0, reached_singularity=False):
     obs, obs_info = env.get_obs()
 
     proprio = robot._get_proprioception_dict()
@@ -45,6 +60,14 @@ def dump_to_memory(env, robot, episode_memory, number_of_collisions=0):
     proprio['left_eef_pos'], proprio['left_eef_orn'] = robot.get_relative_eef_pose(arm='left')
     proprio['right_eef_pos'], proprio['right_eef_orn'] = robot.get_relative_eef_pose(arm='right')
     proprio['base_pos'], proprio['base_orn'] = robot.get_position_orientation()
+    proprio['extrinsic_matrix'] = robot._extrinsic_matrix
+    # breakpoint()
+    # convert tuple to tensor
+    xtion_rgb_optical_frame_pose =  robot.links["xtion_rgb_optical_frame"].get_position_orientation()
+    xtion_depth_optical_frame_pose =  robot.links["xtion_depth_optical_frame"].get_position_orientation()
+    proprio['xtion_rgb_optical_frame'] = th.cat((xtion_rgb_optical_frame_pose[0], xtion_rgb_optical_frame_pose[1]))
+    proprio['xtion_depth_optical_frame'] = th.cat((xtion_depth_optical_frame_pose[0], xtion_depth_optical_frame_pose[1]))
+   
     for k in proprio.keys():
         episode_memory.add_proprioception(k, proprio[k].cpu().numpy())
 
@@ -69,7 +92,7 @@ def dump_to_memory(env, robot, episode_memory, number_of_collisions=0):
 
     episode_memory.add_extra('grasps', is_grasping.numpy())
     episode_memory.add_extra('contacts', is_in_collision)
-
+    episode_memory.add_extra('singularities', reached_singularity)
 # def custom_reset(env, robot, episode_memory): 
 #     scene_initial_state = env.scene._initial_state
     
@@ -98,7 +121,7 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     for action in ctrl_gen:
         if action == 'Done':
             if episode_memory is not None:
-                dump_to_memory(env, robot, episode_memory, number_of_collisions) 
+                dump_to_memory(env, robot, episode_memory, number_of_collisions, reached_singularity=reached_singularity) 
             number_of_collisions = 0
             continue
         action[robot.gripper_action_idx["right"]] = grasp_action
@@ -118,11 +141,9 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
 
         if sum(singularities) > 3:
             reached_singularity = True
-            # breakpoint()
             # remove the last action from memory
-            episode_memory.data['actions']['actions'].pop()
-            return
-
+            # episode_memory.data['actions']['actions'].pop()
+            # return
 
 
 def primitive(episode_memory):
@@ -142,7 +163,7 @@ def primitive(episode_memory):
     # add noise to place pos
     place_pos = place_pose[0]
     place_orn = place_pose[1]
-    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(0.0, 0.2), np.random.uniform(-0.2, 0.2), np.random.uniform(-0.1, 0.02) # np.random.uniform(-0.1, 0.05)
+    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(0.0, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.1, 0.02) # np.random.uniform(-0.1, 0.05)
     place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
     place_pos += place_noise
     place_pose = (place_pos, place_orn)    
@@ -161,7 +182,6 @@ def primitive(episode_memory):
     # breakpoint()
     # ====================================================================================
 
-    #TODO: Add a 0 action here
 
     # # ============= Open grasp =================
     # gripper_closed = False
@@ -181,39 +201,18 @@ def primitive(episode_memory):
     # # ==========================================
 
 def randomize_robot():
-    # for manipulation
-    # base_pose = robot.get_position_orientation()
-    # base_pos = base_pose[0]
-    # base_x_noise = np.random.uniform(-0.1, 0.05)
-    # base_y_noise = np.random.uniform(-0.1, 0.05)
-    # base_noise = th.tensor([base_x_noise, base_y_noise, 0.0])
-    # base_noise = th.tensor([-0.1, 0.0, 0.0])
-    # base_pos += base_noise 
-    # scene_initial_state['object_registry']['robot0']['root_link']['pos'] = base_pos
-    
-    # base_yaw = R.from_quat(base_pose[1]).as_euler('XYZ', degrees=True)[2]
-    # print("base_yaw: ", base_yaw)
-    # base_yaw_noise = np.random.uniform(-15, 15)
-    # # remove later
-    # base_yaw_noise = 45
-    # base_yaw += base_yaw_noise
-    # r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
-    # r_quat = R.as_quat(r_euler)
-    # scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
-    # print("r_quat: ", r_quat)
-
-    # robot.set_position_orientation(base_pos, r_quat)
-
     # move hand up
     current_eef_pose = robot.get_relative_eef_pose(arm='right')
     # current_eef_pose = action_primitives._get_pose_in_robot_frame((robot.get_eef_position(), robot.get_eef_orientation()))
     print("current_eef_pose: ", current_eef_pose)
-    target_pose = (current_eef_pose[0] + th.tensor([0.0, 0.0, 0.2]), current_eef_pose[1])
+    noise_x, noise_y, noise_z = np.random.uniform(-0.05, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.05, 0.05)
+    up_noise = th.tensor([0.0, 0.0, 0.2]) + th.tensor([noise_x, noise_y, noise_z])
+    target_pose = (current_eef_pose[0] + up_noise, current_eef_pose[1])
     execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
                        env, 
                        robot, 
                        grasp_action=-1.0)
-
+    
     # move base
     action = th.zeros(robot.action_dim)
     action[robot.gripper_action_idx["right"]] = -1
@@ -249,6 +248,8 @@ def randomize_robot():
     for _ in range(50):
         og.sim.step()
 
+    set_extrinsic_matrix(robot)
+
     # add to memory
     dump_to_memory(env, robot, episode_memory)
 
@@ -263,7 +264,7 @@ def set_all_seeds(seed):
     th.backends.cudnn.deterministic = True
 
 
-set_all_seeds(seed=7)
+set_all_seeds(seed=1)
 config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
 config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
 config["scene"] = dict()
@@ -348,7 +349,7 @@ print("box.mass: ", box.mass)
 
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-save_folder = 'place_in_shelf_data'
+save_folder = 'temp'
 os.makedirs(save_folder, exist_ok=True)
 
 # Obtain the number of episodes
@@ -369,7 +370,7 @@ for _ in range(100):
     og.sim.step()
 
 state = og.sim.dump_state(serialized=False)
-for i in range(250):
+for i in range(3):
     print(f"---------------- Episode {i} ------------------")
     episode_memory = Memory()
     
@@ -382,14 +383,18 @@ for i in range(250):
     episode_memory.dump(f'{save_folder}/dataset.hdf5')
     og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
     
+    for _ in range(30):
+        og.sim.step()
+
     og.sim.load_state(state, serialized=False)
     
-    # remove later
     for _ in range(30):
         og.sim.step()
 
     del episode_memory
     episode_number += 1
+
+
 
 # # save the end simulator state
 # og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
