@@ -133,10 +133,14 @@ def primitive(episode_memory):
     # add noise to place pos
     place_pos = place_pose[0]
     place_orn = place_pose[1]
+
     # Noise range 1 (0-300)
     # place_noise_x, place_noise_y, place_noise_z = np.random.uniform(0.0, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.1, 0.02) # np.random.uniform(-0.1, 0.05)
     # Noise range 2 (300-600)
-    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.15, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.2, 0.15) # np.random.uniform(-0.1, 0.05)
+    # place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.15, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.2, 0.15) # np.random.uniform(-0.1, 0.05)
+    # Noise range 3 (600-900)
+    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.25, 0.15), np.random.uniform(-0.25, 0.25), np.random.uniform(-0.3, 0.2) # np.random.uniform(-0.1, 0.05)
+    
     place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
     place_pos += place_noise
     place_pose = (place_pos, place_orn)    
@@ -178,10 +182,14 @@ def randomize_robot():
     current_eef_pose = robot.get_relative_eef_pose(arm='right')
     # current_eef_pose = action_primitives._get_pose_in_robot_frame((robot.get_eef_position(), robot.get_eef_orientation()))
     print("current_eef_pose: ", current_eef_pose)
+    
     # Noise range 1 (0-300)
     # noise_x, noise_y, noise_z = np.random.uniform(-0.05, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.05, 0.05)
     # Noise range 2 (300-600)
-    noise_x, noise_y, noise_z = np.random.uniform(-0.1, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.1, 0.05)
+    # noise_x, noise_y, noise_z = np.random.uniform(-0.1, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.1, 0.05)
+    # Noise range 3 (600-900)
+    noise_x, noise_y, noise_z = np.random.uniform(-0.1, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.2, 0.1)
+    
     up_noise = th.tensor([0.0, 0.0, 0.2]) + th.tensor([noise_x, noise_y, noise_z])
     target_pose = (current_eef_pose[0] + up_noise, current_eef_pose[1])
     execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
