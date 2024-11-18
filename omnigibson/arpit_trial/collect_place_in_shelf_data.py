@@ -35,22 +35,6 @@ def set_extrinsic_matrix(robot, camera_link="xtion_link"):
 
     robot._extrinsic_matrix = camera_to_base
 
-# def get_pose_wrt_robot():
-#      # obtain target pose w.r.t robot
-#     target_pose = np.eye(4)
-#     target_pose[:3, :3] = R.from_quat(place_pose[1]).as_matrix()
-#     target_pose[:3, 3] = np.transpose(place_pose[0])
-#     robot_pose = robot.get_position_orientation()
-#     robot_to_world = np.eye(4)
-#     robot_to_world[:3, :3] = R.from_quat(robot_pose[1].numpy()).as_matrix()
-#     robot_to_world[:3, 3] = np.transpose(robot_pose[0].numpy())
-
-#     target_pose_wrt_robot = np.dot(np.linalg.inv(robot_to_world), target_pose) 
-    
-#     target_pos = target_pose_wrt_robot[:3, 3]
-#     target_orn = np.array(R.from_matrix(target_pose_wrt_robot[:3, :3]).as_quat())
-#     target_pose = (th.from_numpy(target_pos), th.from_numpy(target_orn))
-#     print("target_pos: ", target_pos, target_orn)
 
 def dump_to_memory(env, robot, episode_memory, number_of_collisions=0, reached_singularity=False):
     obs, obs_info = env.get_obs()
@@ -93,26 +77,7 @@ def dump_to_memory(env, robot, episode_memory, number_of_collisions=0, reached_s
     episode_memory.add_extra('grasps', is_grasping.numpy())
     episode_memory.add_extra('contacts', is_in_collision)
     episode_memory.add_extra('singularities', reached_singularity)
-# def custom_reset(env, robot, episode_memory): 
-#     scene_initial_state = env.scene._initial_state
-    
-#     base_yaw = 90
-#     r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
-#     r_quat = R.as_quat(r_euler)
-#     scene_initial_state['object_registry']['robot0']['root_link']['ori'] = r_quat
-    
-#     head_joints = np.array([-0.5031718015670776, -0.9972541332244873])
 
-#     # Reset environment and robot
-#     env.reset()
-#     robot.reset(head_joints_pos=head_joints)
-
-#     # Step simulator a few times so that the effects of "reset" take place
-#     for _ in range(10):
-#         og.sim.step()
-
-#     # add to memory
-#     dump_to_memory(env, robot, episode_memory)
 
 def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     number_of_collisions = 0
@@ -120,7 +85,7 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     reached_singularity = False
     for action in ctrl_gen:
         if action == 'Done':
-            if episode_memory is not None:
+            if episode_memory is not None:      
                 dump_to_memory(env, robot, episode_memory, number_of_collisions, reached_singularity=reached_singularity) 
             number_of_collisions = 0
             continue
@@ -153,12 +118,6 @@ def primitive(episode_memory):
     # place_pose =  (np.array([ 1.1888, -0.1884,  0.8387]), np.array([-0.0489, -0.0063,  0.5555,  0.8301]))
     # w.r.t robot
     place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
-
-    # # move the right eef 10 cm forward
-    # current_eef_pose = robot.get_relative_eef_pose(arm='right')
-    # # current_eef_pose = action_primitives._get_pose_in_robot_frame((robot.get_eef_position(), robot.get_eef_orientation()))
-    # print("current_eef_pose: ", current_eef_pose)
-    # place_pose = (current_eef_pose[0] + th.tensor([0.1, 0.0, 0.0]), current_eef_pose[1])
 
     # add noise to place pos
     place_pos = place_pose[0]
@@ -314,8 +273,6 @@ og.sim.restore(["place_start.json"])
 
 scene = env.scene
 robot = env.robots[0]
-print(robot.name)
-# pdb.set_trace()
 
 state = og.sim.dump_state()
 og.sim.stop()
@@ -349,7 +306,7 @@ print("box.mass: ", box.mass)
 
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-save_folder = 'temp'
+save_folder = 'place_in_shelf_data_new'
 os.makedirs(save_folder, exist_ok=True)
 
 # Obtain the number of episodes
@@ -370,7 +327,7 @@ for _ in range(100):
     og.sim.step()
 
 state = og.sim.dump_state(serialized=False)
-for i in range(3):
+for i in range(300):
     print(f"---------------- Episode {i} ------------------")
     episode_memory = Memory()
     
@@ -383,12 +340,12 @@ for i in range(3):
     episode_memory.dump(f'{save_folder}/dataset.hdf5')
     og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
     
-    for _ in range(30):
+    for _ in range(10):
         og.sim.step()
 
     og.sim.load_state(state, serialized=False)
     
-    for _ in range(30):
+    for _ in range(10):
         og.sim.step()
 
     del episode_memory
