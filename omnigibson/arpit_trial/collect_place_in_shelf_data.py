@@ -18,6 +18,7 @@ from omnigibson.utils.ui_utils import KeyboardRobotController
 from omnigibson.action_primitives.starter_semantic_action_primitives import StarterSemanticActionPrimitives
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 import omnigibson.utils.transform_utils as T
+from omnigibson.object_states.contact_bodies import ContactBodies
 from memory import Memory
 
 def set_extrinsic_matrix(robot, camera_link="xtion_link"):
@@ -95,7 +96,17 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
 
         # debugging:
         box = env.scene.object_registry("name", "box")
-        is_contact = detect_robot_collision_in_sim(robot, filter_objs=[box])
+        robot_is_contact = detect_robot_collision_in_sim(robot, filter_objs=[box])
+
+        # check if box is in collision
+        box_is_contact = False
+        box_contact_bodies = list(box.states[ContactBodies].get_value())
+        # two fingers are already in contact with the box 
+        if len(box_contact_bodies) > 2:
+            box_is_contact = True
+            # print("box_contact_bodies: ", box_contact_bodies)
+
+        is_contact = robot_is_contact or box_is_contact
         if is_contact:
             number_of_collisions += 1
             # print("Collided! number_of_collisions: ", number_of_collisions)
@@ -122,7 +133,10 @@ def primitive(episode_memory):
     # add noise to place pos
     place_pos = place_pose[0]
     place_orn = place_pose[1]
-    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(0.0, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.1, 0.02) # np.random.uniform(-0.1, 0.05)
+    # Noise range 1 (0-300)
+    # place_noise_x, place_noise_y, place_noise_z = np.random.uniform(0.0, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.1, 0.02) # np.random.uniform(-0.1, 0.05)
+    # Noise range 2 (300-600)
+    place_noise_x, place_noise_y, place_noise_z = np.random.uniform(-0.15, 0.15), np.random.uniform(-0.17, 0.17), np.random.uniform(-0.2, 0.15) # np.random.uniform(-0.1, 0.05)
     place_noise = th.tensor([place_noise_x, place_noise_y, place_noise_z])
     place_pos += place_noise
     place_pose = (place_pos, place_orn)    
@@ -164,7 +178,10 @@ def randomize_robot():
     current_eef_pose = robot.get_relative_eef_pose(arm='right')
     # current_eef_pose = action_primitives._get_pose_in_robot_frame((robot.get_eef_position(), robot.get_eef_orientation()))
     print("current_eef_pose: ", current_eef_pose)
-    noise_x, noise_y, noise_z = np.random.uniform(-0.05, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.05, 0.05)
+    # Noise range 1 (0-300)
+    # noise_x, noise_y, noise_z = np.random.uniform(-0.05, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.05, 0.05)
+    # Noise range 2 (300-600)
+    noise_x, noise_y, noise_z = np.random.uniform(-0.1, 0.05), np.random.uniform(-0.1, 0.1), np.random.uniform(-0.1, 0.05)
     up_noise = th.tensor([0.0, 0.0, 0.2]) + th.tensor([noise_x, noise_y, noise_z])
     target_pose = (current_eef_pose[0] + up_noise, current_eef_pose[1])
     execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), 
@@ -258,7 +275,6 @@ config["objects"] = [
         "primitive_type": "Cube",
         "rgba": [1.0, 0, 0, 1.0],
         "scale": [0.1, 0.05, 0.1],
-        "mass": 1e-6,
         "position": [0.1, 0.5, 0.5],
         "orientation": box_quat
     }
@@ -295,7 +311,8 @@ og.sim.load_state(state)
 
 # getting all objects in scene
 # env.scene.objects
-
+shelf = env.scene.object_registry("name", "shelf")
+shelf.root_link.mass = 1e3
 box = env.scene.object_registry("name", "box")
 box.root_link.mass = 1e-2
 print("box.mass: ", box.mass)
@@ -331,7 +348,7 @@ for i in range(300):
     print(f"---------------- Episode {i} ------------------")
     episode_memory = Memory()
     
-    # randomize base pose and head pose a bit
+    # Randomize base pose and head pose a bit
     randomize_robot()
     # breakpoint()
     

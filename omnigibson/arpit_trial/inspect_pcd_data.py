@@ -181,82 +181,208 @@ def get_pcd(ep, hdf5_file):
         pcd['normals'] = np.array(pcd_normals)
         return pcd
 
-class VisualizerWithCallback:
-    def __init__(self, point_cloud):
-        self.vis = o3d.visualization.VisualizerWithEditing()
-        self.pcd = point_cloud
-        self.points = np.asarray(self.pcd.points)
+# class VisualizerWithCallback:
+#     def __init__(self, point_cloud):
+#         self.vis = o3d.visualization.VisualizerWithEditing()
+#         self.pcd = point_cloud
+#         self.points = np.asarray(self.pcd.points)
         
-    def run(self):
-        self.vis.create_window()
-        self.vis.add_geometry(self.pcd)
+#     def run(self):
+#         self.vis.create_window()
+#         # self.vis.add_geometry(self.pcd)
         
-        # Set camera parameters
-        view_control = self.vis.get_view_control()
-        view_control.change_field_of_view(60.0)
-        view_control.set_zoom(0.7)
-        view_control.set_front([0, 0, -1])
-        view_control.set_lookat([0, 0, 0])
-        view_control.set_up([0, -1, 0])
+#         # Set camera parameters
+#         view_control = self.vis.get_view_control()
+#         view_control.change_field_of_view(60.0)
+#         view_control.set_zoom(0.7)
+#         view_control.set_front([0, 0, -1])
+#         view_control.set_lookat([0, 0, 0])
+#         view_control.set_up([0, -1, 0])
         
-        # Run visualizer and get picked points
-        picked_points = self.vis.run()  # Returns indices of picked points
+#         # Run visualizer and get picked points
+#         picked_points = self.vis.run()  # Returns indices of picked points
         
-        # Print coordinates of picked points
-        if picked_points is not None:
-            for idx in picked_points:
-                if idx < len(self.points):
-                    point = self.points[idx]
-                    print(f"Selected point {idx}: x={point[0]:.3f}, y={point[1]:.3f}, z={point[2]:.3f}")
+#         # Print coordinates of picked points
+#         if picked_points is not None:
+#             for idx in picked_points:
+#                 if idx < len(self.points):
+#                     point = self.points[idx]
+#                     print(f"Selected point {idx}: x={point[0]:.3f}, y={point[1]:.3f}, z={point[2]:.3f}")
         
-        self.vis.destroy_window()
+#         self.vis.destroy_window()
 
-def visualize_pointcloud_and_action(points, colors, action=None):
-    # Create point cloud object
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
+# def visualize_pointcloud_and_action(points, colors, action=None, eef_pos=None):
+#     # Create point cloud object
+#     pcd = o3d.geometry.PointCloud()
+#     pcd.points = o3d.utility.Vector3dVector(points)
     
-    # Add colors to point cloud
-    if colors is not None:
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-    else:
-        # If no colors provided, use uniform gray color for visibility
-        pcd.paint_uniform_color([0.7, 0.7, 0.7])
+#     # Add colors to point cloud
+#     if colors is not None:
+#         pcd.colors = o3d.utility.Vector3dVector(colors)
+#     else:
+#         # If no colors provided, use uniform gray color for visibility
+#         pcd.paint_uniform_color([0.7, 0.7, 0.7])
     
+#     # Create visualizer instance
+#     vis_obj = VisualizerWithCallback(pcd)
+    
+#     if action is not None:
+#         # Create line geometry for action vector starting from eef_pos
+#         start_point = eef_pos
+#         end_point = eef_pos + action
+#         points = [start_point, end_point]
+#         lines = [[0, 1]]
+#         colors = [[1, 0, 0]]  # Red color for action vector
+        
+#         line_set = o3d.geometry.LineSet()
+#         line_set.points = o3d.utility.Vector3dVector(points)
+#         line_set.lines = o3d.utility.Vector2iVector(lines)
+#         line_set.colors = o3d.utility.Vector3dVector(colors)
+
+#         # Add a sphere at the start point for better visibility
+#         sphere = o3d.geometry.TriangleMesh.create_sphere(radius=50.0)
+#         sphere.translate(start_point)
+#         sphere.paint_uniform_color([0, 1, 0])  # Green color for start point
+        
+#         vis_obj.vis.add_geometry(line_set)
+#         vis_obj.vis.add_geometry(sphere)
+
+#         # #  Create line geometry for action vector
+#         # points = [[0, 0, 0], action]
+#         # lines = [[0, 1]]
+#         # colors = [[1, 0, 0]]
+        
+#         # line_set = o3d.geometry.LineSet()
+#         # line_set.points = o3d.utility.Vector3dVector(points)
+#         # line_set.lines = o3d.utility.Vector2iVector(lines)
+#         # line_set.colors = o3d.utility.Vector3dVector(colors)
+        
+#         # vis_obj.vis.add_geometry(line_set)
+    
+#     # Add coordinate frame
+#     coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
+#     vis_obj.vis.add_geometry(coord_frame)
+    
+#     # Run visualizer
+#     vis_obj.run()
+
+def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=None, eef_pos=None):
     # Create visualizer instance
-    vis_obj = VisualizerWithCallback(pcd)
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    
+    # Create first point cloud object
+    pcd1 = o3d.geometry.PointCloud()
+    pcd1.points = o3d.utility.Vector3dVector(points1)
+    if colors1 is not None:
+        pcd1.colors = o3d.utility.Vector3dVector(colors1)
+    else:
+        pcd1.paint_uniform_color([0.7, 0.7, 0.7])
+    vis.add_geometry(pcd1)
+    
+    offset_y = -2.0
+    # Create second point cloud object (offset in x direction)
+    pcd2 = o3d.geometry.PointCloud()
+    points2_offset = points2.copy()
+    points2_offset[:, 1] += offset_y  # Offset in x direction
+    pcd2.points = o3d.utility.Vector3dVector(points2_offset)
+    if colors2 is not None:
+        pcd2.colors = o3d.utility.Vector3dVector(colors2)
+    else:
+        pcd2.paint_uniform_color([0.7, 0.7, 0.7])
+    vis.add_geometry(pcd2)
+    
     
     if action is not None:
-        # Create line geometry for action vector
-        points = [[0, 0, 0], action]
-        lines = [[0, 1]]
-        colors = [[1, 0, 0]]
+        # Create cylinder for action vector
+        start_point = eef_pos
+        end_point = eef_pos + action  # Scale action vector for better visibility
+        print("start_point: ", start_point)
+        print("end_point: ", end_point)
+
+        # Calculate cylinder parameters
+        vector = end_point - start_point
+        length = np.linalg.norm(vector)
+        direction = vector / length
         
-        line_set = o3d.geometry.LineSet()
-        line_set.points = o3d.utility.Vector3dVector(points)
-        line_set.lines = o3d.utility.Vector2iVector(lines)
-        line_set.colors = o3d.utility.Vector3dVector(colors)
+        # Create cylinder (oriented along z-axis by default)
+        cylinder = o3d.geometry.TriangleMesh.create_cylinder(radius=0.005, height=length)
         
-        vis_obj.vis.add_geometry(line_set)
-    
+        # Calculate rotation to align cylinder with action vector
+        # Default cylinder direction is [0, 0, 1]
+        default_direction = np.array([0, 0, 1])
+        # Find rotation axis and angle
+        rotation_axis = np.cross(default_direction, direction)
+        rotation_axis_norm = np.linalg.norm(rotation_axis)
+        
+        if rotation_axis_norm > 0:  # if not parallel
+            rotation_axis = rotation_axis / rotation_axis_norm
+            angle = np.arccos(np.dot(default_direction, direction))
+            R = o3d.geometry.get_rotation_matrix_from_axis_angle(rotation_axis * angle)
+            cylinder.rotate(R, center=[0, 0, 0])
+        
+        # Move cylinder to correct position
+        cylinder.translate(start_point + vector/2)
+        cylinder.paint_uniform_color([1, 0, 0])  # Red color
+        vis.add_geometry(cylinder)
+
+        # Add a sphere at the start point for better visibility
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.02)
+        sphere.translate(start_point)
+        sphere.paint_uniform_color([0, 1, 0])  # Green color for start point
+        vis.add_geometry(sphere)
     # Add coordinate frame
     coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
-    vis_obj.vis.add_geometry(coord_frame)
+    vis.add_geometry(coord_frame)
+    
+    # Set camera parameters
+    view_control = vis.get_view_control()
+    view_control.change_field_of_view(60.0)
+    # view_control.set_zoom(0.7)
+    view_control.set_zoom(1.5)
+    # view_control.set_front([0, 0, -1])
+    view_control.set_front([-0.013842371518927768, 0.5269709674468008, 0.8497705503363334])
+    # view_control.set_lookat([0, 0, 0])
+    view_control.set_lookat([1.0, 1.0, 1.0])
+    # view_control.set_up([0, -1, 0])
+    view_control.set_up([0.9690995313503652, 0.2163931972079168, -0.11840642946495106])
     
     # Run visualizer
-    vis_obj.run()
+    vis.run()
+
+    # # Get and print camera parameters before destroying window
+    # view_control = vis.get_view_control()
+    # cam = view_control.convert_to_pinhole_camera_parameters()
+    # # Get zoom
+    # # zoom = view_control.get_zoom()
+    # # Get view matrix
+    # view_matrix = np.array(cam.extrinsic)
+    # # Calculate front, up, and lookat
+    # front = -view_matrix[:3, 2]  # negative z-axis of camera coordinate system
+    # up = -view_matrix[:3, 1]     # negative y-axis of camera coordinate system
+    # # lookat = np.array(view_control.get_lookat())
+    # print("\nCamera parameters:")
+    # # print(f"zoom = {zoom}")
+    # print(f"front = {front.tolist()}")
+    # print(f"up = {up.tolist()}")
+    # # print(f"lookat = {lookat.tolist()}")
+
+    vis.destroy_window()
 
 # Read and visualize data
 with h5py.File("/home/arpit/test_projects/OmniGibson/temp/dataset.hdf5", "r") as f:
-    first_key = list(f["data"].keys())[0]
-    extr = np.array(f["data"][first_key]["proprioceptions"]["extrinsic_matrix"])[0]
+    first_key = list(f["data"].keys())[2]
+    extr = np.array(f["data"][first_key]["proprioceptions"]["extrinsic_matrix"])[2]
     print("extr: ", extr)
     # breakpoint()
     pcd = get_pcd(first_key, f)
     # breakpoint()
     point_clouds = pcd['points']
     point_colors = pcd['colors']
-    # actions = np.array(f["data"][first_key]["actions"]["actions"])[:, 3:6]
-    actions = np.array([[0.0, 0.0, 0.0]])
+    actions = np.array(f["data"][first_key]["actions"]["actions"])[:, 3:6]
+    eef_pos = np.array(f["data"][first_key]["proprioceptions"]["right_eef_pos"])
+    # actions_to_visualize = actions + eef_pos[:-1]
+    print("actions: ", actions.shape)
+    # actions = np.array([[0.0, 0.0, 0.0]])
 
-    visualize_pointcloud_and_action(point_clouds[0], point_colors[0], actions[0])
+    visualize_pointcloud_and_action(point_clouds[0], point_colors[0], point_clouds[1], point_colors[1], action=actions[0], eef_pos=eef_pos[0])
