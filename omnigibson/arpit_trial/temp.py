@@ -59,19 +59,73 @@ import pickle
 # plt.tight_layout()
 # plt.show()
 
+def extract_observations_info_from_hdf5(obs_info_strings, obs_info_shapes):
+        # Reconstruct original structure
+        idx = 0
+        reconstructed_data = []
+        for shape in obs_info_shapes:
+            sublist = []
+            for _ in range(shape):
+                sublist.append(list(map(lambda x: x.decode('utf-8'), obs_info_strings[idx:idx+2])))
+                idx += 2
+            reconstructed_data.append(sublist)
+
+        reconstructed_data = np.array(reconstructed_data, dtype=object)
+        # for i in range(len(reconstructed_data)):
+        #     print(i, np.array(reconstructed_data[i]).shape)
+        #     if i == 0:
+        #         print(reconstructed_data)
+        return reconstructed_data
+
+def get_seg_instance_info(ep, hdf5_file):
+    # Basically dealing with HDF5 limitation: handling inconsistent length arrays in observations_info/seg_instance_id
+    if 'seg_instance_strings' in hdf5_file[f'data/{ep}/observations_info'].keys():
+        seg_instance_strings = np.array(hdf5_file["data/{}/observations_info/seg_instance_strings".format(ep)])
+        seg_instance_shapes = np.array(hdf5_file["data/{}/observations_info/seg_instance_shapes".format(ep)])
+        seg_instance = extract_observations_info_from_hdf5(obs_info_strings=seg_instance_strings, 
+                                                                    obs_info_shapes=seg_instance_shapes)
+        # print("111: ", seg_instance.shape)
+    else:
+        hd5key = "data/{}/observations_info/seg_instance".format(ep)
+        # seg_instance = hdf5_file[hd5key]
+        seg_instance = np.array(hdf5_file[hd5key]).astype(str)
+        # print("222: ", seg_instance.shape)
+    return seg_instance
+
 
 import h5py
 import numpy as np
-with h5py.File("/home/arpit/test_projects/OmniGibson/temp/dataset.hdf5", "r") as f:
+with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_low_noise/dataset.hdf5", "r") as f:
     print(len(f["data"].keys()))
+    actions = np.array(f["data/episode_00020/actions/actions"])
+    print("actions: ", actions)
     # breakpoint()
-    for i in range(len(f["data"])):
-        print("actions: ", np.array(f["data"]["episode_{:05d}".format(i)]["actions"]["actions"]).shape)
-        print("rgb: ", np.array(f["data"]["episode_{:05d}".format(i)]["observations"]["rgb"]).shape)
-        print("contacts: ", np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"]).shape)
-        print("singularities: ", np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["singularities"]).shape)
-        print("extrinsic_matrix: ", np.array(f["data"]["episode_{:05d}".format(i)]["proprioceptions"]["extrinsic_matrix"]).shape)
-        print(("--------------"))
+    # for i in range(len(f["data"])):
+    #     # print(f["data"]["episode_{:05d}".format(i)]["observations_info"].keys())
+    #     seg_instance_info = get_seg_instance_info(f"episode_{i:05d}", f)
+    #     # print(np.array(seg_instance_info).shape)
+    #     for waypt in seg_instance_info:
+    #         ground_exist = False
+    #         for j in range(len(waypt)):
+    #             if "groundPlane" == waypt[j][1]:
+    #                 ground_exist = True
+    #                 break
+    #         if not ground_exist:
+    #             print(f"Episode {i} has no ground plane")
+
+    #     # if "seg_instance_strings" in f["data"]["episode_{:05d}".format(i)]["observations_info"].keys():
+    #     #     print(f"Episode {i} has seg_instance_strings")
+    #     actions_shape = np.array(f["data"]["episode_{:05d}".format(i)]["actions"]["actions"]).shape
+    #     rgb_shape = np.array(f["data"]["episode_{:05d}".format(i)]["observations"]["rgb"]).shape
+    #     contacts_shape = np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"]).shape
+    #     if actions_shape[0] != rgb_shape[0] - 1 and actions_shape[0] != contacts_shape[0] - 1:
+    #         print(f"Episode {i} has incorrect shape")
+    #     # print("actions: ", np.array(f["data"]["episode_{:05d}".format(i)]["actions"]["actions"]).shape)
+    #     # print("rgb: ", np.array(f["data"]["episode_{:05d}".format(i)]["observations"]["rgb"]).shape)
+    #     # print("contacts: ", np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"]).shape)
+    #     # print("singularities: ", np.array(f["data"]["episode_{:05d}".format(i)]["extras"]["singularities"]).shape)
+    #     # print("extrinsic_matrix: ", np.array(f["data"]["episode_{:05d}".format(i)]["proprioceptions"]["extrinsic_matrix"]).shape)
+    #     # print(("--------------"))
 
 #     print(np.array(f["data"]["episode_00250"]["actions"]["actions"]))
 #     print(np.array(f["data"]["episode_00250"]["proprioceptions"]["right_eef_pos"]).shape)

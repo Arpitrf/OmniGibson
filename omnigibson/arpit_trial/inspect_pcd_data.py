@@ -4,7 +4,7 @@ import numpy as np
 import h5py
 import numpy as np
 import open3d as o3d
-
+import matplotlib.pyplot as plt
 def extract_observations_info_from_hdf5(obs_info_strings, obs_info_shapes):
         # Reconstruct original structure
         idx = 0
@@ -23,7 +23,7 @@ def extract_observations_info_from_hdf5(obs_info_strings, obs_info_shapes):
         #         print(reconstructed_data)
         return reconstructed_data
     
-def get_seg_instance_id_info(ep, hdf5_file):
+def get_seg_semantic_info(ep, hdf5_file):
     # Basically dealing with HDF5 limitation: handling inconsistent length arrays in observations_info/seg_instance_id
     if 'seg_semantic_strings' in hdf5_file[f'data/{ep}/observations_info'].keys():
         seg_semantic_strings = np.array(hdf5_file["data/{}/observations_info/seg_semantic_strings".format(ep)])
@@ -37,6 +37,21 @@ def get_seg_instance_id_info(ep, hdf5_file):
         seg_semantic = np.array(hdf5_file[hd5key]).astype(str)
         # print("222: ", seg_semantic.shape)
     return seg_semantic
+
+def get_seg_instance_info(ep, hdf5_file):
+    # Basically dealing with HDF5 limitation: handling inconsistent length arrays in observations_info/seg_instance_id
+    if 'seg_instance_strings' in hdf5_file[f'data/{ep}/observations_info'].keys():
+        seg_instance_strings = np.array(hdf5_file["data/{}/observations_info/seg_instance_strings".format(ep)])
+        seg_instance_shapes = np.array(hdf5_file["data/{}/observations_info/seg_instance_shapes".format(ep)])
+        seg_instance = extract_observations_info_from_hdf5(obs_info_strings=seg_instance_strings, 
+                                                                    obs_info_shapes=seg_instance_shapes)
+        # print("111: ", seg_instance.shape)
+    else:
+        hd5key = "data/{}/observations_info/seg_instance".format(ep)
+        # seg_instance = hdf5_file[hd5key]
+        seg_instance = np.array(hdf5_file[hd5key]).astype(str)
+        # print("222: ", seg_instance.shape)
+    return seg_instance
 
 def generate_point_cloud_from_depth(depth_image, intrinsic_matrix, mask, extrinsic_matrix):
     """
@@ -139,15 +154,20 @@ def get_pcd(ep, hdf5_file):
             [  0.0000,   0.0000,   1.0000]])
         
         # TODO: get extrinsic matrix from the code
-        extrinsic_matrix = np.array(f["data"][first_key]["proprioceptions"]["extrinsic_matrix"])[0]
+        extrinsic_matrix = np.array(f["data"][ep]["proprioceptions"]["extrinsic_matrix"])[0]
         # extrinsic_matrix = np.eye(4)
         
         # print("len(depth): ", len(depth))
 
         # creating mask to remove floors
         seg_semantic = hdf5_file[f'data/{ep}/observations/seg_semantic']
-        seg_semantic_info = get_seg_instance_id_info(ep, hdf5_file)
-        # seq_num = 0
+        seg_instance = hdf5_file[f'data/{ep}/observations/seg_instance']
+        
+        # Change here
+        # seg_semantic_info = get_seg_instance_info(ep, hdf5_file)
+        seg_instance_info = get_seg_instance_info(ep, hdf5_file)
+        
+        # breakpoint()
 
         pcd_points = []
         pcd_normals = []
@@ -156,17 +176,25 @@ def get_pcd(ep, hdf5_file):
 
             # creating mask to remove floors
             floor_id = -1
-            for row in seg_semantic_info[seq_num]:
+            # Change here
+            # for row in seg_semantic_info[seq_num]:
+            for row in seg_instance_info[seq_num]:
                 sem_id, class_name = int(row[0]), row[1]
-                if class_name == 'floors':
+                # Change here
+                # if class_name == 'floors':
+                if class_name == 'groundPlane':
                     floor_id = sem_id
                     break
 
+            # breakpoint()
             if floor_id != -1:
                 mask = np.zeros_like(depth[seq_num])
-                mask[seg_semantic[seq_num] != floor_id] = 1
+                # Change here
+                # mask[seg_semantic[seq_num] != floor_id] = 1
+                mask[seg_instance[seq_num] != floor_id] = 1
             else:
                 mask = np.ones_like(depth[seq_num])
+            # mask = np.ones_like(depth[seq_num])
 
             o3d_pcd = generate_point_cloud_from_depth(depth[seq_num], intr, mask, extrinsic_matrix)
             # show pcd in open3d
@@ -281,6 +309,7 @@ def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=N
     vis.add_geometry(pcd1)
     
     offset_y = -2.0
+    # offset_y = 0.0
     # Create second point cloud object (offset in x direction)
     pcd2 = o3d.geometry.PointCloud()
     points2_offset = points2.copy()
@@ -369,20 +398,29 @@ def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=N
 
     vis.destroy_window()
 
+np.random.seed(1)
 # Read and visualize data
-with h5py.File("/home/arpit/test_projects/OmniGibson/temp/dataset.hdf5", "r") as f:
-    first_key = list(f["data"].keys())[2]
-    extr = np.array(f["data"][first_key]["proprioceptions"]["extrinsic_matrix"])[2]
-    print("extr: ", extr)
-    # breakpoint()
-    pcd = get_pcd(first_key, f)
-    # breakpoint()
-    point_clouds = pcd['points']
-    point_colors = pcd['colors']
-    actions = np.array(f["data"][first_key]["actions"]["actions"])[:, 3:6]
-    eef_pos = np.array(f["data"][first_key]["proprioceptions"]["right_eef_pos"])
-    # actions_to_visualize = actions + eef_pos[:-1]
-    print("actions: ", actions.shape)
-    # actions = np.array([[0.0, 0.0, 0.0]])
+with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_high_noise/dataset.hdf5", "r") as f:
+    for _ in range(10):
+        episode_number = np.random.randint(0, len(f["data"]))
+        # breakpoint()
+        waypoint_number = np.random.randint(0, len(f[f"data/episode_{episode_number:05d}/actions/actions"]))
+        print("episode_number, waypoint_number: ", episode_number, waypoint_number)
+        key = list(f["data"].keys())[episode_number]
+        # breakpoint()
+        pcd = get_pcd(key, f)
+        # breakpoint()
+        point_clouds = pcd['points']
+        point_colors = pcd['colors']
+        actions = np.array(f["data"][key]["actions"]["actions"])[:, 3:6]
+        eef_pos = np.array(f["data"][key]["proprioceptions"]["right_eef_pos"])
+        
+        print("contacts: ", np.array(f["data"][key]["extras"]["contacts"])[waypoint_number+1])
+        print("singularity reached in the traj: ", np.array(f["data"][key]["extras"]["singularities"])[waypoint_number+1])
 
-    visualize_pointcloud_and_action(point_clouds[0], point_colors[0], point_clouds[1], point_colors[1], action=actions[0], eef_pos=eef_pos[0])
+        visualize_pointcloud_and_action(point_clouds[waypoint_number],
+                                        point_colors[waypoint_number],
+                                        point_clouds[waypoint_number + 1],
+                                        point_colors[waypoint_number + 1],
+                                        action=actions[waypoint_number],
+                                        eef_pos=eef_pos[waypoint_number])

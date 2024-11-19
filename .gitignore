@@ -133,3 +133,6 @@ place_in_shelf_data/
 place_in_shelf_data_test/
 place_in_shelf_data_test2/
 object_dropping_data/
+place_in_shelf_data_low_noise/
+place_in_shelf_data_medium_noise/
+place_in_shelf_data_high_noise/

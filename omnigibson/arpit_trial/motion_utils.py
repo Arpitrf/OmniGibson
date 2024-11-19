@@ -7,11 +7,12 @@ import omnigibson.utils.transform_utils as T
 from scipy.spatial.transform import Rotation as R
 
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
+from omnigibson.object_states.contact_bodies import ContactBodies
 from memory import Memory
 from utils import dump_to_memory
 
 class MotionUtils:
-    def __init__(self, env, robot, action_primitives, writer):
+    def __init__(self, env, robot, action_primitives, writer=None):
         self.env = env
         self.robot = robot
         self.action_primitives = action_primitives
@@ -27,7 +28,7 @@ class MotionUtils:
         total_collisions = 0
         singularities = []
         reached_singularity = False
-        for action in ctrl_gen:
+        for i, action in enumerate(ctrl_gen):
             if action == 'Done':
                 if episode_memory is not None:
                     dump_to_memory(self.env, self.robot, episode_memory) 
@@ -36,12 +37,46 @@ class MotionUtils:
             # print("action: ", action)
             obs, reward, terminated, truncated, info = self.env.step(action)
             img = obs[f"{self.env.robots[0].name}"][f"{self.env.robots[0].name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy()
-            self.writer.append_data(img)
-            box = self.env.scene.object_registry("name", "box")
-            arm_in_collision = detect_robot_collision_in_sim(self.robot, filter_objs=[box])
-            if arm_in_collision:
-                total_collisions += 1
+            if self.writer is not None:
+                self.writer.append_data(img)
             
+            # ============================================= Check for collisions =============================================
+            # Check if robot right gripper fingers are in collision
+            box = self.env.scene.object_registry("name", "box")
+            gripper_fingers_is_contact = detect_robot_collision_in_sim(self.robot, filter_objs=[box])
+
+            # Check if robot right gripper is in collision
+            gripper_is_contact = False
+            # TODO: Remove hardcoding from link names
+            gripper_links = ["gripper_right_link"]
+            for gripper_link in gripper_links:
+                lis = self.robot.links[gripper_link].contact_list()
+                if len(lis) > 0:
+                    # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
+                    gripper_is_contact = True
+
+            # Check if robot right arm is in collision
+            robot_is_contact = False
+            # TODO: Remove hardcoding from indices
+            for j in range(1,8):
+                lis = self.robot.links[f"arm_right_{j}_link"].contact_list()
+                if len(lis) > 0:
+                    # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
+                    robot_is_contact = True
+
+            # Check if box is in collision
+            box_is_contact = False
+            box_contact_bodies = list(box.states[ContactBodies].get_value())
+            # two fingers are already in contact with the box 
+            if len(box_contact_bodies) > 2:
+                box_is_contact = True
+                # print("box_contact_bodies: ", box_contact_bodies)
+
+            # print("robot_is_contact, gripper_is_contact, box_is_contact: ", robot_is_contact, gripper_is_contact, box_is_contact)
+            is_contact = robot_is_contact or box_is_contact or gripper_is_contact or gripper_fingers_is_contact
+            if is_contact:
+                total_collisions += 1
+            # ====================================================================================
             singularity = self.robot._controllers["arm_right"].singularity
             singularities.append(singularity)
 
@@ -323,7 +358,8 @@ class MotionUtils:
                 og.sim.step()
                 obs, _ = self.env.get_obs()
                 img = obs[f"{self.env.robots[0].name}"][f"{self.env.robots[0].name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy()
-                self.writer.append_data(img)
+                if self.writer is not None:
+                    self.writer.append_data(img)
 
             
             # gripper_pos = robot.get_joint_positions()[robot.gripper_control_idx["right"]]

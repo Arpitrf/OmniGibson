@@ -94,11 +94,31 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
         # print("action: ", action[:3], action[14:17])
         env.step(action)
 
-        # debugging:
+        # ============================================= Check for collisions =============================================
+        # Check if robot right gripper fingers are in collision
         box = env.scene.object_registry("name", "box")
-        robot_is_contact = detect_robot_collision_in_sim(robot, filter_objs=[box])
+        gripper_fingers_is_contact = detect_robot_collision_in_sim(robot, filter_objs=[box])
 
-        # check if box is in collision
+        # Check if robot right gripper is in collision
+        gripper_is_contact = False
+        # TODO: Remove hardcoding from link names
+        gripper_links = ["gripper_right_link"]
+        for gripper_link in gripper_links:
+            lis = robot.links[gripper_link].contact_list()
+            if len(lis) > 0:
+                # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
+                gripper_is_contact = True
+
+        # Check if robot right arm is in collision
+        robot_is_contact = False
+        # TODO: Remove hardcoding from indices
+        for j in range(1,8):
+            lis = robot.links[f"arm_right_{j}_link"].contact_list()
+            if len(lis) > 0:
+                # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
+                robot_is_contact = True
+
+        # Check if box is in collision
         box_is_contact = False
         box_contact_bodies = list(box.states[ContactBodies].get_value())
         # two fingers are already in contact with the box 
@@ -106,10 +126,11 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
             box_is_contact = True
             # print("box_contact_bodies: ", box_contact_bodies)
 
-        is_contact = robot_is_contact or box_is_contact
+        is_contact = robot_is_contact or box_is_contact or gripper_is_contact or gripper_fingers_is_contact
         if is_contact:
             number_of_collisions += 1
             # print("Collided! number_of_collisions: ", number_of_collisions)
+        # ====================================================================================
 
         # if singularity is reached in this episode, do not add to memory
         singularity = robot._controllers["arm_right"].singularity
@@ -341,19 +362,13 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
         with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
             episode_number = len(file['data'].keys())
             print("episode_number: ", episode_number)
-
-# # save the start simulator state
-# og.sim.save(f'{save_folder}/episode_{episode_number:05d}_start.json')
-# arr = scene.dump_state(serialized=True)
-# with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-#     pickle.dump(arr, f)
             
 for _ in range(100):
     og.sim.step()
 
 state = og.sim.dump_state(serialized=False)
-for i in range(300):
-    print(f"---------------- Episode {i} ------------------")
+for i in range(600):
+    print(f"---------------- Episode {episode_number} ------------------")
     episode_memory = Memory()
     
     # Randomize base pose and head pose a bit
@@ -375,15 +390,6 @@ for i in range(300):
 
     del episode_memory
     episode_number += 1
-
-
-
-# # save the end simulator state
-# og.sim.save(f'{save_folder}/episode_{episode_number:05d}_end.json')
-# arr = scene.dump_state(serialized=True)
-# with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-#     pickle.dump(arr, f)
-
 
 # Always shut down the environment cleanly at the end
 # og.clear()
