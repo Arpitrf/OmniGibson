@@ -6,6 +6,22 @@ import omnigibson as og
 
 from omnigibson import object_states
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
+import omnigibson.utils.transform_utils as T
+
+def set_extrinsic_matrix(robot, camera_link="xtion_link"):
+    # Alternative approach using robot's built-in methods
+    camera_link = robot.links["xtion_optical_frame"]
+    base_link = robot.links["base_footprint"]
+
+    # Get world poses
+    camera_pos, camera_quat = camera_link.get_position_orientation()
+    base_pos, base_quat = base_link.get_position_orientation()
+
+    camera_mat = T.pose2mat((camera_pos, camera_quat))
+    base_mat = T.pose2mat((base_pos, base_quat))
+    camera_to_base = th.linalg.inv(base_mat) @ camera_mat
+
+    robot._extrinsic_matrix = camera_to_base
 
 def correct_gripper_friction(robot):
     state = og.sim.dump_state()
@@ -68,7 +84,7 @@ def write_moviepy_video(obs_list, name, folder_path, fps=1):
     clip.write_videofile(f"{name}", fps=fps, logger=None)
 
 
-def dump_to_memory(env, robot, episode_memory):
+def dump_to_memory(env, robot, episode_memory, number_of_collisions=0, reached_singularity=False):
     obs, obs_info = env.get_obs()
 
     proprio = robot._get_proprioception_dict()
@@ -76,6 +92,14 @@ def dump_to_memory(env, robot, episode_memory):
     proprio['left_eef_pos'], proprio['left_eef_orn'] = robot.get_relative_eef_pose(arm='left')
     proprio['right_eef_pos'], proprio['right_eef_orn'] = robot.get_relative_eef_pose(arm='right')
     proprio['base_pos'], proprio['base_orn'] = robot.get_position_orientation()
+    proprio['extrinsic_matrix'] = robot._extrinsic_matrix
+    # breakpoint()
+    # convert tuple to tensor
+    xtion_rgb_optical_frame_pose =  robot.links["xtion_rgb_optical_frame"].get_position_orientation()
+    xtion_depth_optical_frame_pose =  robot.links["xtion_depth_optical_frame"].get_position_orientation()
+    proprio['xtion_rgb_optical_frame'] = th.cat((xtion_rgb_optical_frame_pose[0], xtion_rgb_optical_frame_pose[1]))
+    proprio['xtion_depth_optical_frame'] = th.cat((xtion_depth_optical_frame_pose[0], xtion_depth_optical_frame_pose[1]))
+    
     for k in proprio.keys():
         episode_memory.add_proprioception(k, proprio[k].cpu().numpy())
 
@@ -91,10 +115,14 @@ def dump_to_memory(env, robot, episode_memory):
 
 
     is_grasping = robot.custom_is_grasping()
-    is_contact = detect_robot_collision_in_sim(robot)
+    is_in_collision = False
+    if number_of_collisions > 5:
+        is_in_collision = True
+    print("is_in_collision: ", number_of_collisions, is_in_collision)
 
     episode_memory.add_extra('grasps', is_grasping.numpy())
-    episode_memory.add_extra('contacts', is_contact)
+    episode_memory.add_extra('contacts', is_in_collision)
+    episode_memory.add_extra('singularities', reached_singularity)
 
 # def add_noise(temp_prior):
 #     temp_prior_modified = temp_prior.clone()

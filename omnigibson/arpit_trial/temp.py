@@ -1,18 +1,22 @@
 from omnigibson.action_primitives.action_primitive_set_base import ActionPrimitiveError
 import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
 
-# # read episode errors
-# with open("/home/arpit/test_projects/OmniGibson/outputs_data_gen/2024-11-13/22-18-29/episode_errors.pkl", "rb") as f:
-#     episode_errors = pickle.load(f)
-# # print the metadata of the first 10 episodes
-# phases = []
-# reasons = []
-# for i in range(50):
-#     print(f"Episode {i}: {episode_errors[i]['reason']}")
-#     # print(f"Episode {i}: {episode_errors[i]['phase']}")
-#     phases.append(episode_errors[i]['phase'])
-#     reasons.append(episode_errors[i]['reason'])
+f_name = "0001.pickle"
+with open(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}", "rb") as f:
+    data_dict = pickle.load(f)
+    for k in data_dict.keys():
+        print("k, v: ", k, np.array(data_dict[k]).shape)
+fig, ax = plt.subplots(1,2)
+ax[0].imshow(np.array(data_dict["rgb"]))
+ax[1].imshow(np.array(data_dict["depth"]))
+plt.show()
 
+cv2.imwrite(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}_rgb.png", np.array(data_dict["rgb"]))
+cv2.imwrite(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}_depth.png", np.array(data_dict["depth"]))
+breakpoint()
 
 
 # import matplotlib.pyplot as plt
@@ -97,10 +101,12 @@ import h5py
 import numpy as np
 with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_low_noise/dataset.hdf5", "r") as f:
     print(len(f["data"].keys()))
-    actions = np.array(f["data/episode_00020/actions/actions"])
-    print("actions: ", actions)
+    # actions = np.array(f["data/episode_00000/actions/actions"])
+    # print("actions: ", actions)
     # breakpoint()
-    # for i in range(len(f["data"])):
+    for i in range(len(f["data"])):
+        actions = np.array(f[f"data/episode_{i:05d}/actions/actions"])
+        print("actions: ", actions[:, 3])
     #     # print(f["data"]["episode_{:05d}".format(i)]["observations_info"].keys())
     #     seg_instance_info = get_seg_instance_info(f"episode_{i:05d}", f)
     #     # print(np.array(seg_instance_info).shape)
@@ -141,6 +147,11 @@ with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_low_noi
     #         print(f"Ignoring episode {i}")
     #         continue
     #     for j in range(1, len(f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"])):
+    #         action = np.array(f["data"]["episode_{:05d}".format(i)]["actions"]["actions"])[:, 3:6]
+    #         if action.sum() == 0:
+    #             print(f"Episode {i} has no action")
+    #             # del f['data']['episode_{:05d}'.format(i)]
+    #             continue
     #         contact = f["data"]["episode_{:05d}".format(i)]["extras"]["contacts"][j]
     #         total_data_points += 1
     #         if contact:

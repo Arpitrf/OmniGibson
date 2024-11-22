@@ -1,10 +1,47 @@
 import h5py
 import numpy as np
+import torch
 
 import h5py
 import numpy as np
 import open3d as o3d
 import matplotlib.pyplot as plt
+
+from pointnet2.models import action_pointnet2_cls_ssg
+from omnigibson.arpit_trial.test_sam import obtain_mask
+
+def predict_collisions(points, actions):
+    points = torch.from_numpy(np.array(points))
+    # actions = actions.unsqueeze(0)
+    actions = torch.from_numpy(np.array(actions)).to(dtype=torch.float64)
+        
+    # remove later
+    votes = 10
+    actions_tile = actions.repeat(votes, 1)
+    pos_noise = torch.empty(votes, 3).uniform_(-0.005, 0.005)
+    actions_tile[:, 3:6] = actions_tile[:, 3:6] + pos_noise
+
+    points, actions = points.type(torch.FloatTensor).cuda(), actions.type(torch.FloatTensor).cuda()
+    actions_tile = actions_tile.type(torch.FloatTensor).cuda()
+    points = points.transpose(2, 1)
+    
+    # ---------------------------
+    vote_num = 1    
+    for _ in range(vote_num):
+        pred, _ = classifier(points, actions)
+        # vote_pool += pred
+    # pred = vote_pool / vote_num
+    # pred_choice = pred.data.max(1)[1]
+
+    probabilities = torch.sigmoid(pred)
+    # Convert probabilities to binary predictions (0 or 1)
+    pred_choice = (probabilities >= 0.5).float()
+
+    print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
+    # -----------------------------
+
+    return pred_choice.item(), probabilities.item()
+
 def extract_observations_info_from_hdf5(obs_info_strings, obs_info_shapes):
         # Reconstruct original structure
         idx = 0
@@ -134,6 +171,8 @@ def generate_point_cloud_from_depth(depth_image, intrinsic_matrix, mask, extrins
 
     # transform points to world frame
     # make points homogeneous
+    # breakpoint()
+    points = points / 1000.0    
     points = np.hstack((points, np.ones((points.shape[0], 1))))
     points = extrinsic_matrix @ points.T
     points = points.T
@@ -146,62 +185,45 @@ def generate_point_cloud_from_depth(depth_image, intrinsic_matrix, mask, extrins
 
     return point_cloud
 
-def get_pcd(ep, hdf5_file):
-        depth = hdf5_file[f"data/{ep}/observations/depth"]
-        intr =  np.array([
-            [103.8416,   0.0000,  64.0000],
-            [  0.0000, 103.8416,  64.0000],
-            [  0.0000,   0.0000,   1.0000]])
+def get_pcd(data_dict):
+        depth = data_dict["depth"].squeeze()
+        intr = data_dict["cam_intr"]
         
-        # TODO: get extrinsic matrix from the code
-        extrinsic_matrix = np.array(f["data"][ep]["proprioceptions"]["extrinsic_matrix"])[0]
+        extrinsic_matrix = data_dict["cam_extr"]
         # extrinsic_matrix = np.eye(4)
-        
-        # print("len(depth): ", len(depth))
 
-        # creating mask to remove floors
-        seg_semantic = hdf5_file[f'data/{ep}/observations/seg_semantic']
-        seg_instance = hdf5_file[f'data/{ep}/observations/seg_instance']
-        
-        # Change here
-        # seg_semantic_info = get_seg_semantic_info(ep, hdf5_file)
-        seg_instance_info = get_seg_instance_info(ep, hdf5_file)
-        
         # breakpoint()
-
+        
         pcd_points = []
         pcd_normals = []
         pcd_colors = []
-        for seq_num in range(len(depth)):
+        mask = obtain_mask()
 
-            # creating mask to remove floors
-            floor_id = -1
-            # Change here
-            # for row in seg_semantic_info[seq_num]:
-            for row in seg_instance_info[seq_num]:
-                sem_id, class_name = int(row[0]), row[1]
-                # Change here
-                # if class_name == 'floors':
-                if class_name == 'groundPlane':
-                    floor_id = sem_id
-                    break
+        # breakpoint()
 
-            # breakpoint()
-            if floor_id != -1:
-                mask = np.zeros_like(depth[seq_num])
-                # Change here
-                # mask[seg_semantic[seq_num] != floor_id] = 1
-                mask[seg_instance[seq_num] != floor_id] = 1
-            else:
-                mask = np.ones_like(depth[seq_num])
-            # mask = np.ones_like(depth[seq_num])
+        o3d_pcd = generate_point_cloud_from_depth(depth, intr, mask, extrinsic_matrix)
+        
+        # show pcd in open3d
+        # o3d.visualization.draw_geometries([o3d_pcd])
+        
+        pcd_points.append(np.asarray(o3d_pcd.points))
+        pcd_colors.append(np.asarray(o3d_pcd.colors))
+        pcd_normals.append(np.asarray(o3d_pcd.normals))
 
-            o3d_pcd = generate_point_cloud_from_depth(depth[seq_num], intr, mask, extrinsic_matrix)
-            # show pcd in open3d
-            # o3d.visualization.draw_geometries([o3d_pcd])
-            pcd_points.append(np.asarray(o3d_pcd.points))
-            pcd_colors.append(np.asarray(o3d_pcd.colors))
-            pcd_normals.append(np.asarray(o3d_pcd.normals))
+        # remove points that are too close to the floor
+        breakpoint()
+        pcd_points[-1] = pcd_points[-1][pcd_points[-1][:, 2] > 0.15]
+        # pcd_colors[-1] = pcd_colors[-1][pcd_points[-1][:, 2] > 0.15]
+        # pcd_normals[-1] = pcd_normals[-1][pcd_points[-1][:, 2] > 0.15]
+
+        # Randomly drop points from the point cloud
+        keep_ratio = 0.7  # Keep 50% of points randomly
+        num_points = len(pcd_points[-1])
+        mask = np.random.choice([True, False], size=num_points, p=[keep_ratio, 1-keep_ratio])
+        
+        pcd_points[-1] = pcd_points[-1][mask]
+        # pcd_colors[-1] = pcd_colors[-1][mask] if len(pcd_colors[-1]) > 0 else pcd_colors[-1]
+        # pcd_normals[-1] = pcd_normals[-1][mask] if len(pcd_normals[-1]) > 0 else pcd_normals[-1]
         
         pcd = dict()
         pcd['points'] = np.array(pcd_points)
@@ -209,90 +231,90 @@ def get_pcd(ep, hdf5_file):
         pcd['normals'] = np.array(pcd_normals)
         return pcd
 
-# class VisualizerWithCallback:
-#     def __init__(self, point_cloud):
-#         self.vis = o3d.visualization.VisualizerWithEditing()
-#         self.pcd = point_cloud
-#         self.points = np.asarray(self.pcd.points)
+class VisualizerWithCallback:
+    def __init__(self, point_cloud):
+        self.vis = o3d.visualization.VisualizerWithEditing()
+        self.pcd = point_cloud
+        self.points = np.asarray(self.pcd.points)
         
-#     def run(self):
-#         self.vis.create_window()
-#         # self.vis.add_geometry(self.pcd)
+    def run(self):
+        self.vis.create_window()
+        self.vis.add_geometry(self.pcd)
         
-#         # Set camera parameters
-#         view_control = self.vis.get_view_control()
-#         view_control.change_field_of_view(60.0)
-#         view_control.set_zoom(0.7)
-#         view_control.set_front([0, 0, -1])
-#         view_control.set_lookat([0, 0, 0])
-#         view_control.set_up([0, -1, 0])
+        # Set camera parameters
+        view_control = self.vis.get_view_control()
+        view_control.change_field_of_view(60.0)
+        view_control.set_zoom(0.7)
+        view_control.set_front([0, 0, -1])
+        view_control.set_lookat([0, 0, 0])
+        view_control.set_up([0, -1, 0])
         
-#         # Run visualizer and get picked points
-#         picked_points = self.vis.run()  # Returns indices of picked points
+        # Run visualizer and get picked points
+        picked_points = self.vis.run()  # Returns indices of picked points
         
-#         # Print coordinates of picked points
-#         if picked_points is not None:
-#             for idx in picked_points:
-#                 if idx < len(self.points):
-#                     point = self.points[idx]
-#                     print(f"Selected point {idx}: x={point[0]:.3f}, y={point[1]:.3f}, z={point[2]:.3f}")
+        # Print coordinates of picked points
+        if picked_points is not None:
+            for idx in picked_points:
+                if idx < len(self.points):
+                    point = self.points[idx]
+                    print(f"Selected point {idx}: x={point[0]:.3f}, y={point[1]:.3f}, z={point[2]:.3f}")
         
-#         self.vis.destroy_window()
+        self.vis.destroy_window()
 
-# def visualize_pointcloud_and_action(points, colors, action=None, eef_pos=None):
-#     # Create point cloud object
-#     pcd = o3d.geometry.PointCloud()
-#     pcd.points = o3d.utility.Vector3dVector(points)
+def visualize_pointcloud_and_action_pt_selection(points, colors=None, action=None, eef_pos=None):
+    # Create point cloud object
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
     
-#     # Add colors to point cloud
-#     if colors is not None:
-#         pcd.colors = o3d.utility.Vector3dVector(colors)
-#     else:
-#         # If no colors provided, use uniform gray color for visibility
-#         pcd.paint_uniform_color([0.7, 0.7, 0.7])
+    # Add colors to point cloud
+    if colors is not None:
+        pcd.colors = o3d.utility.Vector3dVector(colors)
+    else:
+        # If no colors provided, use uniform gray color for visibility
+        pcd.paint_uniform_color([0.7, 0.7, 0.7])
     
-#     # Create visualizer instance
-#     vis_obj = VisualizerWithCallback(pcd)
+    # Create visualizer instance
+    vis_obj = VisualizerWithCallback(pcd)
     
-#     if action is not None:
-#         # Create line geometry for action vector starting from eef_pos
-#         start_point = eef_pos
-#         end_point = eef_pos + action
-#         points = [start_point, end_point]
-#         lines = [[0, 1]]
-#         colors = [[1, 0, 0]]  # Red color for action vector
+    if action is not None:
+        # Create line geometry for action vector starting from eef_pos
+        start_point = eef_pos
+        end_point = eef_pos + action
+        points = [start_point, end_point]
+        lines = [[0, 1]]
+        colors = [[1, 0, 0]]  # Red color for action vector
         
-#         line_set = o3d.geometry.LineSet()
-#         line_set.points = o3d.utility.Vector3dVector(points)
-#         line_set.lines = o3d.utility.Vector2iVector(lines)
-#         line_set.colors = o3d.utility.Vector3dVector(colors)
+        line_set = o3d.geometry.LineSet()
+        line_set.points = o3d.utility.Vector3dVector(points)
+        line_set.lines = o3d.utility.Vector2iVector(lines)
+        line_set.colors = o3d.utility.Vector3dVector(colors)
 
-#         # Add a sphere at the start point for better visibility
-#         sphere = o3d.geometry.TriangleMesh.create_sphere(radius=50.0)
-#         sphere.translate(start_point)
-#         sphere.paint_uniform_color([0, 1, 0])  # Green color for start point
+        # Add a sphere at the start point for better visibility
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=50.0)
+        sphere.translate(start_point)
+        sphere.paint_uniform_color([0, 1, 0])  # Green color for start point
         
-#         vis_obj.vis.add_geometry(line_set)
-#         vis_obj.vis.add_geometry(sphere)
+        vis_obj.vis.add_geometry(line_set)
+        vis_obj.vis.add_geometry(sphere)
 
-#         # #  Create line geometry for action vector
-#         # points = [[0, 0, 0], action]
-#         # lines = [[0, 1]]
-#         # colors = [[1, 0, 0]]
+        # #  Create line geometry for action vector
+        # points = [[0, 0, 0], action]
+        # lines = [[0, 1]]
+        # colors = [[1, 0, 0]]
         
-#         # line_set = o3d.geometry.LineSet()
-#         # line_set.points = o3d.utility.Vector3dVector(points)
-#         # line_set.lines = o3d.utility.Vector2iVector(lines)
-#         # line_set.colors = o3d.utility.Vector3dVector(colors)
+        # line_set = o3d.geometry.LineSet()
+        # line_set.points = o3d.utility.Vector3dVector(points)
+        # line_set.lines = o3d.utility.Vector2iVector(lines)
+        # line_set.colors = o3d.utility.Vector3dVector(colors)
         
-#         # vis_obj.vis.add_geometry(line_set)
+        # vis_obj.vis.add_geometry(line_set)
     
-#     # Add coordinate frame
-#     coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
-#     vis_obj.vis.add_geometry(coord_frame)
+    # Add coordinate frame
+    coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
+    vis_obj.vis.add_geometry(coord_frame)
     
-#     # Run visualizer
-#     vis_obj.run()
+    # Run visualizer
+    vis_obj.run()
 
 def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=None, eef_pos=None):
     # Create visualizer instance
@@ -398,39 +420,90 @@ def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=N
 
     vis.destroy_window()
 
-np.random.seed(10)
-# Read and visualize data
-with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_test_expl/dataset.hdf5", "r") as f:
-    for _ in range(10):
-        episode_number = np.random.randint(0, len(f["data"]))
-        # episode_number = i
-        # breakpoint()
-        waypoint_number = np.random.randint(0, len(f[f"data/episode_{episode_number:05d}/actions/actions"]))
-        # waypoint_number = 0
-        print("-----------------------------------")
-        print("episode_number, waypoint_number: ", episode_number, waypoint_number)
-        key = list(f["data"].keys())[episode_number]
-        # breakpoint()
-        pcd = get_pcd(key, f)
-        # breakpoint()
-        point_clouds = pcd['points']
-        point_colors = pcd['colors']
-        actions = np.array(f["data"][key]["actions"]["actions"])[:, 3:6]
-        eef_pos = np.array(f["data"][key]["proprioceptions"]["right_eef_pos"])
-        eef_orn = np.array(f["data"][key]["proprioceptions"]["right_eef_orn"])
-        # breakpoint()
-        # right_arm_joint_positions = np.array(f["data"][key]["proprioceptions"]["right_arm_joint_positions"])
-        print("eef_pos: ", eef_pos[waypoint_number])
-        print("eef_orn: ", eef_orn[waypoint_number])
-        # eef_pos:  [ 0.46803105 -0.19804734  0.765079  ]
-        # eef_orn:  [-0.20215519 -0.0937544   0.61410695  0.75711036]
-        
-        print("contacts: ", np.array(f["data"][key]["extras"]["contacts"])[waypoint_number+1])
-        print("singularity reached in the traj: ", np.array(f["data"][key]["extras"]["singularities"])[waypoint_number+1])
 
-        visualize_pointcloud_and_action(point_clouds[waypoint_number],
-                                        point_colors[waypoint_number],
-                                        point_clouds[waypoint_number + 1],
-                                        point_colors[waypoint_number + 1],
-                                        action=actions[waypoint_number],
-                                        eef_pos=eef_pos[waypoint_number])
+import pickle
+# f_name = "0001.pickle"
+# f = open(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}", "rb")
+# data_dict = pickle.load(f)
+# for k in data_dict.keys():
+#     print("k, v: ", k, np.array(data_dict[k]).shape)
+
+# # breakpoint()
+# pcd = get_pcd(data_dict)
+
+# # breakpoint()
+
+# waypoint_number = 0
+# point_clouds = pcd['points']
+
+# # save pcd to pickle file
+# with open('real_world_data/pcd_0001.pickle', 'wb') as f:
+#     pickle.dump(point_clouds, f)
+
+# visualize_pointcloud_and_action_pt_selection(point_clouds[waypoint_number])
+
+
+# ------------------------------------------------------------------------------------------------
+num_class = 1
+experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_place_new_data"
+
+classifier = action_pointnet2_cls_ssg.get_model(num_class, normal_channel=False)
+classifier = classifier.cuda()
+
+checkpoint = torch.load(str(experiment_dir) + '/checkpoints/model_epoch_180.pth')
+classifier.load_state_dict(checkpoint['model_state_dict'])
+classifier.eval()
+    
+pred_choices = []
+probs = []
+prob_collision_list = []
+prob_no_collision_list = []
+point_clouds = pickle.load(open('real_world_data/pcd_0001.pickle', 'rb'))
+
+visualize_pointcloud_and_action_pt_selection(point_clouds[0])
+
+np.random.seed(0)
+for i in range(50):
+    actions = np.zeros((1, 10))
+    actions[:, -1] = -1.0
+    # x = np.random.uniform(-0.02, 0.02)
+    x = np.random.uniform(0.05, 0.1)
+    y = np.random.uniform(-0.02, 0.02)
+    # z = np.random.uniform(-0.1, 0.2)
+    z = np.random.uniform(-0.22, -0.18)
+    actions[:, 3:6] = np.array([x, y, z]) 
+
+    pred_choice, prob = predict_collisions(points=point_clouds, actions=actions)
+    pred_choices.append(pred_choice)
+    probs.append(prob)
+
+    if pred_choice == 1.0:
+        prob_collision_list.append(prob)
+    else:
+        prob_no_collision_list.append(prob)
+
+print("len(prob_collision_list): ", len(prob_collision_list))
+print("len(prob_no_collision_list): ", len(prob_no_collision_list))
+
+fig, axs = plt.subplots(1, 2)
+axs[0].hist(prob_collision_list, bins=20, alpha=0.5, label='Collision')
+axs[1].hist(prob_no_collision_list, bins=20, alpha=0.5, label='No Collision')
+# axs[0].legend(loc='upper right')
+axs[0].set_title('Collisions (should be high)')
+axs[1].set_title('No Collisions (should be low)')
+axs[0].set_xlabel('Probability')
+axs[1].set_xlabel('Probability')
+axs[0].set_ylim(0, 30)
+axs[1].set_ylim(0, 30)
+axs[0].set_xlim(0, 1.0)
+axs[1].set_xlim(0, 1.0)
+axs[0].set_ylabel('Frequency')
+axs[1].set_ylabel('Frequency')
+plt.show()
+
+# visualize_pointcloud_and_action(point_clouds[waypoint_number],
+#                                 point_colors[waypoint_number],
+#                                 point_clouds[waypoint_number + 1],
+#                                 point_colors[waypoint_number + 1],
+#                                 action=actions[waypoint_number],
+#                                 eef_pos=eef_pos[waypoint_number])

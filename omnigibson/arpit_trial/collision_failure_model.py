@@ -9,11 +9,11 @@ from pointnet2.data_utils.utils import generate_point_cloud_from_depth
 
 
 class CollisionFailureModel:
-    def __init__(self):  
+    def __init__(self, robot):  
         '''MODEL LOADING'''
         num_class = 1
         # experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/log/classification/pointnet2_cls_ssg_wo_floors_1000_corrected"
-        experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_1200"
+        experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_place_new_data"
         # model_name = os.listdir(experiment_dir + '/logs')[0].split('.')[0]
         # model_type = "action_pointnet2_cls_ssg"
         # model = importlib.import_module(model_type)
@@ -21,9 +21,11 @@ class CollisionFailureModel:
         self.classifier = action_pointnet2_cls_ssg.get_model(num_class, normal_channel=False)
         self.classifier = self.classifier.cuda()
 
-        checkpoint = torch.load(str(experiment_dir) + '/checkpoints/best_model.pth')
+        checkpoint = torch.load(str(experiment_dir) + '/checkpoints/model_epoch_180.pth')
         self.classifier.load_state_dict(checkpoint['model_state_dict'])
         self.classifier.eval()
+
+        self.robot = robot
 
         # with torch.no_grad():
         #     instance_acc = test(classifier.eval(), testDataLoader, vote_num=args.num_votes, num_class=num_class)
@@ -38,7 +40,12 @@ class CollisionFailureModel:
         
         # creating mask to remove floors
         seg_semantic = obs[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_semantic"].cpu().numpy()
+        seg_instance = obs[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_instance"].cpu().numpy()
+
         seg_semantic_info = obs_info[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_semantic"]
+        seg_instance_info = obs_info[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_instance"]
+
+        extrinsic_matrix = self.robot._extrinsic_matrix
 
         pcd_points = []
         pcd_normals = []
@@ -46,19 +53,22 @@ class CollisionFailureModel:
 
         # creating mask to remove floors
         floor_id = -1
-        for k, v in seg_semantic_info.items():
+        # for k, v in seg_semantic_info.items():
+        for k, v in seg_instance_info.items():
             sem_id, class_name = k, v
-            if class_name == 'floors':
+            # if class_name == 'floors':
+            if class_name == 'groundPlane':
                 floor_id = sem_id
                 break
 
         if floor_id != -1:
             mask = np.zeros_like(depth)
-            mask[seg_semantic != floor_id] = 1
+            # mask[seg_semantic != floor_id] = 1
+            mask[seg_instance != floor_id] = 1
         else:
             mask = np.ones_like(depth)
 
-        o3d_pcd = generate_point_cloud_from_depth(depth, intr, mask)
+        o3d_pcd = generate_point_cloud_from_depth(depth, intr, mask, extrinsic_matrix)
         pcd_points.append(np.asarray(o3d_pcd.points))
         pcd_colors.append(np.asarray(o3d_pcd.colors))
         pcd_normals.append(np.asarray(o3d_pcd.normals))
@@ -91,44 +101,46 @@ class CollisionFailureModel:
         actions_tile = actions_tile.type(torch.FloatTensor).cuda()
         points = points.transpose(2, 1)
         
-        # # ---------------------------
-        # for _ in range(vote_num):
-        #     pred, _ = classifier(points, actions)
-        #     # vote_pool += pred
-        # # pred = vote_pool / vote_num
-        # # pred_choice = pred.data.max(1)[1]
+        # ---------------------------
+        vote_num = 1    
+        for _ in range(vote_num):
+            pred, _ = self.classifier(points, actions)
+            # vote_pool += pred
+        # pred = vote_pool / vote_num
+        # pred_choice = pred.data.max(1)[1]
 
-        # probabilities = torch.sigmoid(pred)
-        # # Convert probabilities to binary predictions (0 or 1)
-        # pred_choice = (probabilities >= 0.5).float()
+        probabilities = torch.sigmoid(pred)
+        # Convert probabilities to binary predictions (0 or 1)
+        pred_choice = (probabilities >= threshold).float()
 
-        # print(f"target: pred_choice, pred_prob: ", target.item(), pred_choice.item(), probabilities.item())
-        # # -----------------------------
+        print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
+        # -----------------------------
         
-        preds, pred_choices = [], []
-        # TODO: Vectorize this
-        for i in range(votes):
-            pred, _ = self.classifier(points, actions_tile[i:i+1])
-            preds.append(pred)
-            probabilities = torch.sigmoid(pred)
-            # Changed from 0.5
-            pred_choice = (probabilities >= threshold).float()
-            pred_choices.append(pred_choice.item())
+        # preds, pred_choices = [], []
+        # # TODO: Vectorize this
+        # for i in range(votes):
+        #     pred, _ = self.classifier(points, actions_tile[i:i+1])
+        #     preds.append(pred)
+        #     probabilities = torch.sigmoid(pred)
+        #     # Changed from 0.5
+        #     pred_choice = (probabilities >= threshold).float()
+        #     pred_choices.append(pred_choice.item())
     
 
-        count_ones = pred_choices.count(1.0)
-        count_zeros = pred_choices.count(0.0)
-        if count_ones > count_zeros:
-            pred_choice = torch.tensor(1.0).cuda()
-            confidence = count_ones
-        elif count_zeros > count_ones:
-            pred_choice = torch.tensor(0.0).cuda()
-            confidence = count_zeros
-        else:
-            pred_choice = torch.tensor(1.0).cuda()
-            confidence = count_ones
+        # count_ones = pred_choices.count(1.0)
+        # count_zeros = pred_choices.count(0.0)
+        # if count_ones > count_zeros:
+        #     pred_choice = torch.tensor(1.0).cuda()
+        #     confidence = count_ones
+        # elif count_zeros > count_ones:
+        #     pred_choice = torch.tensor(0.0).cuda()
+        #     confidence = count_zeros
+        # else:
+        #     pred_choice = torch.tensor(1.0).cuda()
+        #     confidence = count_ones
 
-        print(f"pred_choice, pred_prob: ", pred_choice.item(), confidence)
+        # print(f"pred_choice, pred_prob: ", pred_choice.item(), confidence)
+        
         # print(f"target: pred_choice, pred_prob: ", target.item(), pred_choice.item(), confidence)
         # collision_count += target.item()
         # if target.item() == 1.0 and pred_choice.item() == 0.0:

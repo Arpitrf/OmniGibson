@@ -75,7 +75,7 @@ config["objects"] = [
 
 env = og.Environment(configs=config)
 
-ep = "00276"
+ep = "00547"
 og.sim.restore([f"place_in_shelf_data_high_noise/episode_{ep}_start.json"])
 
 

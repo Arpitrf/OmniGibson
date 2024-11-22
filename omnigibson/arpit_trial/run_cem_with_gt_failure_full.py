@@ -23,7 +23,7 @@ from omnigibson.action_primitives.starter_semantic_action_primitives import Star
 from motion_utils import MotionUtils
 from memory import Memory
 from collision_failure_model import CollisionFailureModel
-from utils import correct_gripper_friction, check_success
+from utils import correct_gripper_friction, check_success, set_extrinsic_matrix
 
 
 num_samples = 10
@@ -34,9 +34,9 @@ success = False
 mu_x = np.zeros(3) + 0.03  # Example: 2-dimensional problem
 sigma_x = np.eye(3) * 0.003
 mu_y = np.zeros(3) # Example: 2-dimensional problem
-sigma_y = np.eye(3) * 0.001
+sigma_y = np.eye(3) * 0.003
 mu_z = np.zeros(3)  # Example: 2-dimensional problem
-sigma_z = np.eye(3) * 0.001
+sigma_z = np.eye(3) * 0.003
 
 temp_prior = th.tensor([
     [ 0.   ,  0.,    -0.301,  0.,     0.,     0.,     0.,     0.,     0.,     1.   ],
@@ -63,7 +63,7 @@ def expl(t, actions, motion_utils, robot, env, traj_length, shelf_pos_orn, start
         a = th.zeros(10)
         a[-1] = 1.0
         # input("open gripper action")
-        retval = motion_utils.safe(a, use_hack=True, collision_failure_model=collision_failure_model, grasp_mode=grasp_mode)
+        retval = motion_utils.safe(a, use_hack=True, collision_failure_model=collision_failure_model, grasp_mode=grasp_mode, save_data=False)
         return retval
     
     for action in actions:
@@ -149,7 +149,7 @@ def set_all_seeds(seed):
 
 
 def main():
-    set_all_seeds(seed=13)
+    set_all_seeds(seed=133)
     config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
     config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
     config["scene"] = dict()
@@ -237,7 +237,7 @@ def main():
     motion_utils = MotionUtils(env, robot, action_primitives, writer)
     motion_utils.custom_reset(env, robot)
 
-    collision_failure_model = CollisionFailureModel()
+    collision_failure_model = CollisionFailureModel(robot=robot)
 
     for _ in range(50):
         og.sim.step()
@@ -257,9 +257,11 @@ def main():
 
 
     # Try two modes
-    modes = ["vertical", "horizontal"]
+    # modes = ["horizontal", "vertical"]
+    modes = ["horizontal"]
 
-    episode_memory = Memory()
+    # episode_memory = Memory()
+    episode_memory = None
     primitive_steps_to_perform = np.arange(1, 6)
 
     for mode in modes:
@@ -267,6 +269,9 @@ def main():
         # use primitives for the initial actions
         grasp_sim_state = motion_utils.first_primitive(primitive_steps_to_perform, episode_memory=episode_memory, grasp_mode=grasp_mode) 
         # breakpoint()
+
+        # add extrinsic matrix to robot state
+        set_extrinsic_matrix(robot)
 
         traj_length = 3 # for the place subtask
         start_idx = 8

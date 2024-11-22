@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch as th
 
@@ -30,8 +31,8 @@ class MotionUtils:
         reached_singularity = False
         for i, action in enumerate(ctrl_gen):
             if action == 'Done':
-                if episode_memory is not None:
-                    dump_to_memory(self.env, self.robot, episode_memory) 
+                # if episode_memory is not None:
+                #     dump_to_memory(self.env, self.robot, episode_memory) 
                 continue
             action[self.robot.gripper_action_idx["right"]] = grasp_action
             # print("action: ", action)
@@ -88,7 +89,13 @@ class MotionUtils:
             # print("normalized_qpos: ", normalized_qpos)
         return obs, info, total_collisions, reached_singularity
 
-    def move_primitive(self, action, episode_memory=None, ik_test=True):
+    def move_primitive(self, action, episode_memory=None, ik_test=True, save_data=False):
+        # # save data for test set
+        # if save_data:
+        #     episode_memory = Memory()
+        #     episode_memory.add_action('actions', action)
+        #     dump_to_memory(self.env, self.robot, episode_memory)
+        
         incorrect_control = False
 
         current_pose = self.robot.get_relative_eef_pose(arm='right')
@@ -164,6 +171,16 @@ class MotionUtils:
 
         if pos_error > 0.05 or orn_error > 0.2:
             incorrect_control = True
+
+        # # save data for test set
+        # if save_data:
+        #     dump_to_memory(self.env, self.robot, episode_memory, number_of_collisions=total_collisions, reached_singularity=reached_singularity)
+        #     save_folder = "place_in_shelf_data_test_expl"
+        #     os.makedirs(save_folder, exist_ok=True)
+        #     # only add to dataset if collision:
+        #     if total_collisions > 0:
+        #         episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        #     del episode_memory
 
         return obs, info, total_collisions, incorrect_control, reached_singularity
 
@@ -324,7 +341,7 @@ class MotionUtils:
         for _ in range(10):
             og.sim.step()
 
-    def safe(self, action, use_hack=False, collision_failure_model=None, grasp_mode=None):
+    def safe(self, action, use_hack=False, collision_failure_model=None, grasp_mode=None, save_data=True):
         safe = True
         unsafe_reasons = []
         prev_state = og.sim.dump_state()
@@ -337,7 +354,7 @@ class MotionUtils:
             if grasp_mode == "vertical":
                 threshold = 0.0
             elif grasp_mode == "horizontal":
-                threshold = 0.6
+                threshold = 0.05
             check_collision = collision_failure_model.check_collision(obs, obs_info, action, self.env.robots[0].name, threshold=threshold)
             if check_collision == 1.0:
                 safe = False
@@ -346,7 +363,7 @@ class MotionUtils:
         # --------------------------------
         
         
-        _, _, total_collisions, incorrect_control, reached_singularity = self.move_primitive(action)
+        _, _, total_collisions, incorrect_control, reached_singularity = self.move_primitive(action, save_data=save_data)
 
         if use_hack:
             self.robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=self.robot.gripper_control_idx['right'])
@@ -387,13 +404,13 @@ class MotionUtils:
             unsafe_reasons.append("Will drop object") 
 
         # # collisions
-        # if total_collisions > 0:
+        # if total_collisions > 5:
         #     safe = False
         #     unsafe_reasons.append("Will collide") 
         #     print("In reality total_collisions: ", total_collisions)
         # else:
         #     print("In reality, no collisions")
-        # breakpoint()
+        # # breakpoint()
 
         # # replace collision checking with a learned model
         # obs, obs_info = self.env.get_obs()

@@ -68,8 +68,6 @@ def dump_to_memory(env, robot, episode_memory, number_of_collisions=0, reached_s
 
 
     is_grasping = robot.custom_is_grasping()
-    box = env.scene.object_registry("name", "box")
-    # is_in_collision = detect_robot_collision_in_sim(robot, filter_objs=[box])
     is_in_collision = False
     if number_of_collisions > 5:
         is_in_collision = True
