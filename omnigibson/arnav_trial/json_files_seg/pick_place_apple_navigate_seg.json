@@ -1,0 +1,58 @@
+{
+    "0": {
+        "action": "no contact",
+        "range": [
+            0,
+            15
+        ],
+        "description": "No identifiable action"
+    },
+    "1": {
+        "action": "navigating",
+        "range": [
+            16,
+            60
+        ],
+        "description": "Navigating to ball"
+    },
+    "2": {
+        "action": "no contact",
+        "range": [
+            61,
+            88
+        ],
+        "description": "Reach for and grasp ball"
+    },
+    "3": {
+        "action": "contact",
+        "range": [
+            89,
+            165
+        ],
+        "description": "Pick ball"
+    },
+    "4": {
+        "action": "navigating",
+        "range": [
+            166,
+            240
+        ],
+        "description": "Navigating with ball to plate"
+    },
+    "5": {
+        "action": "contact",
+        "range": [
+            241,
+            306
+        ],
+        "description": "Place ball in plate"
+    },
+    "6": {
+        "action": "no contact",
+        "range": [
+            307,
+            315
+        ],
+        "description": "No identifiable action"
+    }
+}

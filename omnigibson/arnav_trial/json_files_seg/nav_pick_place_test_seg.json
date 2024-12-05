@@ -1,0 +1,26 @@
+{
+    "0": {
+        "action": "navigating",
+        "range": [
+            0,
+            30
+        ],
+        "description": "Navigating to fridge"
+    },
+    "1": {
+        "action": "no contact",
+        "range": [
+            31,
+            78
+        ],
+        "description": "Reach for and grasp ball"
+    },
+    "2": {
+        "action": "contact",
+        "range": [
+            79,
+            195
+        ],
+        "description": "Place ball in bowl"
+    }
+}

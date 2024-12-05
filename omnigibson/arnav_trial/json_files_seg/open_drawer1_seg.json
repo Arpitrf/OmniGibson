@@ -1,0 +1,26 @@
+{
+    "0": {
+        "action": "navigating",
+        "range": [
+            0,
+            15
+        ],
+        "description": "Navigating to drawer"
+    },
+    "1": {
+        "action": "no contact",
+        "range": [
+            16,
+            48
+        ],
+        "description": "Reach for and grasp drawer"
+    },
+    "2": {
+        "action": "contact",
+        "range": [
+            49,
+            150
+        ],
+        "description": "Open drawer"
+    }
+}

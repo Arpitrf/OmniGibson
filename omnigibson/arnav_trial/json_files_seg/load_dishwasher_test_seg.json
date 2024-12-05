@@ -1,0 +1,74 @@
+{
+    "0": {
+        "action": "navigating",
+        "range": [
+            0,
+            30
+        ],
+        "description": "Navigating to dishwasher"
+    },
+    "1": {
+        "action": "no contact",
+        "range": [
+            31,
+            61
+        ],
+        "description": "Reach for and grasp dishwasher"
+    },
+    "2": {
+        "action": "contact",
+        "range": [
+            62,
+            151
+        ],
+        "description": "Open dishwasher"
+    },
+    "3": {
+        "action": "no contact",
+        "range": [
+            152,
+            205
+        ],
+        "description": "Reach for and grasp dishwasher tray"
+    },
+    "4": {
+        "action": "contact",
+        "range": [
+            206,
+            284
+        ],
+        "description": "No identifiable action"
+    },
+    "5": {
+        "action": "no contact",
+        "range": [
+            285,
+            329
+        ],
+        "description": "Reach for and grasp mug"
+    },
+    "6": {
+        "action": "contact",
+        "range": [
+            330,
+            457
+        ],
+        "description": "Place mug in dishwasher tray"
+    },
+    "7": {
+        "action": "no contact",
+        "range": [
+            458,
+            552
+        ],
+        "description": "No identifiable action"
+    },
+    "8": {
+        "action": "contact",
+        "range": [
+            553,
+            585
+        ],
+        "description": "No identifiable action"
+    }
+}

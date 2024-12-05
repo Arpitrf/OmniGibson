@@ -12,6 +12,7 @@ import math
 import random
 from functools import cached_property
 import numpy as np
+import torch
 
 import cv2
 import gymnasium as gym
@@ -352,8 +353,8 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
 
         self.robot_copy = self._load_robot_copy()
 
-        self.move_hand_direct_ik_pos_error = 0.0
-        self.move_hand_direct_ik_orn_error = 0.0
+        self.move_hand_direct_ik_pos_error = 1000.0
+        self.move_hand_direct_ik_orn_error = 1000.0
 
     @property
     def arm(self):
@@ -1586,7 +1587,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
             else:
                 partial_action = controller.compute_no_op_action(self.robot.get_control_dict())
             action_idx = self.robot.controller_action_idx[name]
-            action[action_idx] = partial_action
+            action[action_idx] = partial_action.to(torch.float32)
         return action
 
     def _reset_hand(self):

@@ -22,7 +22,7 @@ from omnigibson.action_primitives.starter_semantic_action_primitives import Star
 
 from motion_utils import MotionUtils
 from memory import Memory
-from collision_failure_model import CollisionFailureModel
+from omnigibson.arpit_trial.failure_models import CollisionFailureModel
 from utils import correct_gripper_friction, check_success, set_extrinsic_matrix
 
 

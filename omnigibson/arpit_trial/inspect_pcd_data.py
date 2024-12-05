@@ -299,27 +299,27 @@ def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=N
     vis = o3d.visualization.Visualizer()
     vis.create_window()
     
-    # # Create first point cloud object
-    # pcd1 = o3d.geometry.PointCloud()
-    # pcd1.points = o3d.utility.Vector3dVector(points1)
-    # if colors1 is not None:
-    #     pcd1.colors = o3d.utility.Vector3dVector(colors1)
-    # else:
-    #     pcd1.paint_uniform_color([0.7, 0.7, 0.7])
-    # vis.add_geometry(pcd1)
-    
-    # offset_y = -2.0
-    offset_y = 0.0
-    # Create second point cloud object (offset in x direction)
-    pcd2 = o3d.geometry.PointCloud()
-    points2_offset = points2.copy()
-    points2_offset[:, 1] += offset_y  # Offset in x direction
-    pcd2.points = o3d.utility.Vector3dVector(points2_offset)
-    if colors2 is not None:
-        pcd2.colors = o3d.utility.Vector3dVector(colors2)
+    # Create first point cloud object
+    pcd1 = o3d.geometry.PointCloud()
+    pcd1.points = o3d.utility.Vector3dVector(points1)
+    if colors1 is not None:
+        pcd1.colors = o3d.utility.Vector3dVector(colors1)
     else:
-        pcd2.paint_uniform_color([0.7, 0.7, 0.7])
-    vis.add_geometry(pcd2)
+        pcd1.paint_uniform_color([0.7, 0.7, 0.7])
+    vis.add_geometry(pcd1)
+    
+    # # offset_y = -2.0
+    # offset_y = 0.0
+    # # Create second point cloud object (offset in x direction)
+    # pcd2 = o3d.geometry.PointCloud()
+    # points2_offset = points2.copy()
+    # points2_offset[:, 1] += offset_y  # Offset in x direction
+    # pcd2.points = o3d.utility.Vector3dVector(points2_offset)
+    # if colors2 is not None:
+    #     pcd2.colors = o3d.utility.Vector3dVector(colors2)
+    # else:
+    #     pcd2.paint_uniform_color([0.7, 0.7, 0.7])
+    # vis.add_geometry(pcd2)
     
     
     if action is not None:
@@ -400,7 +400,7 @@ def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=N
 
 np.random.seed(10)
 # Read and visualize data
-with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_test_expl/dataset.hdf5", "r") as f:
+with h5py.File("/home/arpit/projects/OmniGibson/open_drawer/dataset.hdf5", "r") as f:
     for _ in range(10):
         episode_number = np.random.randint(0, len(f["data"]))
         # episode_number = i
@@ -426,7 +426,8 @@ with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_test_ex
         # eef_orn:  [-0.20215519 -0.0937544   0.61410695  0.75711036]
         
         print("contacts: ", np.array(f["data"][key]["extras"]["contacts"])[waypoint_number+1])
-        print("singularity reached in the traj: ", np.array(f["data"][key]["extras"]["singularities"])[waypoint_number+1])
+        print("grasp: ", np.array(f["data"][key]["extras"]["grasps"])[waypoint_number+1])
+        # print("singularity reached in the traj: ", np.array(f["data"][key]["extras"]["singularities"])[waypoint_number+1])
 
         visualize_pointcloud_and_action(point_clouds[waypoint_number],
                                         point_colors[waypoint_number],

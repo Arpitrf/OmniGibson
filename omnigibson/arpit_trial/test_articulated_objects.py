@@ -64,13 +64,22 @@ config["scene"]["type"] = "Scene"
 # Create and load this object into the simulator
 rot_euler = [0.0, 0.0, -90.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
+# obj_cfg = dict(
+#     type="DatasetObject",
+#     name="fridge",
+#     category="fridge",
+#     model="hivvdf",
+#     position=[1.5, -0.6, 1.0],
+#     # scale=[2.0, 1.0, 1.0],
+#     orientation=rot_quat,
+#     )
 obj_cfg = dict(
     type="DatasetObject",
-    name="fridge",
-    category="fridge",
-    model="hivvdf",
-    position=[1.5, -0.6, 1.0],
-    # scale=[2.0, 1.0, 1.0],
+    name="bottom_cabinet",
+    category="bottom_cabinet",
+    model="rntwkg",
+    position=[1.5, -0.25, 1.0],
+    scale=[1.0, 1.0, 1.2],
     orientation=rot_quat,
     )
 config["objects"] = [obj_cfg]
@@ -86,8 +95,8 @@ from omni.isaac.core.materials import PhysicsMaterial
 gripper_mat = PhysicsMaterial(
     prim_path=f"{robot.prim_path}/gripper_mat",
     name="gripper_material",
-    static_friction=100.0,
-    dynamic_friction=100.0,
+    static_friction=0.01,
+    dynamic_friction=0.01,
     restitution=None,
 )
 for arm, links in robot.finger_links.items():
@@ -115,6 +124,30 @@ step = 0
 while step != max_steps:
     action, keypress_str = action_generator.get_teleop_action()
     env.step(action=action)
+    if keypress_str == 'TAB':
+        right_eef_pose = robot.get_relative_eef_pose(arm='right')
+        right_eef_pos_world, right_eef_orn_world = robot.eef_links["right"].get_position_orientation()
+        right_eef_pose_world = np.zeros((4, 4))
+        right_eef_pose_world[:3, :3] = R.from_quat(right_eef_orn_world).as_matrix()
+        right_eef_pose_world[:3, 3] = right_eef_pos_world
+
+        cabinet_pos_world, cabinet_orn_world = scene.object_registry("name", "bottom_cabinet").get_position_orientation()
+        cabinet_pose_world = np.zeros((4, 4))
+        cabinet_pose_world[:3, :3] = R.from_quat(cabinet_orn_world).as_matrix()
+        cabinet_pose_world[:3, 3] = cabinet_pos_world
+
+        if np.linalg.det(cabinet_pose_world) != 0:
+            right_eef_pose_object = np.linalg.inv(cabinet_pose_world) @ right_eef_pose_world
+        else:
+            right_eef_pose_object = np.linalg.pinv(cabinet_pose_world) @ right_eef_pose_world
+
+        base_pose = robot.get_position_orientation()
+        print("right_eef_pose_base: ", right_eef_pose)
+        print("right_eef_pose_world: ", right_eef_pose_world)
+        print("right_eef_pose_object: ", right_eef_pose_object)
+        print("base_pose: ", base_pose)
+        og.sim.save([f'saved_simulation_states/bottom_cabinet_rntwkg_grasp.json'])
+        breakpoint()
     step += 1
 
 # # collision checks: detect_robot_collision_in_sim, detect_robot_collision()

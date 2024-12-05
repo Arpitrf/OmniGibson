@@ -1,0 +1,32 @@
+{
+    "data": [
+        {
+            "action": "navigating",
+            "range": [
+                0,
+                65
+            ]
+        },
+        {
+            "action": "stationary",
+            "range": [
+                65,
+                180
+            ]
+        },
+        {
+            "action": "navigating",
+            "range": [
+                180,
+                235
+            ]
+        },
+        {
+            "action": "stationary",
+            "range": [
+                235,
+                250
+            ]
+        }
+    ]
+}

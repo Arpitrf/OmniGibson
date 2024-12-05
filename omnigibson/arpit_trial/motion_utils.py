@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation as R
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 from omnigibson.object_states.contact_bodies import ContactBodies
 from memory import Memory
-from utils import dump_to_memory
+from utils import dump_to_memory, hori_concatenate_image
 
 class MotionUtils:
     def __init__(self, env, robot, action_primitives, writer=None):
@@ -33,13 +33,26 @@ class MotionUtils:
             if action == 'Done':
                 # if episode_memory is not None:
                 #     dump_to_memory(self.env, self.robot, episode_memory) 
+                
+                # Hack to sidestep simulation issue (grasp is not lost when moderately bad action)
+                pos_thresh = 0.02
+                ori_thresh = 0.1
+                reached_goal = self.action_primitives.move_hand_direct_ik_pos_error < pos_thresh and self.action_primitives.move_hand_direct_ik_orn_error < ori_thresh
+                print("Surrogate for F/T, F/T safe? ", reached_goal)
+                # if not reached_goal:
+                #     return False
+
                 continue
             action[self.robot.gripper_action_idx["right"]] = grasp_action
             # print("action: ", action)
-            obs, reward, terminated, truncated, info = self.env.step(action)
-            img = obs[f"{self.env.robots[0].name}"][f"{self.env.robots[0].name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy()
             if self.writer is not None:
-                self.writer.append_data(img)
+                obs, reward, terminated, truncated, info = self.env.step(action)
+                img = obs[f"{self.env.robots[0].name}"][f"{self.env.robots[0].name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy() / 255.0
+                viewer_img = og.sim.viewer_camera._get_obs()[0]['rgb'][:,:,:3] / 255.0
+                concat_img = hori_concatenate_image([viewer_img, img])
+                concat_img = concat_img * 255.0
+                concat_img = concat_img.astype(np.uint8)            
+                self.writer.append_data(concat_img)
             
             # ============================================= Check for collisions =============================================
             # Check if robot right gripper fingers are in collision
@@ -67,11 +80,12 @@ class MotionUtils:
 
             # Check if box is in collision
             box_is_contact = False
-            box_contact_bodies = list(box.states[ContactBodies].get_value())
-            # two fingers are already in contact with the box 
-            if len(box_contact_bodies) > 2:
-                box_is_contact = True
-                # print("box_contact_bodies: ", box_contact_bodies)
+            if box is not None:
+                box_contact_bodies = list(box.states[ContactBodies].get_value())
+                # two fingers are already in contact with the box 
+                if len(box_contact_bodies) > 2:
+                    box_is_contact = True
+                    # print("box_contact_bodies: ", box_contact_bodies)
 
             # print("robot_is_contact, gripper_is_contact, box_is_contact: ", robot_is_contact, gripper_is_contact, box_is_contact)
             is_contact = robot_is_contact or box_is_contact or gripper_is_contact or gripper_fingers_is_contact
@@ -87,6 +101,19 @@ class MotionUtils:
             
             # normalized_qpos = robot.get_joint_positions(normalized=True)[robot.arm_control_idx["right"]]
             # print("normalized_qpos: ", normalized_qpos)
+        
+        # save a few more frames
+        if self.writer is not None:
+            for _ in range(10):
+                og.sim.step()
+                obs, info = self.env.get_obs()
+                img = obs[f"{self.env.robots[0].name}"][f"{self.env.robots[0].name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy() / 255.0
+                viewer_img = og.sim.viewer_camera._get_obs()[0]['rgb'][:,:,:3] / 255.0
+                concat_img = hori_concatenate_image([viewer_img, img])
+                concat_img = concat_img * 255.0
+                concat_img = concat_img.astype(np.uint8)            
+                self.writer.append_data(concat_img)
+        
         return obs, info, total_collisions, reached_singularity
 
     def move_primitive(self, action, episode_memory=None, ik_test=True, save_data=False):
@@ -169,6 +196,8 @@ class MotionUtils:
         orn_error = orn_error % (2*th.pi)
         print(f"==== Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees ====")
 
+        pos_thresh = 0.02
+        ori_thresh = 0.1
         if pos_error > 0.05 or orn_error > 0.2:
             incorrect_control = True
 
@@ -341,12 +370,13 @@ class MotionUtils:
         for _ in range(10):
             og.sim.step()
 
-    def safe(self, action, use_hack=False, collision_failure_model=None, grasp_mode=None, save_data=True):
+    def safe(self, action, use_hack=False, collision_failure_model=None, grasp_failure_model=None, grasp_mode=None, save_data=True, grasp_failure_model_threshold=0.5):
         safe = True
         unsafe_reasons = []
         prev_state = og.sim.dump_state()
         box = self.env.scene.object_registry("name", "box")
-        obj_in_hand_pos_before = box.get_position_orientation()[0]
+        if box is not None:
+            obj_in_hand_pos_before = box.get_position_orientation()[0]
 
         # Using model to check for collisions ------
         obs, obs_info = self.env.get_obs()
@@ -360,9 +390,18 @@ class MotionUtils:
                 safe = False
                 unsafe_reasons.append("Model says will collide") 
                 return safe
+            
+        if grasp_failure_model is not None:
+            check_grasp = grasp_failure_model.check_grasp(obs, obs_info, action, self.env.robots[0].name, threshold=grasp_failure_model_threshold)
+            if check_grasp == 0.0:
+                safe = False
+                unsafe_reasons.append("Model says will lose grasp") 
+                return safe
         # --------------------------------
         
         
+        # remove later
+        # action[3:6] = th.tensor([-0.1, -0.15, 0.0])
         _, _, total_collisions, incorrect_control, reached_singularity = self.move_primitive(action, save_data=save_data)
 
         if use_hack:
@@ -384,19 +423,20 @@ class MotionUtils:
             # if abs(gripper_pos[0] - 0.045) > 0.01 or abs(gripper_pos[1] - 0.045) > 0.01:
                 # input("GRIPPER DID NOT OPEN!!. Press enter to continue")
         
-        obj_in_hand_pos_after = box.get_position_orientation()[0]
-        delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 
-        # print("delta_pos_z: ", delta_pos_z)
-        # print("total_collisions: ", total_collisions)
+        delta_pos_z = 0.0
+        if box is not None:
+            obj_in_hand_pos_after = box.get_position_orientation()[0]
+            delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 
 
-        normalized_qpos = self.robot.get_joint_positions(normalized=True)[self.robot.arm_control_idx["right"]]
-        # print("normalized_qpos: ", normalized_qpos)
-        close_to_one = th.isclose(normalized_qpos[:-3], th.tensor(1.0), atol=1e-2)
-        close_to_neg_one = th.isclose(normalized_qpos[:-3], th.tensor(-1.0), atol=1e-2)
-        any_close_to_one_or_neg_one = (close_to_one | close_to_neg_one).any().item()
-        if any_close_to_one_or_neg_one:
-            safe = False
-            unsafe_reasons.append("Reaching some joint limit") 
+        # Checking if near joint limits
+        # normalized_qpos = self.robot.get_joint_positions(normalized=True)[self.robot.arm_control_idx["right"]]
+        # # print("normalized_qpos: ", normalized_qpos)
+        # close_to_one = th.isclose(normalized_qpos[:-3], th.tensor(1.0), atol=1e-2)
+        # close_to_neg_one = th.isclose(normalized_qpos[:-3], th.tensor(-1.0), atol=1e-2)
+        # any_close_to_one_or_neg_one = (close_to_one | close_to_neg_one).any().item()
+        # if any_close_to_one_or_neg_one:
+        #     safe = False
+        #     unsafe_reasons.append("Reaching some joint limit") 
 
         # object dropped (unsafe)
         if delta_pos_z > 0.35:
@@ -411,14 +451,6 @@ class MotionUtils:
         # else:
         #     print("In reality, no collisions")
         # # breakpoint()
-
-        # # replace collision checking with a learned model
-        # obs, obs_info = self.env.get_obs()
-        # if collision_failure_model is not None:
-        #     check_collision = collision_failure_model.check_collision(obs, obs_info, action, self.env.robots[0].name)
-        #     if check_collision:
-        #         safe = False
-        #         unsafe_reasons.append("Will collide") 
         
         # singularities. Need to do this as using IK solver to test if a target pose is reachable is not working well.
         if reached_singularity:

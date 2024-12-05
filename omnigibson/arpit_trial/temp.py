@@ -1,22 +1,23 @@
 from omnigibson.action_primitives.action_primitive_set_base import ActionPrimitiveError
 import pickle
 import numpy as np
+np.set_printoptions(precision=3, suppress=True)
 import matplotlib.pyplot as plt
 import cv2
 
-f_name = "0001.pickle"
-with open(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}", "rb") as f:
-    data_dict = pickle.load(f)
-    for k in data_dict.keys():
-        print("k, v: ", k, np.array(data_dict[k]).shape)
-fig, ax = plt.subplots(1,2)
-ax[0].imshow(np.array(data_dict["rgb"]))
-ax[1].imshow(np.array(data_dict["depth"]))
-plt.show()
+# f_name = "0001.pickle"
+# with open(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}", "rb") as f:
+#     data_dict = pickle.load(f)
+#     for k in data_dict.keys():
+#         print("k, v: ", k, np.array(data_dict[k]).shape)
+# fig, ax = plt.subplots(1,2)
+# ax[0].imshow(np.array(data_dict["rgb"]))
+# ax[1].imshow(np.array(data_dict["depth"]))
+# plt.show()
 
-cv2.imwrite(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}_rgb.png", np.array(data_dict["rgb"]))
-cv2.imwrite(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}_depth.png", np.array(data_dict["depth"]))
-breakpoint()
+# cv2.imwrite(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}_rgb.png", np.array(data_dict["rgb"]))
+# cv2.imwrite(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}_depth.png", np.array(data_dict["depth"]))
+# breakpoint()
 
 
 # import matplotlib.pyplot as plt
@@ -97,16 +98,104 @@ def get_seg_instance_info(ep, hdf5_file):
     return seg_instance
 
 
+def show_vectors(hdf5_file):
+     # show the original vector and the noisy vector in matplotlib
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')    
+    # ax.quiver(0, 0, 0, original_vector[0], original_vector[1], original_vector[2], color='r')
+    for i, ep in enumerate(hdf5_file["data"]):
+        # if i != 7:
+        #     continue
+        vector = np.array(hdf5_file[f"data/{ep}/actions/complete_actions"])[0]
+        grasp_vector = np.array(hdf5_file[f"data/{ep}/extras/grasps"])
+        print("Episode: ", ep)
+        print("vector: ", vector)
+        print("grasp_vector: ", grasp_vector)
+        print("==============")
+        color = "g"
+        if any(grasp_vector == False):
+            color = "r"
+        ax.text(vector[0], vector[1], vector[2], f"{i}", color=color)
+        ax.quiver(0, 0, 0, vector[0], vector[1], vector[2], color=color)
+        # breakpoint()
+    ax.set_xlim([-0.5, 0.5])
+    ax.set_ylim([-0.5, 0.5])
+    ax.set_zlim([-0.2, 0.2])
+    plt.show()
+
+def visualize_trajectories(actions, start_position, ax=None, color='r', ep=0, grasp_vector=None): 
+    total_lines = 0
+    for i in range(actions.shape[0]):
+        trajectory = actions[i, :, 3:6]
+        prev_position = start_position
+
+        for j in range(trajectory.shape[0]):
+            direction = trajectory[j]  # Direction vector at this waypoint
+            magnitude = np.linalg.norm(direction)  # Magnitude of the direction vector
+            direction_normalized = direction / magnitude if magnitude != 0 else direction  # Normalize the direction
+            step = magnitude * direction_normalized
+
+            next_position = prev_position + step
+            if grasp_vector is not None:
+                if grasp_vector[j+1]:
+                    color = "g"
+                else:
+                    color = "r"
+            ax.quiver(prev_position[0], prev_position[1], prev_position[2], step[0], step[1], step[2], color=color)
+            # ax.quiver(0, 0, 0, step[0], step[1], step[2], color=color)
+            # visualize_marker(start_position=prev_position, end_position=next_position, id=total_lines)
+            prev_position = prev_position + step  # Move to the new position
+            total_lines += 1
+
+        # ax.text(next_position[0], next_position[1], next_position[2], f"{ep}", color=color)
+
+    ax.set_xlim([-0.2, 0.2])
+    ax.set_ylim([-0.2, 0.2])
+    ax.set_zlim([-0.2, 0.2])
+    ax.set_xlabel('X-axis')
+    ax.set_ylabel('Y-axis')
+    ax.set_zlabel('Z-axis')
+
 import h5py
 import numpy as np
-with h5py.File("/home/arpit/test_projects/OmniGibson/place_in_shelf_data_low_noise/dataset.hdf5", "r") as f:
+with h5py.File("/home/arpit/projects/OmniGibson/open_drawer_temp/dataset.hdf5", "r") as f:
     print(len(f["data"].keys()))
-    # actions = np.array(f["data/episode_00000/actions/actions"])
+    # actions = np.array(f["data/episode_00003/actions/complete_actions"])
     # print("actions: ", actions)
+    actions = np.array(f["data/episode_00001/actions/actions"])
+    print("actions: ", actions[:, 3:6])
+    # print("grasp: ", np.array(f["data/episode_00003/extras/grasps"]).shape)
+    # show_vectors(f)
     # breakpoint()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     for i in range(len(f["data"])):
-        actions = np.array(f[f"data/episode_{i:05d}/actions/actions"])
-        print("actions: ", actions[:, 3])
+        if i > 10:
+            break
+        print("Episode: ", i)
+        action_traj = np.array(f[f"data/episode_{i:05d}/actions/actions"])
+        grasp_vector = np.array(f[f"data/episode_{i:05d}/extras/grasps"])
+        visualize_trajectories(action_traj[None, ...], np.array([0.0, 0.0, 0.0]), ax=ax, ep=i, grasp_vector=grasp_vector)
+    plt.show()
+
+    # total_actions = 0
+    # grasps = 0
+    # no_grasps = 0
+    # for i in range(len(f["data"])):
+    #     actions = np.array(f[f"data/episode_{i:05d}/actions/actions"]).shape
+    #     total_actions += actions[0]
+    #     for j in range(1, len(f[f"data/episode_{i:05d}/extras/grasps"])):
+    #         if f[f"data/episode_{i:05d}/extras/grasps"][j]:
+    #             grasps += 1
+    #         else:
+    #             no_grasps += 1
+    #     #     action = np.array(f[f"data/episode_{i:05d}/actions/actions"])[j]
+    # print("total_actions: ", total_actions)
+    # print("grasps: ", grasps)
+    # print("no_grasps: ", no_grasps)
+    #     actions = np.array(f[f"data/episode_{i:05d}/actions/actions"])
+    #     print("actions: ", actions)
     #     # print(f["data"]["episode_{:05d}".format(i)]["observations_info"].keys())
     #     seg_instance_info = get_seg_instance_info(f"episode_{i:05d}", f)
     #     # print(np.array(seg_instance_info).shape)

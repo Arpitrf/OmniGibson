@@ -371,12 +371,12 @@ for i in range(600):
     
     # Randomize base pose and head pose a bit
     randomize_robot()
-    # breakpoint()
+    breakpoint()
     
-    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
     primitive(episode_memory)
-    episode_memory.dump(f'{save_folder}/dataset.hdf5')
-    og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
     
     for _ in range(10):
         og.sim.step()

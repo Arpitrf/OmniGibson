@@ -1,0 +1,26 @@
+{
+    "0": {
+        "action": "navigating",
+        "range": [
+            0,
+            45
+        ],
+        "description": "Navigating to fridge"
+    },
+    "1": {
+        "action": "no contact",
+        "range": [
+            46,
+            59
+        ],
+        "description": "Reach for and grasp fridge"
+    },
+    "2": {
+        "action": "contact",
+        "range": [
+            60,
+            150
+        ],
+        "description": "Open fridge"
+    }
+}

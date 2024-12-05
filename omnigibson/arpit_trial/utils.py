@@ -23,7 +23,7 @@ def set_extrinsic_matrix(robot, camera_link="xtion_link"):
 
     robot._extrinsic_matrix = camera_to_base
 
-def correct_gripper_friction(robot):
+def correct_gripper_friction(robot, friction_val=4.0):
     state = og.sim.dump_state()
     og.sim.stop()
     # Set friction
@@ -31,8 +31,8 @@ def correct_gripper_friction(robot):
     gripper_mat = PhysicsMaterial(
         prim_path=f"{robot.prim_path}/gripper_mat",
         name="gripper_material",
-        static_friction=4.0,
-        dynamic_friction=4.0,
+        static_friction=friction_val,
+        dynamic_friction=friction_val,
         restitution=None,
     )
     for arm, links in robot.finger_links.items():
@@ -60,7 +60,7 @@ def hori_concatenate_image(images):
     for i in range(1, len(images)):
         image_i = images[i]
         if image1.shape[0] != image_i.shape[0]:
-            print("Images do not have the same height. Resizing the second image.")
+            # print("Images do not have the same height. Resizing the second image.")
             height = image1.shape[0]
             image_i = cv2.resize(image_i, (int(image_i.shape[1] * (height / image_i.shape[0])), height))
 

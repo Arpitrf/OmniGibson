@@ -165,3 +165,113 @@ class CollisionFailureModel:
         return pred_choice.item()
 
 
+class GraspFailureModel:
+    def __init__(self, robot):  
+        '''MODEL LOADING'''
+        num_class = 1
+        experiment_dir = "/home/arpit/projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_open_drawer"
+
+        self.classifier = action_pointnet2_cls_ssg.get_model(num_class, normal_channel=False)
+        self.classifier = self.classifier.cuda()
+
+        checkpoint = torch.load(str(experiment_dir) + '/checkpoints/model_epoch_180.pth')
+        self.classifier.load_state_dict(checkpoint['model_state_dict'])
+        self.classifier.eval()
+
+        self.robot = robot
+
+        # with torch.no_grad():
+        #     instance_acc = test(classifier.eval(), testDataLoader, vote_num=args.num_votes, num_class=num_class)
+        #     print('Test Instance Accuracy: ', instance_acc)
+
+    def get_pcd(self, obs, obs_info, robot_name):
+        depth = obs[robot_name][f"{robot_name}:eyes:Camera:0"]["depth"].numpy()
+        intr =  np.array([
+            [103.8416,   0.0000,  64.0000],
+            [  0.0000, 103.8416,  64.0000],
+            [  0.0000,   0.0000,   1.0000]])
+        
+        # creating mask to remove floors
+        seg_semantic = obs[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_semantic"].cpu().numpy()
+        seg_instance = obs[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_instance"].cpu().numpy()
+
+        seg_semantic_info = obs_info[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_semantic"]
+        seg_instance_info = obs_info[robot_name][f"{robot_name}:eyes:Camera:0"]["seg_instance"]
+
+        extrinsic_matrix = self.robot._extrinsic_matrix
+
+        pcd_points = []
+        pcd_normals = []
+        pcd_colors = []
+
+        # creating mask to remove floors
+        floor_id = -1
+        # for k, v in seg_semantic_info.items():
+        for k, v in seg_instance_info.items():
+            sem_id, class_name = k, v
+            # if class_name == 'floors':
+            if class_name == 'groundPlane':
+                floor_id = sem_id
+                break
+
+        if floor_id != -1:
+            mask = np.zeros_like(depth)
+            # mask[seg_semantic != floor_id] = 1
+            mask[seg_instance != floor_id] = 1
+        else:
+            mask = np.ones_like(depth)
+
+        o3d_pcd = generate_point_cloud_from_depth(depth, intr, mask, extrinsic_matrix)
+        pcd_points.append(np.asarray(o3d_pcd.points))
+        pcd_colors.append(np.asarray(o3d_pcd.colors))
+        pcd_normals.append(np.asarray(o3d_pcd.normals))
+        
+        # TODO: Convert to torch tensors of dtype float64
+        # pcd shape: torch.Size([1, 16384, 3])
+        # actions shape: torch.Size([1, 10])
+
+        pcd = dict()
+        pcd['points'] = pcd_points
+        pcd['colors'] = pcd_colors
+        pcd['normals'] = pcd_normals
+        return pcd
+
+    def check_grasp(self, obs, obs_info, actions, robot_name, threshold):
+        pcd = self.get_pcd(obs, obs_info, robot_name)
+        points = torch.from_numpy(np.array(pcd['points']))
+        actions = actions.unsqueeze(0)
+        actions = actions.to(dtype=torch.float64)
+            
+        # remove later
+        # votes = 10
+        # actions_tile = actions.repeat(votes, 1)
+        # pos_noise = torch.empty(votes, 3).uniform_(-0.005, 0.005)
+        # actions_tile[:, 3:6] = actions_tile[:, 3:6] + pos_noise
+        # actions_tile = actions_tile.type(torch.FloatTensor).cuda()
+
+        points, actions = points.type(torch.FloatTensor).cuda(), actions.type(torch.FloatTensor).cuda()
+        points = points.transpose(2, 1)
+        
+        # ---------------------------
+        vote_num = 1    
+        for _ in range(vote_num):
+            pred, _ = self.classifier(points, actions)
+            # vote_pool += pred
+        # pred = vote_pool / vote_num
+        # pred_choice = pred.data.max(1)[1]
+
+        probabilities = torch.sigmoid(pred)
+        # Convert probabilities to binary predictions (0 or 1)
+        pred_choice = (probabilities >= threshold).float()
+
+        print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
+        # -----------------------------
+
+        # pcd = o3d.geometry.PointCloud()
+        # # Assign the points to the PointCloud object
+        # pcd.points = o3d.utility.Vector3dVector(org_points[0])
+        # # Visualize the point cloud
+        # o3d.visualization.draw_geometries([pcd])
+        
+
+        return pred_choice.item()

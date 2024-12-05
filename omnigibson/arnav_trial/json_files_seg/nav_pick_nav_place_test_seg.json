@@ -1,0 +1,58 @@
+{
+    "0": {
+        "action": "navigating",
+        "range": [
+            0,
+            30
+        ],
+        "description": "Navigating to fridge"
+    },
+    "1": {
+        "action": "no contact",
+        "range": [
+            31,
+            69
+        ],
+        "description": "Reach for and grasp ball"
+    },
+    "2": {
+        "action": "contact",
+        "range": [
+            70,
+            135
+        ],
+        "description": "Pick ball"
+    },
+    "3": {
+        "action": "navigating",
+        "range": [
+            136,
+            180
+        ],
+        "description": "Navigating with ball to bowl"
+    },
+    "4": {
+        "action": "contact",
+        "range": [
+            181,
+            210
+        ],
+        "description": "Place ball in bowl"
+    },
+    "5": {
+        "action": "navigating",
+        "range": [
+            211,
+            225
+        ],
+        "description": "Navigating with ball to bowl"
+    },
+    "6": {
+        "action": "contact",
+        "range": [
+            226,
+            255
+        ],
+        "description": "Place ball in bowl"
+    }
+}
