@@ -334,6 +334,8 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
         episode_number = len(file['data'].keys())
         print("episode_number: ", episode_number)
 
+breakpoint()
+
 for _ in range(1):
     custom_reset(env, robot, episode_memory)
     # # save the start simulator state
