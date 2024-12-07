@@ -123,7 +123,10 @@ def primitive(episode_memory=None, episode_number=0):
     # w.r.t robot
     # target_pose = (th.tensor([ 0.5066, -0.0575,  0.4948]), th.tensor([ 0.4775,  0.5259, -0.5041,  0.4913]))
     # w.r.t world
-    target_pose = (th.tensor([0.0933, 0.5011, 0.4953]), th.tensor([ 0.0090, -0.7102,  0.0341, -0.7031]))
+    # target_pose = (th.tensor([0.0933, 0.5011, 0.4953]), th.tensor([ 0.0090, -0.7102,  0.0341, -0.7031]))
+    # horizontal-forward
+    # w.r.t world
+    target_pose = (th.tensor([0.1235, 0.4831, 0.4138]), th.tensor([-0.0091,  0.0041,  0.9619,  0.2733]))
 
     pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
     execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=True), 
@@ -260,7 +263,7 @@ config["scene"]["type"] = "Scene"
 # Create and load this object into the simulator
 rot_euler = [0.0, 0.0, 180.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
-box_euler = [0.0, 0.0, 0.0]
+box_euler = [0.0, 0.0, -30.0]
 box_quat = np.array(R.from_euler('XYZ', box_euler, degrees=True).as_quat())
 config["objects"] = [
     {
@@ -344,63 +347,64 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
         episode_number = len(file['data'].keys())
         print("episode_number: ", episode_number)
 
-# for _ in range(1):
-#     # custom_reset(env, robot, episode_memory)
-#     # # save the start simulator state
-#     # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
-#     # arr = scene.dump_state(serialized=True)
-#     # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-#     #     pickle.dump(arr, f)
+for _ in range(1):
+    # custom_reset(env, robot, episode_memory)
+    # # save the start simulator state
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
+    # arr = scene.dump_state(serialized=True)
+    # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
+    #     pickle.dump(arr, f)
 
-#     primitive(episode_memory, episode_number)
+    primitive(episode_memory, episode_number)
 
-#     # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-#     # # save the end simulator state
-#     # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
-#     # arr = scene.dump_state(serialized=True)
-#     # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-#     #     pickle.dump(arr, f)
+    # # save the end simulator state
+    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
+    # arr = scene.dump_state(serialized=True)
+    # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
+    #     pickle.dump(arr, f)
 
-#     episode_number += 1
+    episode_number += 1
 
-# =============================== Teleop ===============================
-# Create teleop controller
-action_generator = KeyboardRobotController(robot=robot)
-# Register custom binding to reset the environment
-action_generator.register_custom_keymapping(
-    key=lazy.carb.input.KeyboardInput.R,
-    description="Reset the robot",
-    callback_fn=lambda: env.reset(),
-)
-# Print out relevant keyboard info if using keyboard teleop
-action_generator.print_keyboard_teleop_info()
+# # =============================== Teleop ===============================
+# # Create teleop controller
+# action_generator = KeyboardRobotController(robot=robot)
+# # Register custom binding to reset the environment
+# action_generator.register_custom_keymapping(
+#     key=lazy.carb.input.KeyboardInput.R,
+#     description="Reset the robot",
+#     callback_fn=lambda: env.reset(),
+# )
+# # Print out relevant keyboard info if using keyboard teleop
+# action_generator.print_keyboard_teleop_info()
 
-max_steps = -1 
-step = 0
-while step != max_steps:
-    action, keypress_str = action_generator.get_teleop_action()
-    print("action: ", action)
+# max_steps = -1 
+# step = 0
+# while step != max_steps:
+#     action, keypress_str = action_generator.get_teleop_action()
+#     print("action: ", action)
     
-    # if action = SPECIAL_ACTION / NONE:
-    #     do not do pre_step()
-    # og.sim.render()
-    # if any(action[robot.controller_action_idx["base"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["camera"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["arm_left"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["arm_right"]] != 0.0):
+#     # if action = SPECIAL_ACTION / NONE:
+#     #     do not do pre_step()
+#     # og.sim.render()
+#     # if any(action[robot.controller_action_idx["base"]] != 0.0) or \
+#     #         any(action[robot.controller_action_idx["camera"]] != 0.0) or \
+#     #         any(action[robot.controller_action_idx["arm_left"]] != 0.0) or \
+#     #         any(action[robot.controller_action_idx["arm_right"]] != 0.0):
 
-    env.step(action=action)
-    if keypress_str == 'TAB':
-        right_eef_pose = robot.get_relative_eef_pose(arm='right')
-        right_eef_pose_world = robot.eef_links["right"].get_position_orientation()
-        base_pose = robot.get_position_orientation()
-        print("right_eef_pose: ", right_eef_pose)
-        print("right_eef_pose_world: ", right_eef_pose_world)
-        print("base_pose: ", base_pose)
-        og.sim.save([f'temp2.json'])
-    step += 1
-# ========================================================================
+#     env.step(action=action)
+#     if keypress_str == 'TAB':
+#         right_eef_pose = robot.get_relative_eef_pose(arm='right')
+#         right_eef_pose_world = robot.eef_links["right"].get_position_orientation()
+#         base_pose = robot.get_position_orientation()
+#         print("right_eef_pose: ", right_eef_pose)
+#         print("right_eef_pose_world: ", right_eef_pose_world)
+#         print("base_pose: ", base_pose)
+#         breakpoint()
+#         # og.sim.save([f'temp2.json'])
+#     step += 1
+# # ========================================================================
 
 for _ in range(500):
     og.sim.step()
