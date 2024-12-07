@@ -242,10 +242,10 @@ class ControllableObject(BaseObject):
             # Create the controller
             controller = create_controller(**cfg)
             # Verify the controller's DOFs can all be driven
-            for idx in controller.dof_idx:
-                assert self._joints[
-                    self.dof_names_ordered[idx]
-                ].driven, "Controllers should only control driveable joints!"
+            # for idx in controller.dof_idx:
+            #     assert self._joints[
+            #         self.dof_names_ordered[idx]
+            #     ].driven, "Controllers should only control driveable joints!"
             self._controllers[name] = controller
         self.update_controller_mode()
 

@@ -155,10 +155,15 @@ def main(random_selection=False, headless=False, short_exec=False, quickstart=Fa
     max_steps = -1 if not short_exec else 100
     step = 0
 
+    breakpoint()
+
     while step != max_steps:
-        action = (
+        action, keypress_str = (
             action_generator.get_random_action() if control_mode == "random" else action_generator.get_teleop_action()
         )
+        print("action: ", action)
+        if keypress_str == 'TAB':
+            breakpoint()
         env.step(action=action)
         step += 1
 

@@ -155,13 +155,13 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
 
     @classproperty
     def n_arms(cls):
-        return 2
-        # return 1
+        # return 2
+        return 1
 
     @classproperty
     def arm_names(cls):
-        return ["left", "right"]
-        # return ["right"]
+        # return ["left", "right"]
+        return ["right"]
 
     @property
     def tucked_default_joint_pos(self):
@@ -171,8 +171,7 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         pos[self.trunk_control_idx] = 0
         pos[self.camera_control_idx] = th.tensor([0.0, 0.0])
         for arm in self.arm_names:
-            # pos[self.gripper_control_idx[arm]] = th.tensor([0.045, 0.045])  # open gripper
-            pos[self.gripper_control_idx[arm]] = th.tensor([0.0, 0.0])  # open gripper
+            pos[self.gripper_control_idx[arm]] = th.tensor([0.045, 0.045])  # open gripper
             pos[self.arm_control_idx[arm]] = th.tensor([-1.10, 1.47, 2.71, 1.71, -1.57, 1.39, 0])
         return pos
 
@@ -184,8 +183,7 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         pos[self.trunk_control_idx] = 0.02 + self.default_trunk_offset
         pos[self.camera_control_idx] = th.tensor([0.0, -0.45])
         for arm in self.arm_names:
-            # pos[self.gripper_control_idx[arm]] = th.tensor([0.045, 0.045])  # open gripper
-            pos[self.gripper_control_idx[arm]] = th.tensor([0.045])  # open gripper
+            pos[self.gripper_control_idx[arm]] = th.tensor([0.045, 0.045])  # open gripper
         return pos
 
     @property
@@ -287,7 +285,8 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         return [
             name
             for arm in self.arm_names
-            for name in [f"arm_{arm}_tool_link", f"wrist_{arm}_ft_link", f"wrist_{arm}_ft_tool_link"]
+            # for name in [f"arm_{arm}_tool_link", f"wrist_{arm}_ft_link", f"wrist_{arm}_ft_tool_link"]
+            for name in [f"arm_{arm}_tool_link"]
         ]
     
 
@@ -310,7 +309,7 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
             # ["gripper_right_right_finger_link", "gripper_right_left_finger_link"],
             # ["gripper_right_link", "wrist_right_ft_link"],
             # ["arm_right_6_link", "gripper_right_link"],
-            ["arm_right_6_link", "wrist_right_ft_tool_link"],
+            # ["arm_right_6_link", "wrist_right_ft_tool_link"],
             ["arm_right_6_link", "wrist_right_ft_link"],
             ["arm_right_6_link", "arm_right_tool_link"],
             ["arm_right_5_link", "wrist_right_ft_link"],
@@ -344,41 +343,41 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
             ["torso_lift_link", "arm_left_1_link"],
             ["torso_lift_link", "arm_left_2_link"],
             ["arm_left_tool_link", "wrist_left_ft_link"],
-            ["wrist_left_ft_link", "wrist_left_ft_tool_link"],
-            ["wrist_left_ft_tool_link", "gripper_left_tool_link"],
+            # ["wrist_left_ft_link", "wrist_left_ft_tool_link"],
+            # ["wrist_left_ft_tool_link", "gripper_left_tool_link"],
             # ["wrist_left_ft_tool_link", "gripper_left_link"],
             # ["gripper_left_grasping_frame", "gripper_left_left_finger_link"],
             # ["gripper_left_grasping_frame", "gripper_left_right_finger_link"],
             ["arm_right_tool_link", "wrist_right_ft_link"],
-            ["wrist_right_ft_link", "wrist_right_ft_tool_link"],
-            ["wrist_right_ft_tool_link", "gripper_right_tool_link"],
+            # ["wrist_right_ft_link", "wrist_right_ft_tool_link"],
+            # ["wrist_right_ft_tool_link", "gripper_right_tool_link"],
             # custom for robotiq
-            ["gripper_right_tool_link", "wrist_right_ft_tool_link"],
-            ["right_robotiq_140_robotiq_arg2f_base_link", "wrist_right_ft_tool_link"],
-            ["right_robotiq_140_robotiq_arg2f_base_link", "gripper_right_tool_link"],
+            # ["gripper_right_tool_link", "wrist_right_ft_tool_link"],
+            # ["right_robotiq_140_robotiq_arg2f_base_link", "wrist_right_ft_tool_link"],
+            # ["right_robotiq_140_robotiq_arg2f_base_link", "gripper_right_tool_link"],
 
-            ["right_robotiq_140_left_outer_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
-            ["right_robotiq_140_left_inner_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
-            ["right_robotiq_140_right_outer_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
-            ["right_robotiq_140_right_inner_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
-            ["right_robotiq_140_left_outer_finger", "right_robotiq_140_robotiq_arg2f_base_link"],
-            ["right_robotiq_140_right_outer_finger", "right_robotiq_140_robotiq_arg2f_base_link"],
+            # ["right_robotiq_140_left_outer_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
+            # ["right_robotiq_140_left_inner_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
+            # ["right_robotiq_140_right_outer_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
+            # ["right_robotiq_140_right_inner_knuckle", "right_robotiq_140_robotiq_arg2f_base_link"],
+            # ["right_robotiq_140_left_outer_finger", "right_robotiq_140_robotiq_arg2f_base_link"],
+            # ["right_robotiq_140_right_outer_finger", "right_robotiq_140_robotiq_arg2f_base_link"],
             
-            ["right_robotiq_140_left_outer_knuckle", "right_robotiq_140_left_inner_knuckle"],
-            ["right_robotiq_140_right_outer_knuckle", "right_robotiq_140_right_inner_knuckle"],
-            ["right_robotiq_140_left_inner_knuckle", "right_robotiq_140_right_inner_knuckle"],
+            # ["right_robotiq_140_left_outer_knuckle", "right_robotiq_140_left_inner_knuckle"],
+            # ["right_robotiq_140_right_outer_knuckle", "right_robotiq_140_right_inner_knuckle"],
+            # ["right_robotiq_140_left_inner_knuckle", "right_robotiq_140_right_inner_knuckle"],
             
-            ["right_robotiq_140_left_outer_finger", "right_robotiq_140_left_outer_knuckle"],
-            ["right_robotiq_140_left_outer_finger", "right_robotiq_140_left_inner_knuckle"],
-            ["right_robotiq_140_left_outer_finger", "right_robotiq_140_left_inner_finger"],
-            ["right_robotiq_140_left_inner_finger", "right_robotiq_140_left_inner_knuckle"],
+            # ["right_robotiq_140_left_outer_finger", "right_robotiq_140_left_outer_knuckle"],
+            # ["right_robotiq_140_left_outer_finger", "right_robotiq_140_left_inner_knuckle"],
+            # ["right_robotiq_140_left_outer_finger", "right_robotiq_140_left_inner_finger"],
+            # ["right_robotiq_140_left_inner_finger", "right_robotiq_140_left_inner_knuckle"],
 
-            ["right_robotiq_140_right_outer_finger", "right_robotiq_140_right_outer_knuckle"],
-            ["right_robotiq_140_right_outer_finger", "right_robotiq_140_right_inner_knuckle"],
-            ["right_robotiq_140_right_outer_finger", "right_robotiq_140_right_inner_finger"],
-            ["right_robotiq_140_right_inner_finger", "right_robotiq_140_right_inner_knuckle"],
+            # ["right_robotiq_140_right_outer_finger", "right_robotiq_140_right_outer_knuckle"],
+            # ["right_robotiq_140_right_outer_finger", "right_robotiq_140_right_inner_knuckle"],
+            # ["right_robotiq_140_right_outer_finger", "right_robotiq_140_right_inner_finger"],
+            # ["right_robotiq_140_right_inner_finger", "right_robotiq_140_right_inner_knuckle"],
             
-            ["right_robotiq_140_left_inner_finger", "right_robotiq_140_right_inner_finger"],
+            # ["right_robotiq_140_left_inner_finger", "right_robotiq_140_right_inner_finger"],
             # ["gripper_right_link", "wrist_right_ft_tool_link"],
             ["head_1_link", "head_2_link"],
             ["torso_fixed_column_link", "arm_right_1_link"],
@@ -389,10 +388,10 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
             ["base_link", "arm_right_5_link"],
             ["base_link", "arm_left_4_link"],
             ["base_link", "arm_left_5_link"],
-            ["wrist_left_ft_tool_link", "arm_left_5_link"],
-            ["wrist_right_ft_tool_link", "arm_right_5_link"],
-            ["arm_left_tool_link", "wrist_left_ft_tool_link"],
-            ["arm_right_tool_link", "wrist_right_ft_tool_link"],
+            # ["wrist_left_ft_tool_link", "arm_left_5_link"],
+            # ["wrist_right_ft_tool_link", "arm_right_5_link"],
+            # ["arm_left_tool_link", "wrist_left_ft_tool_link"],
+            # ["arm_right_tool_link", "wrist_right_ft_tool_link"],
         ]
 
     @property
@@ -451,20 +450,22 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
     @property
     def eef_link_names(self):
         # return {arm: "gripper_{}_grasping_frame".format(arm) for arm in self.arm_names}
-        return {arm: "{}_robotiq_ee_link".format(arm) for arm in self.arm_names}
+        return {arm: "wrist_{}_ft_link".format(arm) for arm in self.arm_names}
+        # return {arm: None for arm in self.arm_names}
 
     @property
     def finger_link_names(self):
         # return {arm: [f"gripper_{arm}_right_finger_link", f"gripper_{arm}_left_finger_link"] for arm in self.arm_names}
-        return {arm: [f"{arm}_robotiq_140_right_inner_finger", f"{arm}_robotiq_140_left_inner_finger"] for arm in self.arm_names}
-        # return {}
+        # return {arm: [f"{arm}_robotiq_140_right_outer_finger", f"{arm}_robotiq_140_left_outer_finger"] for arm in self.arm_names}
+        return {arm: None for arm in self.arm_names}
 
     @property
     def finger_joint_names(self):
-        return {
-            # arm: [f"gripper_{arm}_right_finger_joint", f"gripper_{arm}_left_finger_joint"] for arm in self.arm_names
-            arm: [f"{arm}_robotiq_140_joint_finger"] for arm in self.arm_names
-        }
+        # return {
+        #     # arm: [f"gripper_{arm}_right_finger_joint", f"gripper_{arm}_left_finger_joint"] for arm in self.arm_names
+        #     arm: [f"{arm}_robotiq_arg2f_base_to_robotiq_140_right_inner_knuckle", f"{arm}_robotiq_arg2f_base_to_robotiq_140_right_inner_knuckle"] for arm in self.arm_names
+        # }
+        return {arm: None for arm in self.arm_names}
 
     @property
     def usd_path(self):
@@ -477,7 +478,7 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         # Default variant
         return os.path.join(
             # gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford/tiago_dual_omnidirectional_stanford_33.usd"
-            gm.ASSET_PATH, "models/tiago_robotiq_mimic/usd/tiago.usda"
+            gm.ASSET_PATH, "models/tiago_no_gripper/usd/tiago.usda"
         )
 
     # @property
@@ -510,7 +511,7 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
     def urdf_path(self):
         # breakpoint()
         # return os.path.join(gm.ASSET_PATH, "models/tiago/tiago_dual_omnidirectional_stanford.urdf")
-        return os.path.join(gm.ASSET_PATH, "models/tiago_robotiq_mimic/tiago.urdf")
+        return os.path.join(gm.ASSET_PATH, "models/tiago_no_gripper/tiago.urdf")
 
     @property
     def arm_workspace_range(self):
@@ -529,16 +530,8 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
 
     def custom_is_grasping(self):
         gripper_right_qpos = self._get_proprioception_dict()['gripper_right_qpos']
-        
-        # for PAL gripper
-        # if (gripper_right_qpos[0] > 0.044 and gripper_right_qpos[1] > 0.044) or \
-        #     (gripper_right_qpos[0] < 0.0001 and gripper_right_qpos[1] < 0.0001):
-        #     return th.tensor(False)
-        # else:
-        #     return th.tensor(True)
-        
-        # for Robotiq gripper:
-        if gripper_right_qpos[0] < 0.05 or gripper_right_qpos[0] > 0.75:
+        if (gripper_right_qpos[0] > 0.044 and gripper_right_qpos[1] > 0.044) or \
+            (gripper_right_qpos[0] < 0.0001 and gripper_right_qpos[1] < 0.0001):
             return th.tensor(False)
         else:
             return th.tensor(True)

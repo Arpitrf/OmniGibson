@@ -906,11 +906,11 @@ class KeyboardRobotController:
                 ]
 
         # Print out the user what is being pressed / controlled
-        sys.stdout.write("\033[K")
+        # sys.stdout.write("\033[K")
         keypress_str = self.current_keypress.__str__().split(".")[-1]
-        print("Pressed {}. Action: {}".format(keypress_str, action.tolist()))
-        sys.stdout.write("\033[F")
-        print("keypress_str: ", keypress_str)
+        # print("Pressed {}. Action: {}".format(keypress_str, action.tolist()))
+        # sys.stdout.write("\033[F")
+        # print("keypress_str: ", keypress_str)
 
         # Return action
         return action, keypress_str

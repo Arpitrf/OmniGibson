@@ -104,6 +104,7 @@ class MultiFingerGripperController(GripperController):
         # If we're using binary signal, we override the command output limits
         if mode == "binary":
             command_output_limits = (-1.0, 1.0)
+            # command_output_limits = (-0.1, 0.1)
 
         # Run super init
         super().__init__(
@@ -170,7 +171,6 @@ class MultiFingerGripperController(GripperController):
                     if self._open_qpos is None
                     else self._open_qpos
                 )
-                # print("u: ", u)
             else:
                 u = (
                     self._control_limits[ControlType.get_type(self._motor_type)][0][self.dof_idx]

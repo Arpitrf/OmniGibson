@@ -40,7 +40,7 @@ robots:
     grasping_mode: physical
     rigid_trunk: false
     default_trunk_offset: 0.15
-    default_arm_pose: vertical
+    default_arm_pose: horizontal
     sensor_config:
       VisionSensor:
         sensor_kwargs:
@@ -63,21 +63,22 @@ robots:
         # command_output_limits: null
         # use_delta_commands: false
         name: InverseKinematicsController
+        kp: 1000.0
         # name: OperationalSpaceController
       gripper_left:
-        # name: JointController
-        # motor_type: position
-        # command_input_limits: [-1, 1]
-        # command_output_limits: null
+        name: NullJointController
+        # motor_type: velocity
+        # command_input_limits: [-1.0, 1.0]
+        # command_output_limits: [-1.0, 1.0]
         # use_delta_commands: false
-        name: MultiFingerGripperController
+        # name: MultiFingerGripperController
       gripper_right:
-        # name: JointController
-        # motor_type: position
-        # command_input_limits: [-1, 1]
-        # command_output_limits: null
-        # use_delta_commands: false
-        name: MultiFingerGripperController
+        name: JointController
+        motor_type: velocity
+        command_input_limits: [-1.0, 1.0]
+        command_output_limits: [-1.0, 1.0]
+        use_delta_commands: false
+        # name: MultiFingerGripperController
       camera:
         name: JointController
 
