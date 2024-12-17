@@ -4,6 +4,7 @@ import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 import matplotlib.pyplot as plt
 import cv2
+from scipy.spatial.transform import Rotation as R
 
 # f_name = "0001.pickle"
 # with open(f"/home/arpit/test_projects/OmniGibson/real_world_data/{f_name}", "rb") as f:
@@ -123,7 +124,7 @@ def show_vectors(hdf5_file):
     ax.set_zlim([-0.2, 0.2])
     plt.show()
 
-def visualize_trajectories(actions, start_position, ax=None, color='r', ep=0, grasp_vector=None): 
+def visualize_trajectories(actions, start_position, ax=None, color='r', ep=0, grasp_vector=None, base_orn=None): 
     total_lines = 0
     for i in range(actions.shape[0]):
         trajectory = actions[i, :, 3:6]
@@ -131,6 +132,10 @@ def visualize_trajectories(actions, start_position, ax=None, color='r', ep=0, gr
 
         for j in range(trajectory.shape[0]):
             direction = trajectory[j]  # Direction vector at this waypoint
+            # convert delta from robot frame to world frame
+            if base_orn is not None:
+                base_orn_matrix = R.from_quat(base_orn).as_matrix()
+                direction = base_orn_matrix @ direction
             magnitude = np.linalg.norm(direction)  # Magnitude of the direction vector
             direction_normalized = direction / magnitude if magnitude != 0 else direction  # Normalize the direction
             step = magnitude * direction_normalized
@@ -156,17 +161,33 @@ def visualize_trajectories(actions, start_position, ax=None, color='r', ep=0, gr
     ax.set_ylabel('Y-axis')
     ax.set_zlabel('Z-axis')
 
+# # visualize a pcd
+# import open3d as o3d
+# path = "/home/arpit/projects/OmniGibson/pcd_1.ply"
+# pcd = o3d.io.read_point_cloud(path)
+# o3d.visualization.draw_geometries([pcd])
+
+
+
+
+
+
 import h5py
 import numpy as np
-with h5py.File("/home/arpit/projects/OmniGibson/open_drawer_temp/dataset.hdf5", "r") as f:
+with h5py.File("/home/arpit/projects/OmniGibson/open_cabinet/dataset.hdf5", "r") as f:
     print(len(f["data"].keys()))
+    # breakpoint()
+    # img = np.array(f["data/episode_01007/observations/rgb"])[0][:, :, :3]
+    # plt.imshow(img)
+    # plt.show()
+    # f["data/episode_00000/observations_info"]
+    # np.array(f["data/episode_00000/observations_info/seg_semantic"])
     # actions = np.array(f["data/episode_00003/actions/complete_actions"])
     # print("actions: ", actions)
-    actions = np.array(f["data/episode_00001/actions/actions"])
-    print("actions: ", actions[:, 3:6])
+    # actions = np.array(f["data/episode_00001/actions/actions"])
+    # print("actions: ", actions[:, 3:6])
     # print("grasp: ", np.array(f["data/episode_00003/extras/grasps"]).shape)
     # show_vectors(f)
-    # breakpoint()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -174,9 +195,16 @@ with h5py.File("/home/arpit/projects/OmniGibson/open_drawer_temp/dataset.hdf5", 
         if i > 10:
             break
         print("Episode: ", i)
+        print("len(actions), len(obs): ", np.array(f[f"data/episode_{i:05d}/actions/actions"]).shape, np.array(f[f"data/episode_{i:05d}/observations/rgb"]).shape)
+        print("grasps: ", np.array(f[f"data/episode_{i:05d}/extras/grasps"]))
+
+        if len(np.array(f[f"data/episode_{i:05d}/actions/actions"])) == 0:
+            continue
+        # print("actions: ",  np.array(f[f"data/episode_{i:05d}/actions/actions"])[:, 3:6])
         action_traj = np.array(f[f"data/episode_{i:05d}/actions/actions"])
-        grasp_vector = np.array(f[f"data/episode_{i:05d}/extras/grasps"])
-        visualize_trajectories(action_traj[None, ...], np.array([0.0, 0.0, 0.0]), ax=ax, ep=i, grasp_vector=grasp_vector)
+        grasp_vector = np.array(f[f"data/episode_{i:05d}/extras/grasp_label"])
+        base_orn = np.array(f[f"data/episode_{i:05d}/proprioceptions/base_orn"])[0]
+        visualize_trajectories(action_traj[None, ...], np.array([0.0, 0.0, 0.0]), ax=ax, ep=i, grasp_vector=grasp_vector, base_orn=base_orn)
     plt.show()
 
     # total_actions = 0
@@ -185,7 +213,7 @@ with h5py.File("/home/arpit/projects/OmniGibson/open_drawer_temp/dataset.hdf5", 
     # for i in range(len(f["data"])):
     #     actions = np.array(f[f"data/episode_{i:05d}/actions/actions"]).shape
     #     total_actions += actions[0]
-    #     for j in range(1, len(f[f"data/episode_{i:05d}/extras/grasps"])):
+    #     for j in range(1, len(f[f"data/episode_{i:05d}/extras/grasp_label"])):
     #         if f[f"data/episode_{i:05d}/extras/grasps"][j]:
     #             grasps += 1
     #         else:
@@ -194,6 +222,7 @@ with h5py.File("/home/arpit/projects/OmniGibson/open_drawer_temp/dataset.hdf5", 
     # print("total_actions: ", total_actions)
     # print("grasps: ", grasps)
     # print("no_grasps: ", no_grasps)
+
     #     actions = np.array(f[f"data/episode_{i:05d}/actions/actions"])
     #     print("actions: ", actions)
     #     # print(f["data"]["episode_{:05d}".format(i)]["observations_info"].keys())
@@ -289,3 +318,48 @@ with h5py.File("/home/arpit/projects/OmniGibson/open_drawer_temp/dataset.hdf5", 
 #     return
 
 # filter_hdf5_episodes("/home/arpit/test_projects/OmniGibson/place_in_shelf_data/dataset.hdf5", "/home/arpit/test_projects/OmniGibson/place_in_shelf_data/filtered_dataset.hdf5", ["episode_00250"])
+
+
+
+def overlay_images():
+    import cv2
+    import numpy as np
+    import os
+    import matplotlib.pyplot as plt
+
+    # Path to your folder with video files
+    folder_path = "/home/arpit/projects/OmniGibson/open_drawer_temp3"
+
+    # Get a sorted list of video files
+    video_files = sorted([f for f in os.listdir(folder_path) if f.endswith('.mp4')])
+
+    # List to store the frames
+    frames = []
+
+    for video_file in video_files:
+        video_path = os.path.join(folder_path, video_file)
+        cap = cv2.VideoCapture(video_path)
+        ret, frame = cap.read()  # Read the first frame
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB for matplotlib
+            frames.append(frame)
+        cap.release()
+
+    # Ensure we have frames to process
+    if frames:
+        # Convert the list of frames to a numpy array and calculate the mean image
+        # overlay_image = np.mean(frames, axis=0).astype(np.uint8)
+        overlay_image = np.zeros_like(frames[0], dtype=np.float32)
+        for frame in frames:
+            overlay_image += frame.astype(np.float32) / len(frames)
+        overlay_image = overlay_image.astype(np.uint8)
+
+        # Display the result using matplotlib
+        plt.imshow(overlay_image)
+        plt.axis('off')
+        plt.title('Overlay of First Frames')
+        plt.show()
+    else:
+        print("No frames extracted. Check your folder path or video files.")
+
+# overlay_images()

@@ -137,3 +137,8 @@ place_in_shelf_data_low_noise/
 place_in_shelf_data_medium_noise/
 place_in_shelf_data_high_noise/
 real_world_data/
+resources/
+place_in_shelf_data_final/
+open_cabinet/
+open_cabinet_temp/
+open_drawer/

@@ -12,8 +12,8 @@ class CollisionFailureModel:
     def __init__(self, robot):  
         '''MODEL LOADING'''
         num_class = 1
-        # experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/log/classification/pointnet2_cls_ssg_wo_floors_1000_corrected"
-        experiment_dir = "/home/arpit/test_projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_place_new_data"
+        # experiment_dir = "/home/arpit/projects/Pointnet_Pointnet2_pytorch/log/classification/pointnet2_cls_ssg_wo_floors_1000_corrected"
+        experiment_dir = "/home/arpit/projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_place_new_data"
         # model_name = os.listdir(experiment_dir + '/logs')[0].split('.')[0]
         # model_type = "action_pointnet2_cls_ssg"
         # model = importlib.import_module(model_type)
@@ -169,7 +169,7 @@ class GraspFailureModel:
     def __init__(self, robot):  
         '''MODEL LOADING'''
         num_class = 1
-        experiment_dir = "/home/arpit/projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_open_drawer"
+        experiment_dir = "/home/arpit/projects/Pointnet_Pointnet2_pytorch/pointnet2/log/classification/run_open_cabinet"
 
         self.classifier = action_pointnet2_cls_ssg.get_model(num_class, normal_channel=False)
         self.classifier = self.classifier.cuda()
@@ -236,7 +236,7 @@ class GraspFailureModel:
         pcd['normals'] = pcd_normals
         return pcd
 
-    def check_grasp(self, obs, obs_info, actions, robot_name, threshold):
+    def check_grasp(self, obs, obs_info, actions, robot_name, threshold, waypt=0):
         pcd = self.get_pcd(obs, obs_info, robot_name)
         points = torch.from_numpy(np.array(pcd['points']))
         actions = actions.unsqueeze(0)
@@ -264,7 +264,8 @@ class GraspFailureModel:
         # Convert probabilities to binary predictions (0 or 1)
         pred_choice = (probabilities >= threshold).float()
 
-        print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
+        if waypt > 1:
+            print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
         # -----------------------------
 
         # pcd = o3d.geometry.PointCloud()

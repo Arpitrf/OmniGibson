@@ -14,55 +14,87 @@ import omnigibson.lazy as lazy
 from filelock import FileLock
 from scipy.spatial.transform import Rotation as R
 from omnigibson.utils.asset_utils import decrypt_file
-from omnigibson.utils.ui_utils import KeyboardRobotController
+from omnigibson.utils.ui_utils import KeyboardRobotController, draw_line
 import omnigibson.utils.transform_utils as T
 from omnigibson.action_primitives.starter_semantic_action_primitives import StarterSemanticActionPrimitives
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
-from omnigibson.arpit_trial.memory import Memory
+from omnigibson.arpit_trial.utils.memory import Memory
+from omnigibson.objects import PrimitiveObject
+from omnigibson.utils.python_utils import nums2array
 
-def dump_to_memory(env, robot, episode_memory):
+
+def set_extrinsic_matrix(robot, camera_link="xtion_link"):
+    # Alternative approach using robot's built-in methods
+    camera_link = robot.links["xtion_optical_frame"]
+    base_link = robot.links["base_footprint"]
+
+    # Get world poses
+    camera_pos, camera_quat = camera_link.get_position_orientation()
+    base_pos, base_quat = base_link.get_position_orientation()
+
+    camera_mat = T.pose2mat((camera_pos, camera_quat))
+    base_mat = T.pose2mat((base_pos, base_quat))
+    camera_to_base = th.linalg.inv(base_mat) @ camera_mat
+
+    robot._extrinsic_matrix = camera_to_base
+
+def dump_to_memory(env, robot, episode_memory, relevant_objs=[]):
     obs, obs_info = env.get_obs()
 
     proprio = robot._get_proprioception_dict()
     # add eef pose and base pose to proprio
-    # proprio['left_eef_pos'], proprio['left_eef_orn'] = robot.get_relative_eef_pose(arm='left')
+    proprio['left_eef_pos'], proprio['left_eef_orn'] = robot.get_relative_eef_pose(arm='left')
     proprio['right_eef_pos'], proprio['right_eef_orn'] = robot.get_relative_eef_pose(arm='right')
     proprio['base_pos'], proprio['base_orn'] = robot.get_position_orientation()
+    proprio['extrinsic_matrix'] = robot._extrinsic_matrix
     for k in proprio.keys():
         episode_memory.add_proprioception(k, proprio[k].cpu().numpy())
 
     robot_name = env.robots[0].name
     for k in obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'].keys():
         episode_memory.add_observation(k, obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'][k].cpu().numpy())
-    # # add gripper+object seg
-    # gripper_obj_seg = obtain_gripper_obj_seg(obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'], obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'])
-    # episode_memory.add_observation('gripper_obj_seg', gripper_obj_seg)
     
     for k in obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'].keys():
         episode_memory.add_observation_info(k, obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'][k])
 
+    # add relevant object poses
+    for obj in relevant_objs:
+        for link in obj.links.values():
+            pose = link.get_position_orientation()
+            pose = T.pose2mat(pose)
+            episode_memory.add_value(link.name, pose.cpu().numpy()) 
 
-    is_grasping = robot.custom_is_grasping()
     is_contact = detect_robot_collision_in_sim(robot)
+    
+    is_grasping = robot.custom_is_grasping()
+    pos_thresh = 0.04
+    ori_thresh = 0.1
+    reached_goal = action_primitives.move_hand_direct_ik_pos_error < pos_thresh and action_primitives.move_hand_direct_ik_orn_error < ori_thresh
+    grasp_label = is_grasping and reached_goal
+    # grasp_label = is_grasping
+    ft_label = reached_goal
 
     episode_memory.add_extra('grasps', is_grasping.numpy())
     episode_memory.add_extra('contacts', is_contact)
+    episode_memory.add_extra('reached_goal', reached_goal)
+    episode_memory.add_extra('grasp_label', grasp_label)
+    episode_memory.add_extra('ft_label', ft_label)
 
 def custom_reset(env, robot, episode_memory=None): 
     scene_initial_state = env.scene._initial_state
     
-    base_yaw = 90
-    r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
-    r_quat = R.as_quat(r_euler)
-    scene_initial_state['object_registry'][env.robots[0].name]['root_link']['ori'] = r_quat
+    # base_yaw = 90
+    # r_euler = R.from_euler('z', base_yaw, degrees=True) # or -120
+    # r_quat = R.as_quat(r_euler)
+    # scene_initial_state['object_registry'][env.robots[0].name]['root_link']['ori'] = r_quat
 
-    # randomizing base pos
-    base_pos = np.array([-0.05, -0.4, 0.0])
-    base_x_noise = np.random.uniform(-0.15, 0.15)
-    base_y_noise = np.random.uniform(-0.15, 0.15)
-    base_noise = np.array([base_x_noise, base_y_noise, 0.0])
-    base_pos += base_noise 
-    scene_initial_state['object_registry'][env.robots[0].name]['root_link']['pos'] = base_pos
+    # # randomizing base pos
+    # base_pos = np.array([-0.05, -0.4, 0.0])
+    # base_x_noise = np.random.uniform(-0.15, 0.15)
+    # base_y_noise = np.random.uniform(-0.15, 0.15)
+    # base_noise = np.array([base_x_noise, base_y_noise, 0.0])
+    # base_pos += base_noise 
+    # scene_initial_state['object_registry'][env.robots[0].name]['root_link']['pos'] = base_pos
 
     # Reset environment and robot
     env.reset()
@@ -76,14 +108,12 @@ def custom_reset(env, robot, episode_memory=None):
     for _ in range(10):
         og.sim.step()
 
-    # add to memory
-    dump_to_memory(env, robot, episode_memory)
-
 def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     obs, info = env.get_obs()
     total_collisions = 0
     for action in ctrl_gen:
         if action == 'Done':
+            print("pos and orn errors: ", action_primitives.move_hand_direct_ik_pos_error, th.rad2deg(th.tensor(action_primitives.move_hand_direct_ik_orn_error)))
             if episode_memory is not None:
                 dump_to_memory(env, robot, episode_memory) 
             continue
@@ -93,6 +123,82 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
         # normalized_qpos = robot.get_joint_positions(normalized=True)[robot.arm_control_idx["right"]]
         # print("normalized_qpos: ", normalized_qpos)
     return obs, info, total_collisions
+
+def visualize_axes(target_pose):
+    robot_pos, robot_orn = robot.get_position_orientation()
+    robot_pose_world = np.eye(4)
+    robot_pose_world[:3, :3] = R.from_quat(robot_orn).as_matrix()
+    robot_pose_world[:3, 3] = robot_pos
+    robot_orn_matrix = R.from_quat(robot_orn).as_matrix()
+    eef_pos, eef_orn = robot.eef_links["right"].get_position_orientation()
+    eef_pos, eef_orn = eef_pos.numpy(), eef_orn.numpy()
+    vector_x, vector_y, vector_z = np.array([0.1, 0.0, 0.0]), np.array([0.0, 0.1, 0.0]), np.array([0.0, 0.0, 0.1])
+    # start_x = eef_pos
+    # end_x = eef_pos + vector_x
+    # start_y = eef_pos
+    # end_y = eef_pos + vector_y
+    # start_z = eef_pos
+    # end_z = eef_pos + vector_z
+    # start_x = start_x.tolist()
+    # end_x = end_x.tolist()
+    # start_y = start_y.tolist()
+    # end_y = end_y.tolist()
+    # start_z = start_z.tolist()
+    # end_z = end_z.tolist()
+    # draw_line(start_x, end_x, color=(1.0, 0.0, 0.0, 1.0))
+    # draw_line(start_y, end_y, color=(0.0, 1.0, 0.0, 1.0))
+    # draw_line(start_z, end_z, color=(0.0, 0.0, 1.0, 1.0))
+    # for _ in range(10):
+    #     og.sim.step()
+
+
+    vector_x_base = robot_orn_matrix @ vector_x
+    vector_y_base = robot_orn_matrix @ vector_y
+    vector_z_base = robot_orn_matrix @ vector_z
+    # end_x = eef_pos + vector_x
+    # end_y = eef_pos + vector_y
+    # end_z = eef_pos + vector_z
+    # draw_line(start_x, end_x, color=(1.0, 0.0, 0.0, 1.0))
+    # draw_line(start_y, end_y, color=(0.0, 1.0, 0.0, 1.0))
+    # draw_line(start_z, end_z, color=(0.0, 0.0, 1.0, 1.0))
+    # for _ in range(10):
+    #     og.sim.step()
+
+    _ , eef_orn = robot.get_relative_eef_pose(arm='right')
+    eef_orn = eef_orn.numpy()
+    eef_orn_matrix = R.from_quat(eef_orn).as_matrix()
+    vector_x_eef = eef_orn_matrix @ vector_x_base
+    vector_y_eef = eef_orn_matrix @ vector_y_base
+    vector_z_eef = eef_orn_matrix @ vector_z_base
+    end_x = eef_pos + vector_x_eef
+    end_y = eef_pos + vector_y_eef
+    end_z = eef_pos + vector_z_eef
+    draw_line(eef_pos, end_x, color=(1.0, 0.0, 0.0, 1.0))
+    draw_line(eef_pos, end_y, color=(0.0, 1.0, 0.0, 1.0))
+    draw_line(eef_pos, end_z, color=(0.0, 0.0, 1.0, 1.0))
+    for _ in range(10):
+        og.sim.step()
+
+
+    target_pos, target_orn = target_pose
+    target_pos, target_orn = target_pos.numpy(), target_orn.numpy()
+    target_pos_world = robot_pose_world @ np.array([*target_pos, 1.0])
+    target_pos_world = target_pos_world[:3]
+    target_orn_matrix = R.from_quat(target_orn).as_matrix()
+    vector_x_grasp = target_orn_matrix @ vector_x_base
+    vector_y_grasp = target_orn_matrix @ vector_y_base
+    vector_z_grasp = target_orn_matrix @ vector_z_base
+    end_x = target_pos_world + vector_x_grasp
+    end_y = target_pos_world + vector_y_grasp
+    end_z = target_pos_world + vector_z_grasp
+    draw_line(target_pos_world, end_x, color=(1.0, 0.0, 0.0, 1.0))
+    draw_line(target_pos_world, end_y, color=(0.0, 1.0, 0.0, 1.0))
+    draw_line(target_pos_world, end_z, color=(0.0, 0.0, 1.0, 1.0))
+    for _ in range(10):
+        og.sim.step()
+
+    
+    # breakpoint()
 
 def primitive(episode_memory=None, episode_number=0):
 
@@ -110,9 +216,8 @@ def primitive(episode_memory=None, episode_number=0):
     curr_base_pos = robot.get_position()
     print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
     # =================================================================================
-
+    
     # ======================= Move hand to grasp pose ================================    
-    print("init_hand_pose: ", robot.get_relative_eef_pose(arm='right')[0])
     # # horizontal
     # target_pose = th.tensor([
     #     [ 0.09966776,  0.05407733, -0.99355019,  0.14776738],
@@ -120,7 +225,6 @@ def primitive(episode_memory=None, episode_number=0):
     #     [ 0.01504726, -0.99848979, -0.05283672,  0.40618559],
     #     [ 0.        ,  0.,          0.,          0.        ],
     # ]) 
-    # target_pose = T.mat2pose(target_pose)   
     # horizontal-forward
     target_pose = th.tensor([
         [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
@@ -128,7 +232,6 @@ def primitive(episode_memory=None, episode_number=0):
         [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
         [ 0.        ,  0.,          0.,          0.        ]
     ])
-    target_pose = T.mat2pose(target_pose)
     # vertical
     # w.r.t robot
     # target_pose = (th.tensor([ 0.4946, -0.1072,  0.4705]), th.tensor([0.0354, 0.9991, 0.0150, 0.0194]))
@@ -146,7 +249,42 @@ def primitive(episode_memory=None, episode_number=0):
     #     [-0.03773583,  0.0314257,  -0.99879349,  0.47100371],
     #     [ 0.        ,  0.,          0.,          0.        ],
     # ])
+    
+    target_pose = T.mat2pose(target_pose)
+
+    # # pan
+    # target_pose = th.tensor([
+    #     [ 0.27262547,  0.83505312, -0.47787198,  0.35828257],
+    #     [ 0.31803698,  0.39054868,  0.86390057,  0.49818253],
+    #     [ 0.90803515, -0.38750226, -0.15910426,  0.42454916],
+    #     [ 0.        ,  0.,          0.,          0.        ],
+    # ])
     # target_pose = T.mat2pose(target_pose)
+
+    # # ============== testing grasp proposals =================
+    # # target_pose = th.tensor([
+    # #     [-0.4468734 , -0.52620034,  0.72347589,  0.47257765],
+    # #     [-0.8589831 ,  0.02647212, -0.51131913, -0.0587346 ],
+    # #     [ 0.24990436, -0.84994848, -0.46382689,  0.40966497],
+    # #     [ 0.        ,  0.,          0.,          1.        ],
+    # # ])
+    # # top-dowwn grasp
+    # target_pose = th.tensor([
+    #     [ 0.99039808, -0.06790785,  0.1204166,   0.49365888],
+    #     [-0.03961837, -0.97392494, -0.2233844,  -0.08623638],
+    #     [ 0.13244629,  0.21646877, -0.9672638,   0.43154755],
+    #     [ 0.        ,  0.,          0.,          1.        ]
+    # ])
+    # robotiq_eef_to_grasp_proposals = th.tensor([
+    #     [-1, 0, 0, 0.0],
+    #     [0, -1, 0, 0.0],
+    #     [0, 0, 1, 0.0],
+    #     [0, 0, 0, 1.0],
+    # ])
+    # target_pose = target_pose @ robotiq_eef_to_grasp_proposals
+    # target_pose = T.mat2pose(target_pose)
+    # visualize_axes(target_pose)
+    # # =======================================================
 
     pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
     execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=True), 
@@ -154,7 +292,7 @@ def primitive(episode_memory=None, episode_number=0):
                        robot, 
                        grasp_action, 
                        episode_memory) 
-    
+
     execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=True), 
                        env, 
                        robot, 
@@ -184,9 +322,6 @@ def primitive(episode_memory=None, episode_number=0):
     action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
     episode_memory.add_action('actions', action_to_add)
     # ==============================================
-
-    # obj = env.scene.object_registry("name", "box")
-    # obj.root_link.mass = 1e-4
         
     # ======================= Move hand up ================================  
     curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
@@ -206,7 +341,30 @@ def primitive(episode_memory=None, episode_number=0):
     pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
     orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+
+    # curr_pos, curr_orn = robot.eef_links["right"].get_position_orientation()
+    # new_orn = np.array([
+    #     [ 0.57506982,  0.05240871, -0.81642393],
+    #     [ 0.81670615,  0.02154281,  0.57665151],
+    #     [ 0.04780963, -0.99839333, -0.03041389],
+    # ])
+    # new_orn = R.from_matrix(new_orn).as_quat()
+    # target_pose = (curr_pos, th.tensor(new_orn, dtype=th.float32))
+    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=True), 
+    #                    env, 
+    #                    robot, 
+    #                    grasp_action, 
+    #                    episode_memory)
+    # for _ in range(40):
+    #     og.sim.step()
+    # # Debugging
+    # post_eef_pose = robot.eef_links["right"].get_position_orientation()
+    # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
     # =================================================================================
+
+    # breakpoint()
 
     # ============= Move base ===================
     # debugging
@@ -230,34 +388,36 @@ def primitive(episode_memory=None, episode_number=0):
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
     # ============================================
     
-    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_place_start.json'])
+    # og.sim.save([f'place_in_shelf_start_state.json'])
 
-    # ======================= Move hand to place pose ================================
-    # w.r.t world
-    # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.8563]), th.tensor([-0.0488, -0.0116,  0.5546,  0.8306])) # [ 1.1602, -0.1873,  0.8463]
-    # w.r.t robot
-    # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
+    # # ======================= Move hand to place pose ================================
+    # # w.r.t world
+    # # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.8563]), th.tensor([-0.0488, -0.0116,  0.5546,  0.8306])) # [ 1.1602, -0.1873,  0.8463]
+    # # w.r.t robot
+    # # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
 
-    # for vertical
-    # w.r.t world
-    curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-    place_pose =  (th.tensor([ 1.10402, -0.1873,  0.9563]), curr_orn)
-    execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=True, episode_memory=episode_memory, grasp_action=grasp_action), 
-                       env, 
-                       robot, 
-                       grasp_action,
-                       episode_memory)
-    # execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=True), 
+    # # for vertical
+    # # w.r.t world
+    # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+    # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.9563]), curr_orn)
+    # execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=True, episode_memory=episode_memory, grasp_action=grasp_action), 
     #                    env, 
     #                    robot, 
-    #                    grasp_action)
-    current_pose_world = robot.eef_links["right"].get_position_orientation()
-    print("move hand to place location completed. Desired and Reached right eef pose reached: ", place_pose[0], current_pose_world)
-    # input()
-    # ====================================================================================
+    #                    grasp_action,
+    #                    episode_memory)
+    # # execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=True), 
+    # #                    env, 
+    # #                    robot, 
+    # #                    grasp_action)
+    # # Debugging
+    # post_eef_pose = robot.eef_links["right"].get_position_orientation()
+    # pos_error = np.linalg.norm(post_eef_pose[0] - place_pose[0])
+    # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], place_pose[1])
+    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # # ====================================================================================
 
     # ============= Open grasp =================
-    grasp_action = 1.0
+    grasp_action = -1.0
     action = action_primitives._empty_action()
     action[robot.gripper_action_idx["right"]] = grasp_action
     env.step(action)
@@ -270,8 +430,8 @@ def primitive(episode_memory=None, episode_number=0):
     episode_memory.add_action('actions', action_to_add)
     # ==========================================
 
-    for _ in range(50):
-        og.sim.step()
+    # # for _ in range(50):
+    # #     og.sim.step()
 
 
 
@@ -279,6 +439,11 @@ config_filename = os.path.join(og.example_config_path, "tiago_primitives.yaml")
 config = yaml.load(open(config_filename, "r"), Loader=yaml.FullLoader)
 config["scene"] = dict()
 config["scene"]["type"] = "Scene"
+
+# config["robots"][0]["controller_config"]["arm_right"]["name"] = "OperationalSpaceController"
+
+config["robots"][0]["controller_config"]["arm_right"]["name"] = "InverseKinematicsController"
+config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
 
 # config['robots'][0]['controller_config']['arm_right']['mode'] = 'absolute_pose'
 # config['robots'][0]['controller_config']['arm_right']['command_input_limits'] = None
@@ -314,11 +479,21 @@ config["objects"] = [
         "primitive_type": "Cube",
         "rgba": [1.0, 0, 0, 1.0],
         "scale": [0.1, 0.05, 0.1],
+        # "visual_only": True,
         # "size": 0.05,
         "mass": 1e-6,
         "position": [0.1, 0.5, 0.5],
         "orientation": box_quat
     },
+    # {
+    #     "type": "DatasetObject",
+    #     "name": "can_of_baking_mix",
+    #     "category": "can_of_baking_mix",
+    #     "model": "blrqqz", 
+    #     # "scale": [0.6, 0.6, 0.8],
+    #     "position": [0.1, 0.5, 0.5],
+    #     "orientation": [0, 0, 0, 1]
+    # },
 ]
 
 env = og.Environment(configs=config)
@@ -349,8 +524,10 @@ action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=Fa
 
 # pdb.set_trace()
 obj = env.scene.object_registry("name", "box")
-obj.root_link.mass = 1e-2
+# obj = env.scene.object_registry("name", "can_of_baking_mix")
+obj.root_link.mass = 1e-1
 shelf = env.scene.object_registry("name", "shelf")
+# shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
 shelf.root_link.mass = 1e3
 # print("obj.mass: ", obj.mass)
 
@@ -360,10 +537,20 @@ og.sim.viewer_camera.set_position_orientation(
     th.tensor([-0.2168,  0.5182,  0.7632, -0.3193]),
 )
 
+eef_marker = PrimitiveObject(
+            relative_prim_path=f"/marker",
+            name="marker",
+            primitive_type="Sphere",
+            radius=0.03,
+            visual_only=True,
+            rgba=[1.0, 0, 0, 1.0],
+        )
+env.scene.add_object(eef_marker)
+
 for _ in range(20):
     og.sim.step()
 
-save_folder = 'moma_pick_and_place'
+save_folder = 'place_in_shelf_temp'
 os.makedirs(save_folder, exist_ok=True)
 episode_memory = Memory()
 
@@ -373,8 +560,19 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
         episode_number = len(file['data'].keys())
         print("episode_number: ", episode_number)
 
+# if robot.controllers["arm_right"] != "absolute_pose":
+# robot.controllers["arm_right"].kp[:3] = nums2array(nums=2000, dim=3, dtype=th.float32)
+# robot.controllers["arm_right"].kp[-3:] = nums2array(nums=5000, dim=3, dtype=th.float32)
+
+
 for _ in range(1):
-    # custom_reset(env, robot, episode_memory)
+    custom_reset(env, robot, episode_memory)
+    set_extrinsic_matrix(robot)
+
+    action_primitives.move_hand_direct_ik_pos_error = 0.0
+    action_primitives.move_hand_direct_ik_orn_error = 0.0
+    dump_to_memory(env, robot, episode_memory)
+
     # # save the start simulator state
     # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
     # arr = scene.dump_state(serialized=True)
@@ -393,61 +591,59 @@ for _ in range(1):
 
     episode_number += 1
 
-breakpoint()
+# # =============================== Teleop ===============================
+# # Create teleop controller
+# action_generator = KeyboardRobotController(robot=robot)
+# # Register custom binding to reset the environment
+# action_generator.register_custom_keymapping(
+#     key=lazy.carb.input.KeyboardInput.R,
+#     description="Reset the robot",
+#     callback_fn=lambda: env.reset(),
+# )
+# # Print out relevant keyboard info if using keyboard teleop
+# action_generator.print_keyboard_teleop_info()
 
-# =============================== Teleop ===============================
-# Create teleop controller
-action_generator = KeyboardRobotController(robot=robot)
-# Register custom binding to reset the environment
-action_generator.register_custom_keymapping(
-    key=lazy.carb.input.KeyboardInput.R,
-    description="Reset the robot",
-    callback_fn=lambda: env.reset(),
-)
-# Print out relevant keyboard info if using keyboard teleop
-action_generator.print_keyboard_teleop_info()
-
-max_steps = -1 
-step = 0
-while step != max_steps:
-    action, keypress_str = action_generator.get_teleop_action()
-    # print("action: ", action)
+# max_steps = -1 
+# step = 0
+# while step != max_steps:
+#     action, keypress_str = action_generator.get_teleop_action()
+#     print("action: ", action)
     
-    # if action = SPECIAL_ACTION / NONE:
-    #     do not do pre_step()
-    # og.sim.render()
-    # if any(action[robot.controller_action_idx["base"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["camera"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["arm_left"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["arm_right"]] != 0.0):
+#     # if action = SPECIAL_ACTION / NONE:
+#     #     do not do pre_step()
+#     # og.sim.render()
+#     # if any(action[robot.controller_action_idx["base"]] != 0.0) or \
+#     #         any(action[robot.controller_action_idx["camera"]] != 0.0) or \
+#     #         any(action[robot.controller_action_idx["arm_left"]] != 0.0) or \
+#     #         any(action[robot.controller_action_idx["arm_right"]] != 0.0):
 
-    env.step(action=action)
-    if keypress_str == 'TAB':
-        right_eef_pose = robot.get_relative_eef_pose(arm='right')
-        right_eef_pos_world, right_eef_orn_world = robot.eef_links["right"].get_position_orientation()
-        right_eef_pose_world = np.zeros((4, 4))
-        right_eef_pose_world[:3, :3] = R.from_quat(right_eef_orn_world).as_matrix()
-        right_eef_pose_world[:3, 3] = right_eef_pos_world
+#     env.step(action=action)
+#     if keypress_str == 'TAB':
+#         right_eef_pose = robot.get_relative_eef_pose(arm='right')
+#         right_eef_pos_world, right_eef_orn_world = robot.eef_links["right"].get_position_orientation()
+#         right_eef_pose_world = np.zeros((4, 4))
+#         right_eef_pose_world[:3, :3] = R.from_quat(right_eef_orn_world).as_matrix()
+#         right_eef_pose_world[:3, 3] = right_eef_pos_world
 
-        box_pos_world, box_orn_world = scene.object_registry("name", "box").get_position_orientation()
-        box_pose_world = np.zeros((4, 4))
-        box_pose_world[:3, :3] = R.from_quat(box_orn_world).as_matrix()
-        box_pose_world[:3, 3] = box_pos_world
+#         box_pos_world, box_orn_world = scene.object_registry("name", "frying_pan").get_position_orientation()
+#         box_pose_world = np.zeros((4, 4))
+#         box_pose_world[:3, :3] = R.from_quat(box_orn_world).as_matrix()
+#         box_pose_world[:3, 3] = box_pos_world
 
-        if np.linalg.det(box_pose_world) != 0:
-            right_eef_pose_object = np.linalg.inv(box_pose_world) @ right_eef_pose_world
-        else:
-            right_eef_pose_object = np.linalg.pinv(box_pose_world) @ right_eef_pose_world
+#         if np.linalg.det(box_pose_world) != 0:
+#             right_eef_pose_object = np.linalg.inv(box_pose_world) @ right_eef_pose_world
+#         else:
+#             right_eef_pose_object = np.linalg.pinv(box_pose_world) @ right_eef_pose_world
 
-        base_pose = robot.get_position_orientation()
-        print("right_eef_pose: ", right_eef_pose)
-        print("right_eef_pose_world: ", right_eef_pose_world)
-        print("right_eef_pose_object: ", right_eef_pose_object)
-        print("base_pose: ", base_pose)
-        # og.sim.save([f'temp2.json'])
-        breakpoint()
-    step += 1
-# ========================================================================
+#         base_pose = robot.get_position_orientation()
+#         print("right_eef_pose: ", right_eef_pose)
+#         print("right_eef_pose_world: ", right_eef_pose_world)
+#         print("right_eef_pose_object: ", right_eef_pose_object)
+#         print("base_pose: ", base_pose)
+#         # og.sim.save([f'temp2.json'])
+#         breakpoint()
+#     step += 1
+# # ========================================================================
 
 for _ in range(500):
     og.sim.step()

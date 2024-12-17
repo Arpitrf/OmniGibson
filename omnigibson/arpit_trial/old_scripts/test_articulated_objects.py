@@ -150,82 +150,82 @@ while step != max_steps:
         breakpoint()
     step += 1
 
-# # collision checks: detect_robot_collision_in_sim, detect_robot_collision()
-# # TODO: collision check separately for the arm and rest of the body
-# # FT value
+# collision checks: detect_robot_collision_in_sim, detect_robot_collision()
+# TODO: collision check separately for the arm and rest of the body
+# FT value
 
-# idx = list(robot.joints.keys()).index("arm_right_7_joint")
-# print("len(robot.joints.keys()): ", len(robot.joints.keys()))
-# input()
+idx = list(robot.joints.keys()).index("arm_right_7_joint")
+print("len(robot.joints.keys()): ", len(robot.joints.keys()))
+input()
 
-# def force_data_generator():
-#     step = 0
-#     # # pdb.set_trace()
-#     while step != max_steps:
-#         action, keypress_str = action_generator.get_teleop_action()
-#         env.step(action=action)
-#         step += 1
-#         proprio = robot._get_proprioception_dict()
-#         # print(proprio['joint_qeffort'].shape)
-#         # print(robot.joints.keys())
-#         # if step % 100 == 0:
-#         force_value = robot.get_joint_forces()
-#         # force_value = robot.get_joint_efforts()[idx]
-#         yield step, force_value
-#         # if robot.get_joint_efforts()[idx].item() > 0.001:
-#             # print("effort at joint 7: ", proprio['joint_qeffort'][idx])
-#             # print("applied effor and measured effort at joint 7: ", step, proprio['joint_qeffort'][idx], robot.get_joint_efforts()[idx])
+def force_data_generator():
+    step = 0
+    # # pdb.set_trace()
+    while step != max_steps:
+        action, keypress_str = action_generator.get_teleop_action()
+        env.step(action=action)
+        step += 1
+        proprio = robot._get_proprioception_dict()
+        # print(proprio['joint_qeffort'].shape)
+        # print(robot.joints.keys())
+        # if step % 100 == 0:
+        force_value = robot.get_joint_forces()
+        # force_value = robot.get_joint_efforts()[idx]
+        yield step, force_value
+        # if robot.get_joint_efforts()[idx].item() > 0.001:
+            # print("effort at joint 7: ", proprio['joint_qeffort'][idx])
+            # print("applied effor and measured effort at joint 7: ", step, proprio['joint_qeffort'][idx], robot.get_joint_efforts()[idx])
 
-# ani = animation.FuncAnimation(fig, update, frames=force_data_generator, init_func=init, blit=True, interval=100)
+ani = animation.FuncAnimation(fig, update, frames=force_data_generator, init_func=init, blit=True, interval=100)
+plt.show()
+
+
+# # move hand to a pose
+# action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
+# # move hand 40 cm front
+# curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+# new_pos = curr_pos + th.tensor([0.4, 0.0, 0.0])
+# target_pose = (new_pos, curr_orn)
+# execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True), env, robot)
+
+# input("Press enter to continue =============================")
+# # move hand up
+# curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+# new_pos = curr_pos + th.tensor([0.0, 0.0, 0.3])
+# target_pose = (new_pos, curr_orn)
+# execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True), env, robot)
+
+# input("Press enter to continue =============================")
+# # move hand back
+# curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+# new_pos = curr_pos + th.tensor([-0.4, 0.0, 0.0])
+# target_pose = (new_pos, curr_orn)
+# execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True), env, robot)
+
+for _ in range(5000):
+    og.sim.step()
+
+# Always shut down the environment cleanly at the end
+og.clear()
+
+# # Place the object so it rests on the floor
+# obj = env.scene.object_registry("name", "obj")
+# center_offset = obj.get_position() - obj.aabb_center + np.array([0, 0, obj.aabb_extent[2] / 2.0])
+# obj.set_position(center_offset)
+
+# for _ in range(50):
+#     og.sim.step()
+# obs, obs_info = env.get_obs()
+# seg_semantic = obs['robot0']['robot0:eyes:Camera:0']['seg_semantic'].cpu()
+# seg_instance = obs['robot0']['robot0:eyes:Camera:0']['seg_instance'].cpu()
+# seg_instance_id = obs['robot0']['robot0:eyes:Camera:0']['seg_instance_id'].cpu()
+# print("seg_instance_id.shape: ", seg_instance_id.shape)
+# fig, ax = plt.subplots(1,3)
+# ax[0].imshow(seg_semantic)
+# ax[1].imshow(seg_instance)
+# ax[2].imshow(seg_instance_id)
 # plt.show()
-
-
-# # # move hand to a pose
-# # action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
-# # # move hand 40 cm front
-# # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-# # new_pos = curr_pos + th.tensor([0.4, 0.0, 0.0])
-# # target_pose = (new_pos, curr_orn)
-# # execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True), env, robot)
-
-# # input("Press enter to continue =============================")
-# # # move hand up
-# # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-# # new_pos = curr_pos + th.tensor([0.0, 0.0, 0.3])
-# # target_pose = (new_pos, curr_orn)
-# # execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True), env, robot)
-
-# # input("Press enter to continue =============================")
-# # # move hand back
-# # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-# # new_pos = curr_pos + th.tensor([-0.4, 0.0, 0.0])
-# # target_pose = (new_pos, curr_orn)
-# # execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True), env, robot)
 
 # for _ in range(5000):
 #     og.sim.step()
-
-# # Always shut down the environment cleanly at the end
-# og.clear()
-
-# # # Place the object so it rests on the floor
-# # obj = env.scene.object_registry("name", "obj")
-# # center_offset = obj.get_position() - obj.aabb_center + np.array([0, 0, obj.aabb_extent[2] / 2.0])
-# # obj.set_position(center_offset)
-
-# # for _ in range(50):
-# #     og.sim.step()
-# # obs, obs_info = env.get_obs()
-# # seg_semantic = obs['robot0']['robot0:eyes:Camera:0']['seg_semantic'].cpu()
-# # seg_instance = obs['robot0']['robot0:eyes:Camera:0']['seg_instance'].cpu()
-# # seg_instance_id = obs['robot0']['robot0:eyes:Camera:0']['seg_instance_id'].cpu()
-# # print("seg_instance_id.shape: ", seg_instance_id.shape)
-# # fig, ax = plt.subplots(1,3)
-# # ax[0].imshow(seg_semantic)
-# # ax[1].imshow(seg_instance)
-# # ax[2].imshow(seg_instance_id)
-# # plt.show()
-
-# # for _ in range(5000):
-# #     og.sim.step()
 

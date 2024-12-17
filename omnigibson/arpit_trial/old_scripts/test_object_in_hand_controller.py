@@ -166,8 +166,8 @@ scene = env.scene
 robot = env.robots[0]
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-og.sim.restore(["test_object_in_hand_start_state.json"])
-
+# og.sim.restore(["test_object_in_hand_start_state.json"])
+og.sim.restore(["/home/arpit/projects/OmniGibson/place_in_shelf_final/episode_00000_place_start.json"])
 # obj = env.scene.object_registry("name", "box")
 # obj.root_link.mass = 1e-2
 

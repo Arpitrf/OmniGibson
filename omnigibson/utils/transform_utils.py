@@ -253,6 +253,9 @@ def quat_distance(quaternion1, quaternion0):
     Returns:
         th.tensor: (x,y,z,w) quaternion distance
     """
+    # Ensure the shortest path between quaternions is taken
+    if th.dot(quaternion1, quaternion0) < 0.0:
+        quaternion0 = -quaternion0  # Flip the sign of quaternion0
     return quat_multiply(quaternion1, quat_inverse(quaternion0))
 
 

@@ -44,14 +44,21 @@ def correct_gripper_friction(robot, friction_val=4.0):
     og.sim.load_state(state)
 
 def check_success(env, robot):
-    box = env.scene.object_registry("name", "box")
-    shelf = env.scene.object_registry("name", "shelf")
-    obj_in_shelf = box.states[object_states.Inside].get_value(shelf)
-    #TODO: Figure out why this doesn't work: robot._ag_obj_in_hand[robot.default_arm]
-    grasping = robot.custom_is_grasping()
-    success = obj_in_shelf and not grasping
-    return success
-    # return False
+    # box = env.scene.object_registry("name", "box")
+    # shelf = env.scene.object_registry("name", "shelf")
+    # obj_in_shelf = box.states[object_states.Inside].get_value(shelf)
+    # #TODO: Figure out why this doesn't work: robot._ag_obj_in_hand[robot.default_arm]
+    # grasping = robot.custom_is_grasping()
+    # success = obj_in_shelf and not grasping
+    # return success
+    # For open cabinet
+    bottom_cabinet = env.scene.object_registry("name", "bottom_cabinet")
+    joint_val = bottom_cabinet.joints["j_link_0"].get_state()[0].item()
+    if joint_val > 1.1:
+        return True
+    return False
+
+
 
 def hori_concatenate_image(images):
     # Ensure the images have the same height

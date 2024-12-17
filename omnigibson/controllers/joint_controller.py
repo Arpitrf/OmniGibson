@@ -201,10 +201,12 @@ class JointController(LocomotionController, ManipulationController, GripperContr
                 position_error = target - base_value
                 vel_pos_error = -control_dict[f"joint_velocity"][self.dof_idx]
                 u = position_error * self.kp + vel_pos_error * self.kd
+                # print("u: ", self._motor_type, u)
             elif self._motor_type == "velocity":
                 # Compute command torques via PI velocity controller plus gravity compensation torques
                 velocity_error = target - base_value
                 u = velocity_error * self.kp
+                # print("u: ", self._motor_type, u)
             else:  # effort
                 u = target
 
@@ -220,9 +222,13 @@ class JointController(LocomotionController, ManipulationController, GripperContr
             if self._use_cc_compensation:
                 u += control_dict["cc_force"][self.dof_idx]
 
+            # print("u: ", self._motor_type, u)
+
         else:
             # Desired is the exact goal
             u = target
+        
+        # print("u: ", self._motor_type, u)
 
         # Return control
         return u

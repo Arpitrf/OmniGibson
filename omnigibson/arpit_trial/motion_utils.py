@@ -9,8 +9,8 @@ from scipy.spatial.transform import Rotation as R
 
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 from omnigibson.object_states.contact_bodies import ContactBodies
-from memory import Memory
-from utils import dump_to_memory, hori_concatenate_image
+# from memory import Memory
+from omnigibson.arpit_trial.utils.utils import dump_to_memory, hori_concatenate_image
 
 class MotionUtils:
     def __init__(self, env, robot, action_primitives, writer=None):
@@ -24,7 +24,7 @@ class MotionUtils:
         a = th.cat((-action[t][:-1], action[t][-1:])) 
         self.move_primitive(a, ik_test=False)
 
-    def execute_controller(self, ctrl_gen, grasp_action, episode_memory=None):
+    def execute_controller(self, ctrl_gen, grasp_action, episode_memory=None, check_grasp=False):
         obs, info = self.env.get_obs()          
         total_collisions = 0
         singularities = []
@@ -35,14 +35,15 @@ class MotionUtils:
                 #     dump_to_memory(self.env, self.robot, episode_memory) 
                 
                 # Hack to sidestep simulation issue (grasp is not lost when moderately bad action)
-                pos_thresh = 0.02
-                ori_thresh = 0.1
+                pos_thresh = 0.08
+                ori_thresh = 0.25
                 reached_goal = self.action_primitives.move_hand_direct_ik_pos_error < pos_thresh and self.action_primitives.move_hand_direct_ik_orn_error < ori_thresh
-                print("Surrogate for F/T, F/T safe? ", reached_goal)
-                # if not reached_goal:
-                #     return False
+                if not reached_goal:
+                    print("Did not reach waypoint. Exiting. Normalized_qpos: ", self.robot.get_joint_positions(normalized=True)[self.robot.arm_control_idx["right"]])
+                    return False
 
                 continue
+            
             action[self.robot.gripper_action_idx["right"]] = grasp_action
             # print("action: ", action)
             if self.writer is not None:
@@ -54,50 +55,56 @@ class MotionUtils:
                 concat_img = concat_img.astype(np.uint8)            
                 self.writer.append_data(concat_img)
             
-            # ============================================= Check for collisions =============================================
-            # Check if robot right gripper fingers are in collision
-            box = self.env.scene.object_registry("name", "box")
-            gripper_fingers_is_contact = detect_robot_collision_in_sim(self.robot, filter_objs=[box])
+            # # ============================================= Check for collisions =============================================
+            # # Check if robot right gripper fingers are in collision
+            # box = self.env.scene.object_registry("name", "box")
+            # gripper_fingers_is_contact = detect_robot_collision_in_sim(self.robot, filter_objs=[box])
 
-            # Check if robot right gripper is in collision
-            gripper_is_contact = False
-            # TODO: Remove hardcoding from link names
-            gripper_links = ["gripper_right_link"]
-            for gripper_link in gripper_links:
-                lis = self.robot.links[gripper_link].contact_list()
-                if len(lis) > 0:
-                    # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
-                    gripper_is_contact = True
+            # # # Check if robot right gripper is in collision
+            # gripper_is_contact = False
+            # # # TODO: Remove hardcoding from link names
+            # # gripper_links = ["gripper_right_link"]
+            # # for gripper_link in gripper_links:
+            # #     lis = self.robot.links[gripper_link].contact_list()
+            # #     if len(lis) > 0:
+            # #         # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
+            # #         gripper_is_contact = True
 
-            # Check if robot right arm is in collision
-            robot_is_contact = False
-            # TODO: Remove hardcoding from indices
-            for j in range(1,8):
-                lis = self.robot.links[f"arm_right_{j}_link"].contact_list()
-                if len(lis) > 0:
-                    # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
-                    robot_is_contact = True
+            # # Check if robot right arm is in collision
+            # robot_is_contact = False
+            # # TODO: Remove hardcoding from indices
+            # for j in range(1,8):
+            #     lis = self.robot.links[f"arm_right_{j}_link"].contact_list()
+            #     if len(lis) > 0:
+            #         # print(f"arm_right_{j}_link in contact at step {i}: ", lis)
+            #         robot_is_contact = True
 
-            # Check if box is in collision
-            box_is_contact = False
-            if box is not None:
-                box_contact_bodies = list(box.states[ContactBodies].get_value())
-                # two fingers are already in contact with the box 
-                if len(box_contact_bodies) > 2:
-                    box_is_contact = True
-                    # print("box_contact_bodies: ", box_contact_bodies)
+            # # Check if box is in collision
+            # box_is_contact = False
+            # if box is not None:
+            #     box_contact_bodies = list(box.states[ContactBodies].get_value())
+            #     # two fingers are already in contact with the box 
+            #     if len(box_contact_bodies) > 2:
+            #         box_is_contact = True
+            #         # print("box_contact_bodies: ", box_contact_bodies)
 
-            # print("robot_is_contact, gripper_is_contact, box_is_contact: ", robot_is_contact, gripper_is_contact, box_is_contact)
-            is_contact = robot_is_contact or box_is_contact or gripper_is_contact or gripper_fingers_is_contact
-            if is_contact:
-                total_collisions += 1
-            # ====================================================================================
+            # # print("robot_is_contact, gripper_is_contact, box_is_contact: ", robot_is_contact, gripper_is_contact, box_is_contact)
+            # is_contact = robot_is_contact or box_is_contact or gripper_is_contact or gripper_fingers_is_contact
+            # if is_contact:
+            #     total_collisions += 1
+            # # ====================================================================================
             singularity = self.robot._controllers["arm_right"].singularity
             singularities.append(singularity)
 
-            if sum(singularities) > 3:
+            if sum(singularities) > 10:
                 reached_singularity = True
-                return obs, info, total_collisions, reached_singularity
+                return False
+            
+            # Check grasp
+            is_grasping = self.robot.custom_is_grasping()
+            if check_grasp and not is_grasping:
+                print("Grasp failed. Exiting.", self.robot._get_proprioception_dict()['gripper_right_qpos'])
+                return False
             
             # normalized_qpos = robot.get_joint_positions(normalized=True)[robot.arm_control_idx["right"]]
             # print("normalized_qpos: ", normalized_qpos)
@@ -116,7 +123,8 @@ class MotionUtils:
         
         return obs, info, total_collisions, reached_singularity
 
-    def move_primitive(self, action, episode_memory=None, ik_test=True, save_data=False):
+    def move_primitive(self, action, episode_memory=None, ik_test=True, save_data=False, check_grasp=False):
+        print("action: ", action[3:9])
         # # save data for test set
         # if save_data:
         #     episode_memory = Memory()
@@ -131,7 +139,8 @@ class MotionUtils:
         
         delta_pos = action[3:6]
         delta_orn = action[6:9]
-        grasp_action = action[9]
+        # negating the action here for the robotiq gripper as -1 is open and 1 is close
+        grasp_action = -action[9]
         
         target_pos = current_pos + delta_pos
         target_pos = target_pos.type(th.FloatTensor)
@@ -147,13 +156,14 @@ class MotionUtils:
         #     safe = False
         #     return None, None, 0, safe
         
-        obs, info, total_collisions1, reached_singularity1 = self.execute_controller(self.action_primitives._move_hand_direct_ik(target_pose,
+        action_exec_1 = self.execute_controller(self.action_primitives._move_hand_direct_ik(target_pose,
                                                                                 stop_on_contact=False,
                                                                                 ignore_failure=True,
                                                                                 stop_if_stuck=False,
                                                                                 in_world_frame=False), 
                                                                         grasp_action, 
-                                                                        episode_memory)  
+                                                                        episode_memory,
+                                                                        check_grasp=check_grasp)  
 
         # obtain target pose2d
         current_base_pos, current_base_orn_quat = self.robot.get_position_orientation()
@@ -172,22 +182,24 @@ class MotionUtils:
         target_base_pos = current_base_pos + th.tensor([delta_base_pos[0], delta_base_pos[1], 0.0])
         target_base_yaw = current_base_yaw + delta_base_yaw
         target_pose2d = th.tensor([target_base_pos[0], target_base_pos[1], target_base_yaw])
-        obs, info, total_collisions2, reached_singularity2 = self.execute_controller(self.action_primitives._navigate_to_pose_direct(target_pose2d), 
+        action_exec_2 = self.execute_controller(self.action_primitives._navigate_to_pose_direct(target_pose2d), 
                         grasp_action, 
-                        episode_memory)
+                        episode_memory,
+                        check_grasp=check_grasp)
 
 
         # Hack to ensure that even if primitive does not return any action (if delta pose is 0), grasp action is performed
         action = self.action_primitives._empty_action()
-        obs, info, total_collisions3, reached_singularity3 = self.execute_controller([action], 
+        action_exec_3 = self.execute_controller([action], 
                         grasp_action, 
-                        episode_memory)
+                        episode_memory,
+                        check_grasp=check_grasp)
 
-        total_collisions = max(total_collisions1, total_collisions2, total_collisions3)
-        reached_singularity = reached_singularity1 or reached_singularity2 or reached_singularity3
-        print("total_collisions: ", total_collisions)
+        # total_collisions = max(total_collisions1, total_collisions2, total_collisions3)
+        # reached_singularity = reached_singularity1 or reached_singularity2 or reached_singularity3
+        # print("total_collisions: ", total_collisions)
 
-        for _ in range(50):
+        for _ in range(10):
             og.sim.step()
 
         ee_pose_after = self.robot.get_relative_eef_pose(arm='right')
@@ -196,10 +208,10 @@ class MotionUtils:
         orn_error = orn_error % (2*th.pi)
         print(f"==== Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees ====")
 
-        pos_thresh = 0.02
-        ori_thresh = 0.1
-        if pos_error > 0.05 or orn_error > 0.2:
-            incorrect_control = True
+        # pos_thresh = 0.02
+        # ori_thresh = 0.1
+        # if pos_error > 0.05 or orn_error > 0.2:
+        #     incorrect_control = True
 
         # # save data for test set
         # if save_data:
@@ -211,7 +223,7 @@ class MotionUtils:
         #         episode_memory.dump(f'{save_folder}/dataset.hdf5')
         #     del episode_memory
 
-        return obs, info, total_collisions, incorrect_control, reached_singularity
+        return action_exec_1
 
     def first_primitive(self, primitive_steps_to_perform, episode_memory=None, grasp_mode="vertical"):
 
@@ -370,7 +382,7 @@ class MotionUtils:
         for _ in range(10):
             og.sim.step()
 
-    def safe(self, action, use_hack=False, collision_failure_model=None, grasp_failure_model=None, grasp_mode=None, save_data=True, grasp_failure_model_threshold=0.5):
+    def act(self, action, use_hack=False, collision_failure_model=None, grasp_failure_model=None, grasp_mode=None, save_data=True, grasp_failure_model_threshold=0.5):
         safe = True
         unsafe_reasons = []
         prev_state = og.sim.dump_state()
@@ -378,31 +390,28 @@ class MotionUtils:
         if box is not None:
             obj_in_hand_pos_before = box.get_position_orientation()[0]
 
-        # Using model to check for collisions ------
-        obs, obs_info = self.env.get_obs()
-        if collision_failure_model is not None:
-            if grasp_mode == "vertical":
-                threshold = 0.0
-            elif grasp_mode == "horizontal":
-                threshold = 0.05
-            check_collision = collision_failure_model.check_collision(obs, obs_info, action, self.env.robots[0].name, threshold=threshold)
-            if check_collision == 1.0:
-                safe = False
-                unsafe_reasons.append("Model says will collide") 
-                return safe
+        # # Using model to check for collisions ------
+        # obs, obs_info = self.env.get_obs()
+        # if collision_failure_model is not None:
+        #     threshold = 0.5
+        #     check_collision = collision_failure_model.check_collision(obs, obs_info, action, self.env.robots[0].name, threshold=threshold)
+        #     if check_collision == 1.0:
+        #         safe = False
+        #         unsafe_reasons.append("Model says will collide") 
+        #         return safe
             
-        if grasp_failure_model is not None:
-            check_grasp = grasp_failure_model.check_grasp(obs, obs_info, action, self.env.robots[0].name, threshold=grasp_failure_model_threshold)
-            if check_grasp == 0.0:
-                safe = False
-                unsafe_reasons.append("Model says will lose grasp") 
-                return safe
-        # --------------------------------
+        # if grasp_failure_model is not None:
+        #     check_grasp = grasp_failure_model.check_grasp(obs, obs_info, action, self.env.robots[0].name, threshold=grasp_failure_model_threshold)
+        #     if check_grasp == 0.0:
+        #         safe = False
+        #         unsafe_reasons.append("Model says will lose grasp") 
+        #         return safe
+        # # --------------------------------
         
         
         # remove later
         # action[3:6] = th.tensor([-0.1, -0.15, 0.0])
-        _, _, total_collisions, incorrect_control, reached_singularity = self.move_primitive(action, save_data=save_data)
+        action_exec = self.move_primitive(action, save_data=save_data, check_grasp=True)
 
         if use_hack:
             self.robot.set_joint_positions(positions=th.tensor([0.045, 0.045]), indices=self.robot.gripper_control_idx['right'])
@@ -423,10 +432,10 @@ class MotionUtils:
             # if abs(gripper_pos[0] - 0.045) > 0.01 or abs(gripper_pos[1] - 0.045) > 0.01:
                 # input("GRIPPER DID NOT OPEN!!. Press enter to continue")
         
-        delta_pos_z = 0.0
-        if box is not None:
-            obj_in_hand_pos_after = box.get_position_orientation()[0]
-            delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 
+        # delta_pos_z = 0.0
+        # if box is not None:
+        #     obj_in_hand_pos_after = box.get_position_orientation()[0]
+        #     delta_pos_z = abs(obj_in_hand_pos_before[2] - obj_in_hand_pos_after[2]) 
 
         # Checking if near joint limits
         # normalized_qpos = self.robot.get_joint_positions(normalized=True)[self.robot.arm_control_idx["right"]]
@@ -438,10 +447,10 @@ class MotionUtils:
         #     safe = False
         #     unsafe_reasons.append("Reaching some joint limit") 
 
-        # object dropped (unsafe)
-        if delta_pos_z > 0.35:
-            safe = False 
-            unsafe_reasons.append("Will drop object") 
+        # # object dropped (unsafe)
+        # if delta_pos_z > 0.35:
+        #     safe = False 
+        #     unsafe_reasons.append("Will drop object") 
 
         # # collisions
         # if total_collisions > 5:
@@ -452,25 +461,25 @@ class MotionUtils:
         #     print("In reality, no collisions")
         # # breakpoint()
         
-        # singularities. Need to do this as using IK solver to test if a target pose is reachable is not working well.
-        if reached_singularity:
-            safe = False
-            unsafe_reasons.append("Will reach singularity") 
+        # # singularities. Need to do this as using IK solver to test if a target pose is reachable is not working well.
+        # if reached_singularity:
+        #     safe = False
+        #     unsafe_reasons.append("Will reach singularity") 
 
-        if incorrect_control:
-            safe = False
-            unsafe_reasons.append("Will lead to incorrect control (Let's skip this action).") 
+        # if incorrect_control:
+        #     safe = False
+        #     unsafe_reasons.append("Will lead to incorrect control (Let's skip this action).") 
 
 
-        print("is this action safe? ", safe, unsafe_reasons)
-        if not safe:
-            # Hack to make sure that load_state will work. I think there is an issue in using og.sim.load_state() when there are weird collisions
-            self.robot.set_position_orientation(position=th.tensor([-2.0, 0.0, 0.0]))
-            og.sim.load_state(prev_state)
-            for _ in range(30):
-                og.sim.step()
-            print("Reset state via og.sim.load_state()")
-            # breakpoint()
+        # print("is this action safe? ", safe, unsafe_reasons)
+        # if not safe:
+        #     # Hack to make sure that load_state will work. I think there is an issue in using og.sim.load_state() when there are weird collisions
+        #     self.robot.set_position_orientation(position=th.tensor([-2.0, 0.0, 0.0]))
+        #     og.sim.load_state(prev_state)
+        #     for _ in range(30):
+        #         og.sim.step()
+        #     print("Reset state via og.sim.load_state()")
+        #     # breakpoint()
         
         # input()
-        return safe
+        return action_exec

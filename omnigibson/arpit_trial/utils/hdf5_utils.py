@@ -117,7 +117,7 @@ def main():
     # file = h5py.File(hdf5_file, 'a')
     # modify_dataset_in_hdf5_file(file)
     # reame_ep_and_merge_hdf5('/home/arpit/test_projects/OmniGibson/place_in_shelf_data_test_expl/dataset.hdf5', '/home/arpit/test_projects/OmniGibson/place_in_shelf_data_test_expl/dataset2.hdf5')
-    partition_dataset_train_valid('/home/arpit/projects/OmniGibson/open_drawer/dataset.hdf5')
+    partition_dataset_train_valid('/home/arpit/projects/OmniGibson/open_cabinet/dataset.hdf5')
 
 if __name__ == "__main__":
     main()

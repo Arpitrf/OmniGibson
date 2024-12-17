@@ -29,7 +29,7 @@ from omnigibson.action_primitives.action_primitive_set_base import (
     ActionPrimitiveErrorGroup,
     BaseActionPrimitiveSet,
 )
-from omnigibson.controllers import DifferentialDriveController, InverseKinematicsController, JointController
+from omnigibson.controllers import DifferentialDriveController, InverseKinematicsController, JointController, OperationalSpaceController
 from omnigibson.controllers.controller_base import ControlType
 from omnigibson.macros import create_module_macros
 from omnigibson.objects.object_base import BaseObject
@@ -80,8 +80,9 @@ m.KP_ANGLE_VEL = {
 
 m.MAX_STEPS_FOR_SETTLING = 500
 
-# m.MAX_CARTESIAN_HAND_STEP = 0.05
-m.MAX_CARTESIAN_HAND_STEP = 0.12 # was 0.15
+m.MAX_CARTESIAN_HAND_STEP = 0.05
+# m.MAX_CARTESIAN_HAND_STEP = 0.12 # was 0.15
+# m.MAX_CARTESIAN_HAND_STEP = 0.07 # was 0.15
 m.MAX_STEPS_FOR_HAND_MOVE_JOINT = 500
 # m.MAX_STEPS_FOR_HAND_MOVE_IK = 200
 m.MAX_STEPS_FOR_HAND_MOVE_IK = 100
@@ -340,7 +341,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 eef = f"eef_{arm_name}"
                 arm = f"arm_{arm_name}"
                 arm_ctrl = self.robot.controllers[arm]
-                if isinstance(arm_ctrl, InverseKinematicsController):
+                if isinstance(arm_ctrl, InverseKinematicsController) or isinstance(arm_ctrl, OperationalSpaceController):
                     pos_relative = control_dict[f"{eef}_pos_relative"]
                     quat_relative = control_dict[f"{eef}_quat_relative"]
                     quat_relative_axis_angle = T.quat2axisangle(quat_relative)
@@ -1161,7 +1162,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         target_pose,
         stop_on_contact=False,
         ignore_failure=False,
-        pos_thresh=0.02,
+        pos_thresh=0.01,
         ori_thresh=0.1,
         in_world_frame=True,
         stop_if_stuck=False,
@@ -1188,7 +1189,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # make sure controller is InverseKinematicsController and in expected mode
         controller_config = self.robot._controller_config["arm_" + self.arm]
         assert (
-            controller_config["name"] == "InverseKinematicsController"
+            controller_config["name"] == "InverseKinematicsController" or controller_config["name"] == "OperationalSpaceController"
         ), "Controller must be InverseKinematicsController"
         assert controller_config["mode"] == "pose_absolute_ori" or controller_config["mode"] == "pose_delta_ori", "Controller must be in pose_absolute_ori mode"
         if in_world_frame:
@@ -1199,6 +1200,15 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         action = th.zeros(self.robot.action_dim)
         control_idx = self.robot.controller_action_idx["arm_" + self.arm]
         prev_pos = prev_orn = None
+
+        # # visualize marker
+        # eef_marker = self.env.scene.object_registry("name", "marker")
+        # curr_robot_pos_world, curr_robot_orn_world = self.robot.get_position_orientation()
+        # curr_robot_pose_world = th.eye(4)
+        # curr_robot_pose_world[:3, :3] = th.tensor(Rotation.from_quat(curr_robot_orn_world).as_matrix())
+        # curr_robot_pose_world[:3, 3] = curr_robot_pos_world
+        # target_pos_world = curr_robot_pose_world @ th.tensor([*target_pos, 1])
+        # eef_marker.set_position_orientation(position=target_pos_world[:3])
 
         # All we need to do here is save the target IK position so that empty action takes us towards it
         controller_name = f"arm_{self.arm}"
@@ -1312,7 +1322,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         # quat_waypoints = [th.tensor([-0.0132,  0.0361,  0.6506,  0.7584])] * len(pos_waypoints)
 
         controller_config = self.robot._controller_config["arm_" + self.arm]
-        if controller_config["name"] == "InverseKinematicsController":
+        if controller_config["name"] == "InverseKinematicsController" or controller_config["name"] == "OperationalSpaceController":
             waypoints = list(zip(pos_waypoints, quat_waypoints))
 
             for i, waypoint in enumerate(waypoints):
@@ -1351,7 +1361,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
                 else:
                     yield from self._move_hand_direct_ik(
                         waypoints[-1],
-                        pos_thresh=0.02,
+                        pos_thresh=0.01,
                         ori_thresh=0.1,
                         stop_on_contact=stop_on_contact,
                         ignore_failure=ignore_failure,
@@ -1558,7 +1568,7 @@ class StarterSemanticActionPrimitives(BaseActionPrimitiveSet):
         for name, controller in self.robot._controllers.items():
             # if desired arm targets are available, generate an action that moves the arms to the saved pose targets
             if name in self._arm_targets:
-                if isinstance(controller, InverseKinematicsController):
+                if isinstance(controller, InverseKinematicsController) or isinstance(controller, OperationalSpaceController):
                     arm = name.replace("arm_", "")
                     target_pos, target_orn_axisangle = self._arm_targets[name]
                     current_pos, current_orn = self._get_pose_in_robot_frame(
