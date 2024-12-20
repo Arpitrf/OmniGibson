@@ -171,7 +171,6 @@ def generate_point_cloud_from_depth(depth_image, intrinsic_matrix, mask, extrins
     # print("Unique points in point_cloud: ", unique_points.shape)
     point_cloud = random_point_dropout(point_cloud, fraction_to_keep=0.3)
     print("point_cloud: ", np.array(point_cloud.points).shape)
-    breakpoint()
 
     return point_cloud
 
@@ -223,7 +222,7 @@ def get_seg_instance_info(ep, hdf5_file):
         # print("222: ", seg_instance.shape)
     return seg_instance
 
-def get_pcd(ep, hdf5_file, waypoint=-1):
+def get_pcd(ep, hdf5_file, waypoint=-1, obj_name=None):
     depth = hdf5_file[f"data/{ep}/observations/depth"][waypoint:]
     intr =  np.array([
         [103.8416,   0.0000,  64.0000],
@@ -256,11 +255,11 @@ def get_pcd(ep, hdf5_file, waypoint=-1):
         for row in seg_instance_info[seq_num]:
             sem_id, class_name = int(row[0]), row[1]
             # Change here
-            if class_name == 'box':
+            if class_name == obj_name:
                 obj_id = sem_id
                 break
 
-        # breakpoint()
+        breakpoint()
         if obj_id != -1:
             mask = np.zeros_like(depth[seq_num])
             # Change here
@@ -292,8 +291,10 @@ def set_all_seeds(seed):
 def main():
     set_all_seeds(seed=0)
     hdf5_file = h5py.File("/home/arpit/projects/OmniGibson/place_in_shelf_temp/dataset.hdf5", "r")
-    ep = "episode_00000"
-    test_cloud_with_normals = get_pcd(ep=ep, hdf5_file=hdf5_file)
+    ep = "episode_00001"
+    # obj_name = "box"
+    obj_name = "can_of_baking_mix"
+    test_cloud_with_normals = get_pcd(ep=ep, hdf5_file=hdf5_file, obj_name=obj_name)
     num_samples = len(test_cloud_with_normals.points)
     print("num_samples: ", num_samples)
     

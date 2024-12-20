@@ -174,9 +174,20 @@ def visualize_trajectories(actions, start_position, ax=None, color='r', ep=0, gr
 
 import h5py
 import numpy as np
-with h5py.File("/home/arpit/projects/OmniGibson/open_cabinet/dataset.hdf5", "r") as f:
+with h5py.File("/home/arpit/projects/OmniGibson/place_in_shelf_temp/dataset.hdf5", "r") as f:
     print(len(f["data"].keys()))
-    # breakpoint()
+    breakpoint()
+    ep = "episode_00001"
+    fig, ax = plt.subplots(2,2)
+    seg_semantic = f[f'data/{ep}/observations/seg_semantic']
+    seg_instance = f[f'data/{ep}/observations/seg_instance']
+    seg_instance_id = f[f'data/{ep}/observations/seg_instance_id']
+    rgb = f[f'data/{ep}/observations/rgb']
+    ax[0, 0].imshow(rgb[-1, :, :, :3])
+    ax[0, 1].imshow(seg_semantic[-1])
+    ax[1, 0].imshow(seg_instance[-1])
+    ax[1, 1].imshow(seg_instance_id[-1])
+    plt.show()
     # img = np.array(f["data/episode_01007/observations/rgb"])[0][:, :, :3]
     # plt.imshow(img)
     # plt.show()
@@ -189,23 +200,23 @@ with h5py.File("/home/arpit/projects/OmniGibson/open_cabinet/dataset.hdf5", "r")
     # print("grasp: ", np.array(f["data/episode_00003/extras/grasps"]).shape)
     # show_vectors(f)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    for i in range(len(f["data"])):
-        if i > 10:
-            break
-        print("Episode: ", i)
-        print("len(actions), len(obs): ", np.array(f[f"data/episode_{i:05d}/actions/actions"]).shape, np.array(f[f"data/episode_{i:05d}/observations/rgb"]).shape)
-        print("grasps: ", np.array(f[f"data/episode_{i:05d}/extras/grasps"]))
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # for i in range(len(f["data"])):
+    #     if i > 10:
+    #         break
+    #     print("Episode: ", i)
+    #     print("len(actions), len(obs): ", np.array(f[f"data/episode_{i:05d}/actions/actions"]).shape, np.array(f[f"data/episode_{i:05d}/observations/rgb"]).shape)
+    #     print("grasps: ", np.array(f[f"data/episode_{i:05d}/extras/grasps"]))
 
-        if len(np.array(f[f"data/episode_{i:05d}/actions/actions"])) == 0:
-            continue
-        # print("actions: ",  np.array(f[f"data/episode_{i:05d}/actions/actions"])[:, 3:6])
-        action_traj = np.array(f[f"data/episode_{i:05d}/actions/actions"])
-        grasp_vector = np.array(f[f"data/episode_{i:05d}/extras/grasp_label"])
-        base_orn = np.array(f[f"data/episode_{i:05d}/proprioceptions/base_orn"])[0]
-        visualize_trajectories(action_traj[None, ...], np.array([0.0, 0.0, 0.0]), ax=ax, ep=i, grasp_vector=grasp_vector, base_orn=base_orn)
-    plt.show()
+    #     if len(np.array(f[f"data/episode_{i:05d}/actions/actions"])) == 0:
+    #         continue
+    #     # print("actions: ",  np.array(f[f"data/episode_{i:05d}/actions/actions"])[:, 3:6])
+    #     action_traj = np.array(f[f"data/episode_{i:05d}/actions/actions"])
+    #     grasp_vector = np.array(f[f"data/episode_{i:05d}/extras/grasp_label"])
+    #     base_orn = np.array(f[f"data/episode_{i:05d}/proprioceptions/base_orn"])[0]
+    #     visualize_trajectories(action_traj[None, ...], np.array([0.0, 0.0, 0.0]), ax=ax, ep=i, grasp_vector=grasp_vector, base_orn=base_orn)
+    # plt.show()
 
     # total_actions = 0
     # grasps = 0

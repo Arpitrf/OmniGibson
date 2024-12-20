@@ -22,6 +22,37 @@ from omnigibson.arpit_trial.utils.memory import Memory
 from omnigibson.objects import PrimitiveObject
 from omnigibson.utils.python_utils import nums2array
 
+def closest_rotation_matrix(current_rotation, target_rotation):
+    """
+    Finds the closer rotation matrix (between target and its Z-axis symmetric equivalent) to the current rotation.
+    
+    Args:
+        current_rotation (np.ndarray): Current 3x3 rotation matrix (R_current).
+        target_rotation (np.ndarray): Target 3x3 rotation matrix (R_target).
+    
+    Returns:
+        np.ndarray: The closer rotation matrix to the current rotation.
+    """
+    # Define the 180-degree rotation about the Z-axis
+    R_z_180 = np.array([
+        [-1,  0,  0],
+        [ 0, -1,  0],
+        [ 0,  0,  1]
+    ])
+    
+    # Compute the symmetric equivalent of the target rotation
+    flipped_rotation = target_rotation @ R_z_180
+
+    # Compute the Frobenius norm distances
+    distance_to_target = np.linalg.norm(current_rotation - target_rotation, ord='fro')
+    distance_to_flipped = np.linalg.norm(current_rotation - flipped_rotation, ord='fro')
+    
+    # Choose the closer rotation matrix
+    if distance_to_target <= distance_to_flipped:
+        return target_rotation
+    else:
+        return flipped_rotation
+
 
 def set_extrinsic_matrix(robot, camera_link="xtion_link"):
     # Alternative approach using robot's built-in methods
@@ -126,6 +157,7 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
 
 def visualize_axes(target_pose):
     robot_pos, robot_orn = robot.get_position_orientation()
+    robot_orn = robot_orn.numpy()
     robot_pose_world = np.eye(4)
     robot_pose_world[:3, :3] = R.from_quat(robot_orn).as_matrix()
     robot_pose_world[:3, 3] = robot_pos
@@ -152,17 +184,18 @@ def visualize_axes(target_pose):
     #     og.sim.step()
 
 
+    start_pos = robot_pos.numpy() + np.array([0.2, 0.0, 0.2])
     vector_x_base = robot_orn_matrix @ vector_x
     vector_y_base = robot_orn_matrix @ vector_y
     vector_z_base = robot_orn_matrix @ vector_z
-    # end_x = eef_pos + vector_x
-    # end_y = eef_pos + vector_y
-    # end_z = eef_pos + vector_z
-    # draw_line(start_x, end_x, color=(1.0, 0.0, 0.0, 1.0))
-    # draw_line(start_y, end_y, color=(0.0, 1.0, 0.0, 1.0))
-    # draw_line(start_z, end_z, color=(0.0, 0.0, 1.0, 1.0))
-    # for _ in range(10):
-    #     og.sim.step()
+    end_x = start_pos + vector_x_base
+    end_y = start_pos + vector_y_base
+    end_z = start_pos + vector_z_base
+    draw_line(start_pos, end_x, color=(1.0, 0.0, 0.0, 1.0))
+    draw_line(start_pos, end_y, color=(0.0, 1.0, 0.0, 1.0))
+    draw_line(start_pos, end_z, color=(0.0, 0.0, 1.0, 1.0))
+    for _ in range(10):
+        og.sim.step()
 
     _ , eef_orn = robot.get_relative_eef_pose(arm='right')
     eef_orn = eef_orn.numpy()
@@ -197,8 +230,7 @@ def visualize_axes(target_pose):
     for _ in range(10):
         og.sim.step()
 
-    
-    # breakpoint()
+    breakpoint()
 
 def primitive(episode_memory=None, episode_number=0):
 
@@ -217,64 +249,72 @@ def primitive(episode_memory=None, episode_number=0):
     print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
     # =================================================================================
     
-    # ======================= Move hand to grasp pose ================================    
-    # # horizontal
-    # target_pose = th.tensor([
-    #     [ 0.09966776,  0.05407733, -0.99355019,  0.14776738],
-    #     [ 0.99490699,  0.00968409,  0.10033096,  0.52168679],
-    #     [ 0.01504726, -0.99848979, -0.05283672,  0.40618559],
-    #     [ 0.        ,  0.,          0.,          0.        ],
-    # ]) 
-    # horizontal-forward
-    target_pose = th.tensor([
-        [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
-        [ 0.81670615,  0.02154281,  0.57665151,  0.46947819],
-        [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
-        [ 0.        ,  0.,          0.,          0.        ]
-    ])
-    # vertical
-    # w.r.t robot
-    # target_pose = (th.tensor([ 0.4946, -0.1072,  0.4705]), th.tensor([0.0354, 0.9991, 0.0150, 0.0194]))
-    # # w.r.t object
-    # target_pose = th.tensor([
-    #     [-0.00698751, -0.99389619, -0.00377233,  0.06223419],
-    #     [-0.81544803,  0.06576812,  0.17366531,  0.34058464],
-    #     [ 0.10651827,  0.05080827, -0.89261549,  0.3468574 ],
-    #     [-0.36592966, -0.04666542, -0.26758584,  0.31398208],
-    # ])
-    # w.r.t world
-    # target_pose = th.tensor([
-    #     [-0.04365513, -0.998603,   -0.02977036,  0.09332833],
-    #     [-0.99833373,  0.04247905,  0.039055,    0.49790302],
-    #     [-0.03773583,  0.0314257,  -0.99879349,  0.47100371],
-    #     [ 0.        ,  0.,          0.,          0.        ],
-    # ])
+    # # ======================= Move hand to grasp pose ================================    
+    # in_world_frame = True
+    # # # horizontal
+    # # target_pose = th.tensor([
+    # #     [ 0.09966776,  0.05407733, -0.99355019,  0.14776738],
+    # #     [ 0.99490699,  0.00968409,  0.10033096,  0.52168679],
+    # #     [ 0.01504726, -0.99848979, -0.05283672,  0.40618559],
+    # #     [ 0.        ,  0.,          0.,          0.        ],
+    # # ]) 
+    # # # horizontal-forward
+    # # target_pose = th.tensor([
+    # #     [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
+    # #     [ 0.81670615,  0.02154281,  0.57665151,  0.46947819],
+    # #     [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
+    # #     [ 0.        ,  0.,          0.,          0.        ]
+    # # ])
+    # # vertical
+    # # w.r.t robot
+    # # target_pose = (th.tensor([ 0.4946, -0.1072,  0.4705]), th.tensor([0.0354, 0.9991, 0.0150, 0.0194]))
+    # # # w.r.t object
+    # # target_pose = th.tensor([
+    # #     [-0.00698751, -0.99389619, -0.00377233,  0.06223419],
+    # #     [-0.81544803,  0.06576812,  0.17366531,  0.34058464],
+    # #     [ 0.10651827,  0.05080827, -0.89261549,  0.3468574 ],
+    # #     [-0.36592966, -0.04666542, -0.26758584,  0.31398208],
+    # # ])
+    # # w.r.t world
+    # # target_pose = th.tensor([
+    # #     [-0.04365513, -0.998603,   -0.02977036,  0.09332833],
+    # #     [-0.99833373,  0.04247905,  0.039055,    0.49790302],
+    # #     [-0.03773583,  0.0314257,  -0.99879349,  0.47100371],
+    # #     [ 0.        ,  0.,          0.,          0.        ],
+    # # ])
     
-    target_pose = T.mat2pose(target_pose)
-
-    # # pan
-    # target_pose = th.tensor([
-    #     [ 0.27262547,  0.83505312, -0.47787198,  0.35828257],
-    #     [ 0.31803698,  0.39054868,  0.86390057,  0.49818253],
-    #     [ 0.90803515, -0.38750226, -0.15910426,  0.42454916],
-    #     [ 0.        ,  0.,          0.,          0.        ],
-    # ])
-    # target_pose = T.mat2pose(target_pose)
+    # # # pan
+    # # target_pose = th.tensor([
+    # #     [ 0.27262547,  0.83505312, -0.47787198,  0.35828257],
+    # #     [ 0.31803698,  0.39054868,  0.86390057,  0.49818253],
+    # #     [ 0.90803515, -0.38750226, -0.15910426,  0.42454916],
+    # #     [ 0.        ,  0.,          0.,          0.        ],
+    # # ])
 
     # # ============== testing grasp proposals =================
-    # # target_pose = th.tensor([
-    # #     [-0.4468734 , -0.52620034,  0.72347589,  0.47257765],
-    # #     [-0.8589831 ,  0.02647212, -0.51131913, -0.0587346 ],
-    # #     [ 0.24990436, -0.84994848, -0.46382689,  0.40966497],
-    # #     [ 0.        ,  0.,          0.,          1.        ],
-    # # ])
-    # # top-dowwn grasp
+    # in_world_frame = False
+    # # front grasp
     # target_pose = th.tensor([
-    #     [ 0.99039808, -0.06790785,  0.1204166,   0.49365888],
-    #     [-0.03961837, -0.97392494, -0.2233844,  -0.08623638],
-    #     [ 0.13244629,  0.21646877, -0.9672638,   0.43154755],
+    #     [-0.03274728, -0.0103593,   0.99940998,  0.47657597],
+    #     [ 0.8297006 , -0.55779813,  0.02140467, -0.11761491],
+    #     [ 0.55724727,  0.82991201,  0.02686149,  0.37909019],
     #     [ 0.        ,  0.,          0.,          1.        ]
     # ])
+    # # # top-dowwn grasp
+    # # target_pose = th.tensor([
+    # #     [ 0.99039808, -0.06790785,  0.1204166,   0.49365888],
+    # #     [-0.03961837, -0.97392494, -0.2233844,  -0.08623638],
+    # #     [ 0.13244629,  0.21646877, -0.9672638,   0.43154755],
+    # #     [ 0.        ,  0.,          0.,          1.        ]
+    # # ])
+    # # manually testing a side grasp
+    # # target_pose = th.tensor([
+    # #     [1, 0, 0,  0.5],
+    # #     [0, 0, 1, -0.1],
+    # #     [0, -1, 0,  0.5],
+    # #     [0, 0, 0,  1.0],
+    # # ])
+
     # robotiq_eef_to_grasp_proposals = th.tensor([
     #     [-1, 0, 0, 0.0],
     #     [0, -1, 0, 0.0],
@@ -283,155 +323,166 @@ def primitive(episode_memory=None, episode_number=0):
     # ])
     # target_pose = target_pose @ robotiq_eef_to_grasp_proposals
     # target_pose = T.mat2pose(target_pose)
-    # visualize_axes(target_pose)
-    # # =======================================================
 
-    pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
-    execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=True), 
-                       env, 
-                       robot, 
-                       grasp_action, 
-                       episode_memory) 
+    # # Find the closer target orientation
+    # _, eef_orn = robot.eef_links["right"].get_position_orientation()
+    # R_current = R.from_quat(eef_orn.numpy()).as_matrix()
+    # R_target = R.from_quat(target_pose[1].numpy()).as_matrix()
+    # closer_rotation = closest_rotation_matrix(R_current, R_target)
+    # # breakpoint()
+    # target_pose = (target_pose[0], th.tensor(R.from_matrix(closer_rotation).as_quat(), dtype=th.float32))
+    # # remove later
+    # # target_pose = (th.tensor([0.5, -0.2, 0.5], dtype=th.float32), target_pose[1])
+    # # FIXME: the visualization is not correct
+    # # visualize_axes(target_pose)
+    # # # =======================================================
 
-    execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=True), 
-                       env, 
-                       robot, 
-                       grasp_action, 
-                       episode_memory) 
-    for _ in range(40):
-        og.sim.step()
-    
-    # Debugging
-    # post_eef_pose = robot.get_relative_eef_pose(arm='right')
-    post_eef_pose = robot.eef_links["right"].get_position_orientation()
-    pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
-    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
-    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # =================================================================================
+    # # pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
+    # # execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
+    # #                    env, 
+    # #                    robot, 
+    # #                    grasp_action, 
+    # #                    episode_memory) 
 
-    # ============= Perform grasp ===================
-    grasp_action = 1.0
-    action = action_primitives._empty_action()
-    action[robot.gripper_action_idx["right"]] = grasp_action
-    env.step(action)
-    for _ in range(100):
-        og.sim.step()
-    # save everything to memory
-    dump_to_memory(env, robot, episode_memory)
-    # TODO: Change the indexing here
-    action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
-    episode_memory.add_action('actions', action_to_add)
-    # ==============================================
-        
-    # ======================= Move hand up ================================  
-    curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-    new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
-    target_pose = (new_pos, curr_orn)
-    execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=False), 
-                       env, 
-                       robot, 
-                       grasp_action, 
-                       episode_memory)
-    
-    for _ in range(40):
-        og.sim.step()
-    
-    # Debugging
-    post_eef_pose = robot.get_relative_eef_pose(arm='right')
-    pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
-    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
-    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-
-    # curr_pos, curr_orn = robot.eef_links["right"].get_position_orientation()
-    # new_orn = np.array([
-    #     [ 0.57506982,  0.05240871, -0.81642393],
-    #     [ 0.81670615,  0.02154281,  0.57665151],
-    #     [ 0.04780963, -0.99839333, -0.03041389],
-    # ])
-    # new_orn = R.from_matrix(new_orn).as_quat()
-    # target_pose = (curr_pos, th.tensor(new_orn, dtype=th.float32))
-    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=True), 
+    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
     #                    env, 
     #                    robot, 
     #                    grasp_action, 
-    #                    episode_memory)
+    #                    episode_memory) 
     # for _ in range(40):
     #     og.sim.step()
+    
     # # Debugging
+    # # post_eef_pose = robot.get_relative_eef_pose(arm='right')
     # post_eef_pose = robot.eef_links["right"].get_position_orientation()
     # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
     # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
     # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # =================================================================================
+    # # =================================================================================
 
-    # breakpoint()
-
-    # ============= Move base ===================
-    # debugging
-    ee_pose_before_nav = robot.get_relative_eef_pose(arm='right')
-    # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
-    target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
-    execute_controller(action_primitives._navigate_to_pose_direct(target_base_pose),
-                       env, 
-                       robot, 
-                       grasp_action, 
-                       episode_memory)    
-    for _ in range(50):
-        og.sim.step()
-    curr_base_pos = robot.get_position_orientation()[0]
-    print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
-    
-    # Debugging
-    ee_pose_after_nav = robot.get_relative_eef_pose(arm='right')
-    pos_error = np.linalg.norm(ee_pose_after_nav[0] - ee_pose_before_nav[0])
-    orn_error = T.get_orientation_diff_in_radian(ee_pose_after_nav[1], ee_pose_before_nav[1])
-    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # ============================================
-    
-    # og.sim.save([f'place_in_shelf_start_state.json'])
-
-    # # ======================= Move hand to place pose ================================
-    # # w.r.t world
-    # # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.8563]), th.tensor([-0.0488, -0.0116,  0.5546,  0.8306])) # [ 1.1602, -0.1873,  0.8463]
-    # # w.r.t robot
-    # # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
-
-    # # for vertical
-    # # w.r.t world
+    # # ============= Perform grasp ===================
+    # grasp_action = 1.0
+    # action = action_primitives._empty_action()
+    # action[robot.gripper_action_idx["right"]] = grasp_action
+    # env.step(action)
+    # for _ in range(100):
+    #     og.sim.step()
+    # # save everything to memory
+    # dump_to_memory(env, robot, episode_memory)
+    # # TODO: Change the indexing here
+    # action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
+    # episode_memory.add_action('actions', action_to_add)
+    # # ==============================================
+        
+    # # ======================= Move hand up ================================  
     # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-    # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.9563]), curr_orn)
-    # execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=True, episode_memory=episode_memory, grasp_action=grasp_action), 
+    # new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
+    # target_pose = (new_pos, curr_orn)
+    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=False), 
     #                    env, 
     #                    robot, 
-    #                    grasp_action,
+    #                    grasp_action, 
     #                    episode_memory)
-    # # execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=True), 
+    
+    # for _ in range(40):
+    #     og.sim.step()
+    
+    # # Debugging
+    # post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+
+    # # curr_pos, curr_orn = robot.eef_links["right"].get_position_orientation()
+    # # new_orn = np.array([
+    # #     [ 0.57506982,  0.05240871, -0.81642393],
+    # #     [ 0.81670615,  0.02154281,  0.57665151],
+    # #     [ 0.04780963, -0.99839333, -0.03041389],
+    # # ])
+    # # new_orn = R.from_matrix(new_orn).as_quat()
+    # # target_pose = (curr_pos, th.tensor(new_orn, dtype=th.float32))
+    # # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=True), 
     # #                    env, 
     # #                    robot, 
-    # #                    grasp_action)
-    # # Debugging
-    # post_eef_pose = robot.eef_links["right"].get_position_orientation()
-    # pos_error = np.linalg.norm(post_eef_pose[0] - place_pose[0])
-    # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], place_pose[1])
-    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # # ====================================================================================
-
-    # ============= Open grasp =================
-    grasp_action = -1.0
-    action = action_primitives._empty_action()
-    action[robot.gripper_action_idx["right"]] = grasp_action
-    env.step(action)
-    for _ in range(40):
-        og.sim.step()
-    # save everything to memory
-    dump_to_memory(env, robot, episode_memory)
-    # TODO: Change the indexing here
-    action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
-    episode_memory.add_action('actions', action_to_add)
-    # ==========================================
-
-    # # for _ in range(50):
+    # #                    grasp_action, 
+    # #                    episode_memory)
+    # # for _ in range(40):
     # #     og.sim.step()
+    # # # Debugging
+    # # post_eef_pose = robot.eef_links["right"].get_position_orientation()
+    # # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    # # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    # # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # # =================================================================================
+
+    # # breakpoint()
+
+    # # ============= Move base ===================
+    # # debugging
+    # ee_pose_before_nav = robot.get_relative_eef_pose(arm='right')
+    # # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
+    # target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
+    # execute_controller(action_primitives._navigate_to_pose_direct(target_base_pose),
+    #                    env, 
+    #                    robot, 
+    #                    grasp_action, 
+    #                    episode_memory)    
+    # for _ in range(50):
+    #     og.sim.step()
+    # curr_base_pos = robot.get_position_orientation()[0]
+    # print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
+    
+    # # Debugging
+    # ee_pose_after_nav = robot.get_relative_eef_pose(arm='right')
+    # pos_error = np.linalg.norm(ee_pose_after_nav[0] - ee_pose_before_nav[0])
+    # orn_error = T.get_orientation_diff_in_radian(ee_pose_after_nav[1], ee_pose_before_nav[1])
+    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # # ============================================
+    
+    # # og.sim.save([f'place_in_shelf_start_state.json'])
+
+    # # # ======================= Move hand to place pose ================================
+    # # # w.r.t world
+    # # # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.8563]), th.tensor([-0.0488, -0.0116,  0.5546,  0.8306])) # [ 1.1602, -0.1873,  0.8463]
+    # # # w.r.t robot
+    # # # place_pose = (th.tensor([0.6458, -0.2320, 0.8481]), th.tensor([-0.0555, -0.0157, 0.5436, 0.8373]))
+
+    # # # for vertical
+    # # # w.r.t world
+    # # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+    # # place_pose =  (th.tensor([ 1.10402, -0.1873,  0.9563]), curr_orn)
+    # # execute_controller(action_primitives._move_hand_linearly_cartesian(place_pose, ignore_failure=True, in_world_frame=True, episode_memory=episode_memory, grasp_action=grasp_action), 
+    # #                    env, 
+    # #                    robot, 
+    # #                    grasp_action,
+    # #                    episode_memory)
+    # # # execute_controller(action_primitives._move_hand_direct_ik(place_pose, ignore_failure=True, in_world_frame=True), 
+    # # #                    env, 
+    # # #                    robot, 
+    # # #                    grasp_action)
+    # # # Debugging
+    # # post_eef_pose = robot.eef_links["right"].get_position_orientation()
+    # # pos_error = np.linalg.norm(post_eef_pose[0] - place_pose[0])
+    # # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], place_pose[1])
+    # # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # # # ====================================================================================
+
+    # # ============= Open grasp =================
+    # grasp_action = -1.0
+    # action = action_primitives._empty_action()
+    # action[robot.gripper_action_idx["right"]] = grasp_action
+    # env.step(action)
+    # for _ in range(40):
+    #     og.sim.step()
+    # # save everything to memory
+    # dump_to_memory(env, robot, episode_memory)
+    # # TODO: Change the indexing here
+    # action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
+    # episode_memory.add_action('actions', action_to_add)
+    # # ==========================================
+
+    # # # for _ in range(50):
+    # # #     og.sim.step()
 
 
 
@@ -473,27 +524,27 @@ config["objects"] = [
         "position": [0, 0.6, 0.3],
         "orientation": [0, 0, 0, 1]
     },
-    {
-        "type": "PrimitiveObject",
-        "name": "box",
-        "primitive_type": "Cube",
-        "rgba": [1.0, 0, 0, 1.0],
-        "scale": [0.1, 0.05, 0.1],
-        # "visual_only": True,
-        # "size": 0.05,
-        "mass": 1e-6,
-        "position": [0.1, 0.5, 0.5],
-        "orientation": box_quat
-    },
     # {
-    #     "type": "DatasetObject",
-    #     "name": "can_of_baking_mix",
-    #     "category": "can_of_baking_mix",
-    #     "model": "blrqqz", 
-    #     # "scale": [0.6, 0.6, 0.8],
+    #     "type": "PrimitiveObject",
+    #     "name": "box",
+    #     "primitive_type": "Cube",
+    #     "rgba": [1.0, 0, 0, 1.0],
+    #     "scale": [0.1, 0.05, 0.1],
+    #     # "visual_only": True,
+    #     # "size": 0.05,
+    #     "mass": 1e-6,
     #     "position": [0.1, 0.5, 0.5],
-    #     "orientation": [0, 0, 0, 1]
+    #     "orientation": box_quat
     # },
+    {
+        "type": "DatasetObject",
+        "name": "can_of_baking_mix",
+        "category": "can_of_baking_mix",
+        "model": "blrqqz", 
+        # "scale": [0.6, 0.6, 0.8],
+        "position": [0.1, 0.5, 0.5],
+        "orientation": [0, 0, 0, 1]
+    },
 ]
 
 env = og.Environment(configs=config)
@@ -523,8 +574,8 @@ og.sim.load_state(state)
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
 # pdb.set_trace()
-obj = env.scene.object_registry("name", "box")
-# obj = env.scene.object_registry("name", "can_of_baking_mix")
+# obj = env.scene.object_registry("name", "box")
+obj = env.scene.object_registry("name", "can_of_baking_mix")
 obj.root_link.mass = 1e-1
 shelf = env.scene.object_registry("name", "shelf")
 # shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
@@ -580,8 +631,7 @@ for _ in range(1):
     #     pickle.dump(arr, f)
 
     primitive(episode_memory, episode_number)
-
-    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
     # # save the end simulator state
     # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
