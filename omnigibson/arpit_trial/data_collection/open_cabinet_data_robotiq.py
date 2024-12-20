@@ -573,7 +573,7 @@ og.sim.viewer_camera.set_position_orientation(
 for _ in range(20):
     og.sim.step()
 
-save_folder = 'open_cabinet'
+save_folder = 'open_cabinet_temp'
 os.makedirs(save_folder, exist_ok=True)
 episode_memory = Memory()
 

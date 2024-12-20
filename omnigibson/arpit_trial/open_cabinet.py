@@ -24,6 +24,24 @@ from omnigibson.arpit_trial.utils.memory import Memory
 from omnigibson.utils.python_utils import nums2array
 from omnigibson.utils.ui_utils import KeyboardRobotController, draw_line, clear_debug_drawing
 
+def set_gripper_friction():
+    state = og.sim.dump_state()
+    og.sim.stop()
+    # Set friction
+    from omni.isaac.core.materials import PhysicsMaterial
+    gripper_mat = PhysicsMaterial(
+        prim_path=f"{robot.prim_path}/gripper_mat",
+        name="gripper_material",
+        static_friction=4.0,
+        dynamic_friction=4.0,
+        restitution=None,
+    )
+    for arm, links in robot.finger_links.items():
+        for link in links:
+            for msh in link.collision_meshes.values():
+                msh.apply_physics_material(gripper_mat)
+    og.sim.play()
+    og.sim.load_state(state)
 
 def move_primitive(robot, action_traj, episode_memory=None, writer=None):
     for action_wrt_world in action_traj:
@@ -236,7 +254,8 @@ def custom_reset(env, robot, episode_memory=None):
         og.sim.step()
 
     # add to memory
-    dump_to_memory(env, robot, episode_memory)
+    if episode_memory is not None:
+        dump_to_memory(env, robot, episode_memory)
 
 def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None, check_grasp=False, writer=None, log=False):
     global GLOBAL_TIMESTEP 
@@ -471,18 +490,23 @@ config["scene"]["type"] = "Scene"
 # robot specific config
 config["robots"][0]["default_arm_pose"] = "horizontal"
 config["robots"][0]["controller_config"]["arm_right"]["name"] = "InverseKinematicsController"
-config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
+config["robots"][0]["controller_config"]["arm_right"]["kp"] = 50.0
 config["robots"][0]["controller_config"]["gripper_right"]["motor_type"] = "velocity"
 
 # Create and load this object into the simulator
-rot_euler = [180.0, 0.0, -90.0]
+# Play with this 
+rot_euler = [0.0, 0.0, -90.0]
+# # for hivvdf (upside down)
+# rot_euler = [180.0, 0.0, -90.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
 obj_cfg = dict(
     type="DatasetObject",
     name="fridge",
     category="fridge",
-    model="hivvdf",
-    position=[1.5, -0.6, 1.0],
+    model="hzgqdn",
+    # Play with this 
+    position=[2.5, -0.6, 1.0],
+    # Play with this 
     # scale=[2.0, 1.0, 1.0],
     orientation=rot_quat,
     )
@@ -501,31 +525,9 @@ config["objects"] = [obj_cfg]
 env = og.Environment(configs=config)
 scene = env.scene
 robot = env.robots[0]
-
-state = og.sim.dump_state()
-og.sim.stop()
-# Set friction
-from omni.isaac.core.materials import PhysicsMaterial
-gripper_mat = PhysicsMaterial(
-    prim_path=f"{robot.prim_path}/gripper_mat",
-    name="gripper_material",
-    static_friction=4.0,
-    dynamic_friction=4.0,
-    restitution=None,
-)
-for arm, links in robot.finger_links.items():
-    for link in links:
-        for msh in link.collision_meshes.values():
-            msh.apply_physics_material(gripper_mat)
-og.sim.play()
-og.sim.load_state(state)
-
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-# pdb.set_trace()
-# obj = env.scene.object_registry("name", "box")
-# obj.root_link.mass = 1e-2
-# print("obj.mass: ", obj.mass)
+set_gripper_friction()
 
 # Set viewer camera
 og.sim.viewer_camera.set_position_orientation(
@@ -536,34 +538,34 @@ og.sim.viewer_camera.set_position_orientation(
 for _ in range(20):
     og.sim.step()
 
-save_folder = 'open_drawer'
-os.makedirs(save_folder, exist_ok=True)
-episode_memory = Memory()
+# if need to save episode to hdf5 file
+# save_folder = 'open_drawer'
+# os.makedirs(save_folder, exist_ok=True)
+# episode_memory = Memory()
+# episode_number = 0
+# if os.path.isfile(f'{save_folder}/dataset.hdf5'):
+#     with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
+#         episode_number = len(file['data'].keys())
+#         print("episode_number: ", episode_number)
 
-episode_number = 0
-if os.path.isfile(f'{save_folder}/dataset.hdf5'):
-    with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
-        episode_number = len(file['data'].keys())
-        print("episode_number: ", episode_number)
-
-# robot.controllers["arm_right"].kp[:3] = nums2array(nums=2000, dim=3, dtype=th.float32)
-# robot.controllers["arm_right"].kp[-3:] = nums2array(nums=5000, dim=3, dtype=th.float32)
-
+# Play with this
 # setting properties of the objects
 bottom_cabinet = env.scene.object_registry("name", "bottom_cabinet")
 if bottom_cabinet is not None:
     bottom_cabinet.root_link.mass = 50.0
+    object_name = "bottom_cabinet"
 fridge = env.scene.object_registry("name", "fridge")
 if fridge is not None:
+    object_name = "fridge"
     fridge.root_link.mass = 50.0
     fridge.links["link_0"].mass = 20.0
-    fridge.joints["j_link_0"].friction = 100.0
+    fridge.joints["j_link_0"].friction = 300.0
 
 breakpoint()
 
+# to visualize the F/T data (is not working right now)
 # ani = animation.FuncAnimation(fig, update, frames=force_data_generator, init_func=init, blit=True, interval=100)
 # plt.show()
-
 # init()
 # plt.ion()  # Turn on interactive mode
 # plt.show()  # Display the plot
@@ -571,24 +573,10 @@ breakpoint()
 
 state = og.sim.dump_state(serialized=False)
 for _ in range(1):
-    custom_reset(env, robot, episode_memory)
-    # # save the start simulator state
-    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_start.json'])
-    # arr = scene.dump_state(serialized=True)
-    # with open(f'{save_folder}/episode_{episode_number:05d}_start.pickle', 'wb') as f:
-    #     pickle.dump(arr, f)
-
+    custom_reset(env, robot)
     # primitive(episode_memory, episode_number)
-
     # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-    # # save the end simulator state
-    # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])
-    # arr = scene.dump_state(serialized=True)
-    # with open(f'{save_folder}/episode_{episode_number:05d}_end.pickle', 'wb') as f:
-    #     pickle.dump(arr, f)
-
-    # breakpoint()
     # og.sim.load_state(state, serialized=False)
     # for _ in range(10):
     #     og.sim.step()
@@ -613,39 +601,30 @@ breakpoint()
 while step != max_steps:
     action, keypress_str = action_generator.get_teleop_action()
     # action[robot.gripper_action_idx["right"]] = 1.0
-    print("action: ", action)
-    
-    # if action = SPECIAL_ACTION / NONE:
-    #     do not do pre_step()
-    # og.sim.render()
-    # if any(action[robot.controller_action_idx["base"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["camera"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["arm_left"]] != 0.0) or \
-    #         any(action[robot.controller_action_idx["arm_right"]] != 0.0):
-
+    # print("action: ", action)
     env.step(action=action)
     if keypress_str == 'TAB':
-        # right_eef_pos_world, right_eef_orn_world = robot.eef_links["right"].get_position_orientation()
-        # right_eef_pose_world = np.eye(4)
-        # right_eef_pose_world[:3, :3] = R.from_quat(right_eef_orn_world).as_matrix()
-        # right_eef_pose_world[:3, 3] = right_eef_pos_world
+        right_eef_pos_world, right_eef_orn_world = robot.eef_links["right"].get_position_orientation()
+        right_eef_pose_world = np.eye(4)
+        right_eef_pose_world[:3, :3] = R.from_quat(right_eef_orn_world).as_matrix()
+        right_eef_pose_world[:3, 3] = right_eef_pos_world
 
-        # obj_pos_world, obj_orn_world = scene.object_registry("name", "bottom_cabinet").get_position_orientation()
-        # obj_pose_world = np.eye(4)
-        # obj_pose_world[:3, :3] = R.from_quat(obj_orn_world).as_matrix()
-        # obj_pose_world[:3, 3] = obj_pos_world
+        obj_pos_world, obj_orn_world = scene.object_registry("name", object_name).get_position_orientation()
+        obj_pose_world = np.eye(4)
+        obj_pose_world[:3, :3] = R.from_quat(obj_orn_world).as_matrix()
+        obj_pose_world[:3, 3] = obj_pos_world
 
-        # if np.linalg.det(obj_pose_world) != 0:
-        #     right_eef_pose_object = np.linalg.inv(obj_pose_world) @ right_eef_pose_world
-        # else:
-        #     right_eef_pose_object = np.linalg.pinv(obj_pose_world) @ right_eef_pose_world
+        if np.linalg.det(obj_pose_world) != 0:
+            right_eef_pose_object = np.linalg.inv(obj_pose_world) @ right_eef_pose_world
+        else:
+            right_eef_pose_object = np.linalg.pinv(obj_pose_world) @ right_eef_pose_world
 
-        # base_pose = robot.get_position_orientation()
-        # right_eef_pose = robot.get_relative_eef_pose(arm='right')
-        # print("right_eef_pose: ", right_eef_pose)
-        # print("right_eef_pose_world: ", right_eef_pose_world)
-        # print("right_eef_pose_object: ", right_eef_pose_object)
-        # print("base_pose: ", base_pose)
+        base_pose = robot.get_position_orientation()
+        right_eef_pose = robot.get_relative_eef_pose(arm='right')
+        print("right_eef_pose: ", right_eef_pose)
+        print("right_eef_pose_world: ", right_eef_pose_world)
+        print("right_eef_pose_object: ", right_eef_pose_object)
+        print("base_pose: ", base_pose)
         breakpoint()
 
     step += 1
