@@ -172,7 +172,8 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         pos[self.camera_control_idx] = th.tensor([0.0, 0.0])
         for arm in self.arm_names:
             # pos[self.gripper_control_idx[arm]] = th.tensor([0.045, 0.045])  # open gripper
-            pos[self.gripper_control_idx[arm]] = th.tensor([0.0, 0.0])  # open gripper
+            # pos[self.gripper_control_idx[arm]] = th.tensor([0.0, 0.0])  # open gripper
+            pos[self.gripper_control_idx[arm]] = th.tensor([0.045])  # open gripper
             pos[self.arm_control_idx[arm]] = th.tensor([-1.10, 1.47, 2.71, 1.71, -1.57, 1.39, 0])
         return pos
 

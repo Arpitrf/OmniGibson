@@ -88,6 +88,17 @@ def dump_to_memory(env, robot, episode_memory, relevant_objs=[]):
     for k in obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'].keys():
         episode_memory.add_observation_info(k, obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'][k])
 
+    fig, ax = plt.subplots(2,2)
+    seg_semantic = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_semantic'].cpu().numpy()
+    seg_instance = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance'].cpu().numpy()
+    seg_instance_id = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'].cpu().numpy()
+    rgb = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['rgb'].cpu().numpy()
+    ax[0, 0].imshow(rgb[:, :, :3])
+    ax[0, 1].imshow(seg_semantic)
+    ax[1, 0].imshow(seg_instance)
+    ax[1, 1].imshow(seg_instance_id)
+    plt.show()
+
     # add relevant object poses
     for obj in relevant_objs:
         for link in obj.links.values():
