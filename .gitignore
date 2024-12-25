@@ -98,6 +98,8 @@ site/
 # Tests of examples
 tests/tests_of_examples
 
+.env
+
 # Custom folders
 data/
 dynamics_model_dataset/
