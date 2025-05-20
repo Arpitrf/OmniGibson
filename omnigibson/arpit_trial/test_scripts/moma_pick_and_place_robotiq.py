@@ -88,16 +88,16 @@ def dump_to_memory(env, robot, episode_memory, relevant_objs=[]):
     for k in obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'].keys():
         episode_memory.add_observation_info(k, obs_info[f'{robot_name}'][f'{robot_name}:eyes:Camera:0'][k])
 
-    fig, ax = plt.subplots(2,2)
-    seg_semantic = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_semantic'].cpu().numpy()
-    seg_instance = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance'].cpu().numpy()
-    seg_instance_id = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'].cpu().numpy()
-    rgb = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['rgb'].cpu().numpy()
-    ax[0, 0].imshow(rgb[:, :, :3])
-    ax[0, 1].imshow(seg_semantic)
-    ax[1, 0].imshow(seg_instance)
-    ax[1, 1].imshow(seg_instance_id)
-    plt.show()
+    # fig, ax = plt.subplots(2,2)
+    # seg_semantic = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_semantic'].cpu().numpy()
+    # seg_instance = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance'].cpu().numpy()
+    # seg_instance_id = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['seg_instance_id'].cpu().numpy()
+    # rgb = obs[f'{robot_name}'][f'{robot_name}:eyes:Camera:0']['rgb'].cpu().numpy()
+    # ax[0, 0].imshow(rgb[:, :, :3])
+    # ax[0, 1].imshow(seg_semantic)
+    # ax[1, 0].imshow(seg_instance)
+    # ax[1, 1].imshow(seg_instance_id)
+    # plt.show()
 
     # add relevant object poses
     for obj in relevant_objs:
@@ -260,47 +260,67 @@ def primitive(episode_memory=None, episode_number=0):
     print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
     # =================================================================================
     
-    # # ======================= Move hand to grasp pose ================================    
-    # in_world_frame = True
-    # # # horizontal
-    # # target_pose = th.tensor([
-    # #     [ 0.09966776,  0.05407733, -0.99355019,  0.14776738],
-    # #     [ 0.99490699,  0.00968409,  0.10033096,  0.52168679],
-    # #     [ 0.01504726, -0.99848979, -0.05283672,  0.40618559],
-    # #     [ 0.        ,  0.,          0.,          0.        ],
-    # # ]) 
-    # # # horizontal-forward
-    # # target_pose = th.tensor([
-    # #     [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
-    # #     [ 0.81670615,  0.02154281,  0.57665151,  0.46947819],
-    # #     [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
-    # #     [ 0.        ,  0.,          0.,          0.        ]
-    # # ])
-    # # vertical
-    # # w.r.t robot
-    # # target_pose = (th.tensor([ 0.4946, -0.1072,  0.4705]), th.tensor([0.0354, 0.9991, 0.0150, 0.0194]))
-    # # # w.r.t object
-    # # target_pose = th.tensor([
-    # #     [-0.00698751, -0.99389619, -0.00377233,  0.06223419],
-    # #     [-0.81544803,  0.06576812,  0.17366531,  0.34058464],
-    # #     [ 0.10651827,  0.05080827, -0.89261549,  0.3468574 ],
-    # #     [-0.36592966, -0.04666542, -0.26758584,  0.31398208],
-    # # ])
+    # ======================= Move hand to grasp pose ================================    
+    in_world_frame = True
+    # # horizontal
+    # target_pose = th.tensor([
+    #     [ 0.09966776,  0.05407733, -0.99355019,  0.14776738],
+    #     [ 0.99490699,  0.00968409,  0.10033096,  0.52168679],
+    #     [ 0.01504726, -0.99848979, -0.05283672,  0.40618559],
+    #     [ 0.        ,  0.,          0.,          0.        ],
+    # ]) 
+    # # horizontal-forward
+    # target_pose = th.tensor([
+    #     [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
+    #     [ 0.81670615,  0.02154281,  0.57665151,  0.46947819],
+    #     [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
+    #     [ 0.        ,  0.,          0.,          0.        ]
+    # ])
+    # vertical
+    # w.r.t robot
+    # target_pose = (th.tensor([ 0.4946, -0.1072,  0.4705]), th.tensor([0.0354, 0.9991, 0.0150, 0.0194]))
+    # # w.r.t object
+    # target_pose = th.tensor([
+    #     [-0.00698751, -0.99389619, -0.00377233,  0.06223419],
+    #     [-0.81544803,  0.06576812,  0.17366531,  0.34058464],
+    #     [ 0.10651827,  0.05080827, -0.89261549,  0.3468574 ],
+    #     [-0.36592966, -0.04666542, -0.26758584,  0.31398208],
+    # ])
     # # w.r.t world
-    # # target_pose = th.tensor([
-    # #     [-0.04365513, -0.998603,   -0.02977036,  0.09332833],
-    # #     [-0.99833373,  0.04247905,  0.039055,    0.49790302],
-    # #     [-0.03773583,  0.0314257,  -0.99879349,  0.47100371],
-    # #     [ 0.        ,  0.,          0.,          0.        ],
-    # # ])
+    # target_pose = th.tensor([
+    #     [-0.04365513, -0.998603,   -0.02977036,  0.09332833],
+    #     [-0.99833373,  0.04247905,  0.039055,    0.49790302],
+    #     [-0.03773583,  0.0314257,  -0.99879349,  0.47100371],
+    #     [ 0.        ,  0.,          0.,          0.        ],
+    # ])
+
+    # Can
+    # # vertical
+    # # w.r.t world
+    # target_pose = th.tensor([
+    #     [-0.04365513, -0.998603,   -0.02977036,  0.09332833],
+    #     [-0.99833373,  0.04247905,  0.039055,    0.49790302],
+    #     [-0.03773583,  0.0314257,  -0.99879349,  0.52100371],
+    #     [ 0.        ,  0.,          0.,          0.        ],
+    # ])
+    # horizontal-forward
+    # # w.r.t world
+    # target_pose = th.tensor([
+    #     [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
+    #     [ 0.81670615,  0.02154281,  0.57665151,  0.46947819],
+    #     [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
+    #     [ 0.        ,  0.,          0.,          0.        ]
+    # ])
     
-    # # # pan
-    # # target_pose = th.tensor([
-    # #     [ 0.27262547,  0.83505312, -0.47787198,  0.35828257],
-    # #     [ 0.31803698,  0.39054868,  0.86390057,  0.49818253],
-    # #     [ 0.90803515, -0.38750226, -0.15910426,  0.42454916],
-    # #     [ 0.        ,  0.,          0.,          0.        ],
-    # # ])
+    # pan
+    target_pose = th.tensor([
+        [ 0.27262547,  0.83505312, -0.47787198,  0.35828257],
+        [ 0.31803698,  0.39054868,  0.86390057,  0.49818253],
+        [ 0.90803515, -0.38750226, -0.15910426,  0.42454916],
+        [ 0.        ,  0.,          0.,          0.        ],
+    ])
+    
+    target_pose = T.mat2pose(target_pose)
 
     # # ============== testing grasp proposals =================
     # in_world_frame = False
@@ -348,109 +368,111 @@ def primitive(episode_memory=None, episode_number=0):
     # # visualize_axes(target_pose)
     # # # =======================================================
 
-    # # pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
-    # # execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
-    # #                    env, 
-    # #                    robot, 
-    # #                    grasp_action, 
-    # #                    episode_memory) 
+    pre_target_pose = (target_pose[0] + th.tensor([0.0, -0.04, 0.1]), target_pose[1]) 
+    execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
+                       env, 
+                       robot, 
+                       grasp_action, 
+                       episode_memory) 
 
-    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
-    #                    env, 
-    #                    robot, 
-    #                    grasp_action, 
-    #                    episode_memory) 
-    # for _ in range(40):
-    #     og.sim.step()
+    execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
+                       env, 
+                       robot, 
+                       grasp_action, 
+                       episode_memory) 
+    for _ in range(40):
+        og.sim.step()
     
-    # # Debugging
-    # # post_eef_pose = robot.get_relative_eef_pose(arm='right')
-    # post_eef_pose = robot.eef_links["right"].get_position_orientation()
-    # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
-    # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
-    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # # =================================================================================
+    # Debugging
+    # post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    post_eef_pose = robot.eef_links["right"].get_position_orientation()
+    pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # =================================================================================
 
-    # # ============= Perform grasp ===================
-    # grasp_action = 1.0
-    # action = action_primitives._empty_action()
-    # action[robot.gripper_action_idx["right"]] = grasp_action
-    # env.step(action)
-    # for _ in range(100):
-    #     og.sim.step()
-    # # save everything to memory
-    # dump_to_memory(env, robot, episode_memory)
-    # # TODO: Change the indexing here
-    # action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
-    # episode_memory.add_action('actions', action_to_add)
-    # # ==============================================
+    # ============= Perform grasp ===================
+    grasp_action = 1.0
+    action = action_primitives._empty_action()
+    action[robot.gripper_action_idx["right"]] = grasp_action
+    env.step(action)
+    for _ in range(100):
+        og.sim.step()
+    # save everything to memory
+    dump_to_memory(env, robot, episode_memory)
+    # TODO: Change the indexing here
+    action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
+    episode_memory.add_action('actions', action_to_add)
+    # ==============================================
+
+    breakpoint()
         
-    # # ======================= Move hand up ================================  
-    # curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-    # new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
-    # target_pose = (new_pos, curr_orn)
-    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=False), 
+    # ======================= Move hand up ================================  
+    curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
+    new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
+    target_pose = (new_pos, curr_orn)
+    execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=False), 
+                       env, 
+                       robot, 
+                       grasp_action, 
+                       episode_memory)
+    
+    for _ in range(40):
+        og.sim.step()
+    
+    # Debugging
+    post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
+    orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
+    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+
+    # curr_pos, curr_orn = robot.eef_links["right"].get_position_orientation()
+    # new_orn = np.array([
+    #     [ 0.57506982,  0.05240871, -0.81642393],
+    #     [ 0.81670615,  0.02154281,  0.57665151],
+    #     [ 0.04780963, -0.99839333, -0.03041389],
+    # ])
+    # new_orn = R.from_matrix(new_orn).as_quat()
+    # target_pose = (curr_pos, th.tensor(new_orn, dtype=th.float32))
+    # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=True), 
     #                    env, 
     #                    robot, 
     #                    grasp_action, 
     #                    episode_memory)
-    
     # for _ in range(40):
     #     og.sim.step()
-    
     # # Debugging
-    # post_eef_pose = robot.get_relative_eef_pose(arm='right')
+    # post_eef_pose = robot.eef_links["right"].get_position_orientation()
     # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
     # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
     # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # =================================================================================
 
-    # # curr_pos, curr_orn = robot.eef_links["right"].get_position_orientation()
-    # # new_orn = np.array([
-    # #     [ 0.57506982,  0.05240871, -0.81642393],
-    # #     [ 0.81670615,  0.02154281,  0.57665151],
-    # #     [ 0.04780963, -0.99839333, -0.03041389],
-    # # ])
-    # # new_orn = R.from_matrix(new_orn).as_quat()
-    # # target_pose = (curr_pos, th.tensor(new_orn, dtype=th.float32))
-    # # execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=True), 
-    # #                    env, 
-    # #                    robot, 
-    # #                    grasp_action, 
-    # #                    episode_memory)
-    # # for _ in range(40):
-    # #     og.sim.step()
-    # # # Debugging
-    # # post_eef_pose = robot.eef_links["right"].get_position_orientation()
-    # # pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
-    # # orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
-    # # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # # =================================================================================
+    # breakpoint()
 
-    # # breakpoint()
-
-    # # ============= Move base ===================
-    # # debugging
-    # ee_pose_before_nav = robot.get_relative_eef_pose(arm='right')
-    # # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
-    # target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
-    # execute_controller(action_primitives._navigate_to_pose_direct(target_base_pose),
-    #                    env, 
-    #                    robot, 
-    #                    grasp_action, 
-    #                    episode_memory)    
-    # for _ in range(50):
-    #     og.sim.step()
-    # curr_base_pos = robot.get_position_orientation()[0]
-    # print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
+    # ============= Move base ===================
+    # debugging
+    ee_pose_before_nav = robot.get_relative_eef_pose(arm='right')
+    # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
+    target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
+    execute_controller(action_primitives._navigate_to_pose_direct(target_base_pose),
+                       env, 
+                       robot, 
+                       grasp_action, 
+                       episode_memory)    
+    for _ in range(50):
+        og.sim.step()
+    curr_base_pos = robot.get_position_orientation()[0]
+    print("move base completed. Final right eef pose reached: ", target_base_pose[:2], curr_base_pos[:2])
     
-    # # Debugging
-    # ee_pose_after_nav = robot.get_relative_eef_pose(arm='right')
-    # pos_error = np.linalg.norm(ee_pose_after_nav[0] - ee_pose_before_nav[0])
-    # orn_error = T.get_orientation_diff_in_radian(ee_pose_after_nav[1], ee_pose_before_nav[1])
-    # print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    # # ============================================
+    # Debugging
+    ee_pose_after_nav = robot.get_relative_eef_pose(arm='right')
+    pos_error = np.linalg.norm(ee_pose_after_nav[0] - ee_pose_before_nav[0])
+    orn_error = T.get_orientation_diff_in_radian(ee_pose_after_nav[1], ee_pose_before_nav[1])
+    print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    # ============================================
     
-    # # og.sim.save([f'place_in_shelf_start_state.json'])
+    # og.sim.save([f'saved_simulation_states/place_in_shelf_start_state_forward_can.json'])
 
     # # # ======================= Move hand to place pose ================================
     # # # w.r.t world
@@ -505,7 +527,9 @@ config["scene"]["type"] = "Scene"
 # config["robots"][0]["controller_config"]["arm_right"]["name"] = "OperationalSpaceController"
 
 config["robots"][0]["controller_config"]["arm_right"]["name"] = "InverseKinematicsController"
-config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
+# config["robots"][0]["controller_config"]["arm_right"]["kp"] = 500.0
+config["robots"][0]["controller_config"]["arm_right"]["kp"] = th.tensor([800.0, 800.0, 800.0, 1500.0, 500.0, 500.0, 500.0])
+# config["robots"][0]["controller_config"]["gripper_right"]["motor_type"] = "velocity"
 
 # config['robots'][0]['controller_config']['arm_right']['mode'] = 'absolute_pose'
 # config['robots'][0]['controller_config']['arm_right']['command_input_limits'] = None
@@ -514,18 +538,32 @@ config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
 # Create and load this object into the simulator
 rot_euler = [0.0, 0.0, 180.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
-box_euler = [0.0, 0.0, -30.0]
+# for forward grasp
+# box_euler = [0.0, 0.0, -30.0]
+# for top-down grasp
+box_euler = [0.0, 0.0, 0.0]
 box_quat = np.array(R.from_euler('XYZ', box_euler, degrees=True).as_quat())
+pan_euler = [0.0, 0.0, 90.0]
+pan_quat = np.array(R.from_euler('XYZ', pan_euler, degrees=True).as_quat())
 config["objects"] = [
+    # {
+    #     "type": "DatasetObject",
+    #     "name": "shelf",
+    #     "category": "shelf",
+    #     "model": "eniafz",
+    #     "position": [1.5, 0, 1.0],
+    #     "scale": [2.0, 2.0, 1.0],
+    #     "orientation": rot_quat,
+    # }, 
     {
         "type": "DatasetObject",
-        "name": "shelf",
-        "category": "shelf",
-        "model": "eniafz",
+        "name": "commercial_kitchen_sink",
+        "category": "commercial_kitchen_sink",
+        "model": "nmxgbm",
         "position": [1.5, 0, 1.0],
-        "scale": [2.0, 2.0, 1.0],
+        "scale": [1.0, 1.0, 0.8],
         "orientation": rot_quat,
-    },   
+    }, 
     {
         "type": "DatasetObject",
         "name": "coffee_table",
@@ -547,14 +585,23 @@ config["objects"] = [
     #     "position": [0.1, 0.5, 0.5],
     #     "orientation": box_quat
     # },
+    # {
+    #     "type": "DatasetObject",
+    #     "name": "can_of_baking_mix",
+    #     "category": "can_of_baking_mix",
+    #     "model": "blrqqz", 
+    #     "scale": [0.7, 0.7, 1.3],
+    #     "position": [0.1, 0.5, 0.5],
+    #     "orientation": [0, 0, 0, 1]
+    # },
     {
         "type": "DatasetObject",
-        "name": "can_of_baking_mix",
-        "category": "can_of_baking_mix",
-        "model": "blrqqz", 
-        # "scale": [0.6, 0.6, 0.8],
-        "position": [0.1, 0.5, 0.5],
-        "orientation": [0, 0, 0, 1]
+        "name": "saucepan",
+        "category": "saucepan",
+        "model": "fsinsu", 
+        # "scale": [0.7, 0.7, 1.3],
+        "position": [0.20, 0.52, 0.5],
+        "orientation": pan_quat
     },
 ]
 
@@ -584,14 +631,14 @@ og.sim.load_state(state)
 
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
-# pdb.set_trace()
-# obj = env.scene.object_registry("name", "box")
-obj = env.scene.object_registry("name", "can_of_baking_mix")
+# # pdb.set_trace()
+# # obj = env.scene.object_registry("name", "box")
+obj = env.scene.object_registry("name", "saucepan")
 obj.root_link.mass = 1e-1
-shelf = env.scene.object_registry("name", "shelf")
-# shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
-shelf.root_link.mass = 1e3
-# print("obj.mass: ", obj.mass)
+# shelf = env.scene.object_registry("name", "shelf")
+# # shelf.set_position_orientation(position=th.tensor([5.0, 5.0, 0.0]))
+# shelf.root_link.mass = 1e3
+# # print("obj.mass: ", obj.mass)
 
 # Set viewer camera
 og.sim.viewer_camera.set_position_orientation(
@@ -626,6 +673,14 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
 # robot.controllers["arm_right"].kp[:3] = nums2array(nums=2000, dim=3, dtype=th.float32)
 # robot.controllers["arm_right"].kp[-3:] = nums2array(nums=5000, dim=3, dtype=th.float32)
 
+for _ in range(500):
+    action = action_primitives._empty_action()
+    action[robot.base_action_idx] = th.tensor([0.0, 0.0, 0.0], dtype=th.float32)
+    env.step(action)
+    # robot.set_linear_velocity(th.tensor([0.1, 0.1, 0.0], dtype=th.float32))
+    # og.sim.step()
+
+breakpoint()
 
 for _ in range(1):
     custom_reset(env, robot, episode_memory)
@@ -642,7 +697,7 @@ for _ in range(1):
     #     pickle.dump(arr, f)
 
     primitive(episode_memory, episode_number)
-    episode_memory.dump(f'{save_folder}/dataset.hdf5')
+    # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
     # # save the end simulator state
     # og.sim.save([f'{save_folder}/episode_{episode_number:05d}_end.json'])

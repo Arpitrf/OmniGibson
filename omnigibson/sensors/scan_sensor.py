@@ -58,7 +58,7 @@ class ScanSensor(BaseSensor):
         noise=None,
         load_config=None,
         # Basic LIDAR kwargs
-        min_range=0.05,
+        min_range=0.15, #0.05
         max_range=10.0,
         horizontal_fov=360.0,
         vertical_fov=1.0,
@@ -114,7 +114,18 @@ class ScanSensor(BaseSensor):
 
     def _load(self):
         # Define a LIDAR prim at the current stage
-        result, lidar = lazy.omni.kit.commands.execute("RangeSensorCreateLidar", path=self.prim_path)
+        result, lidar = lazy.omni.kit.commands.execute("RangeSensorCreateLidar",
+                                                        path=self.prim_path,)
+                                                        # min_range = self._load_config["min_range"],
+                                                        # max_range = self._load_config["max_range"],
+                                                        # horizontal_fov = self._load_config["horizontal_fov"],
+                                                        # vertical_fov = self._load_config["vertical_fov"],
+                                                        # yaw_offset = self._load_config["yaw_offset"],
+                                                        # horizontal_resolution = self._load_config["horizontal_resolution"],
+                                                        # vertical_resolution = self._load_config["vertical_resolution"],
+                                                        # rotation_rate = self._load_config["rotation_rate"],
+                                                        # draw_points = self._load_config["draw_points"],
+                                                        # draw_lines = self._load_config["draw_lines"]),
 
         return lidar.GetPrim()
 
@@ -250,6 +261,8 @@ class ScanSensor(BaseSensor):
             # Sometimes get_linear_depth_data will return values that are slightly out of range, needs clipping
             raw_scan = th.clip(raw_scan, self.min_range, self.max_range)
             obs["scan"] = (raw_scan - self.min_range) / (self.max_range - self.min_range)
+            # remove later
+            # obs["scan"] = raw_scan
 
             # Optionally add occupancy grid info
             if "occupancy_grid" in self._modalities:

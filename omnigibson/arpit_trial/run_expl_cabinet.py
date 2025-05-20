@@ -341,7 +341,7 @@ def expl(t, actions, motion_utils, robot, env, traj_length, collision_failure_mo
             retval["stop_expl"] = True
             retval["task_success"] = False
             return retval
-        # In the current implementation I am performing the action (move_primitive) inside the safe action. This will change later.
+
         retval = expl(t+1, actions, motion_utils, robot, env, traj_length, grasp_failure_model=grasp_failure_model, grasp_mode=grasp_mode)
 
         if retval["stop_expl"]:

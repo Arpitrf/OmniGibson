@@ -721,8 +721,8 @@ class KeyboardRobotController:
         self.custom_keymapping = {}
 
         # Add mapping for joint control directions (no index because these are inferred at runtime)
-        self.keypress_mapping[lazy.carb.input.KeyboardInput.RIGHT_BRACKET] = {"idx": None, "val": 0.1}
-        self.keypress_mapping[lazy.carb.input.KeyboardInput.LEFT_BRACKET] = {"idx": None, "val": -0.1}
+        self.keypress_mapping[lazy.carb.input.KeyboardInput.RIGHT_BRACKET] = {"idx": None, "val": 0.2}
+        self.keypress_mapping[lazy.carb.input.KeyboardInput.LEFT_BRACKET] = {"idx": None, "val": -0.2}
 
         # Iterate over all controller info and populate mapping
         for component, info in self.controller_info.items():

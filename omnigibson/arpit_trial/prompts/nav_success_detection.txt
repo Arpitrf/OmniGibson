@@ -1,0 +1,6 @@
+A robot has been asked to navigate to [object]. Here the [object] can be a complete object (like cup or apple) or it can be a specific part of an object (like white handle). We provide an image of robot's egocentric view (taken from robot's head camera) after the navigation. 
+Your job is to answer whether the robot has successfully navigated to the [object]. For a successful navigation to [object] the [object] should be clearly visible in the image.
+
+Please answer in the following format only:
+
+{Yes/No}.{Reason in one sentence}. 

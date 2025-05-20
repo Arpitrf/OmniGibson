@@ -529,8 +529,8 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
             #     "max": [0.5, 0.5, 1.0],
             # },
             "right": {
-                "min": th.tensor([-0.7, -0.2, 0.1], dtype=th.float32),
-                "max": th.tensor([0.7, 1.0, 1.2], dtype=th.float32),
+                "min": th.tensor([-0.7, -1.0, 0.1], dtype=th.float32),
+                "max": th.tensor([0.7, 0.3, 1.2], dtype=th.float32),
             },
         }
 
@@ -553,8 +553,47 @@ class Tiago(HolonomicBaseRobot, ArticulatedTrunkRobot, UntuckedArmPoseRobot, Act
         #     return th.tensor(True)
         
         # for Robotiq gripper:
-        # completely closed gripper value is 0.7845
+        # completely closed gripper value is 0.7845 or 0.7858
         if gripper_right_qpos[0] < 0.05 or gripper_right_qpos[0] > 0.783:
             return th.tensor(False)
         else:
             return th.tensor(True)
+        
+    def get_relative_link_pose(self, link="gripper_right_tool_link", arm="default", mat=False,):
+        """
+        Args:
+            arm (str): specific arm to grab eef pose. Default is "default" which corresponds to the first entry
+                in self.arm_names
+            mat (bool): whether to return pose in matrix form (mat=True) or (pos, quat) tuple (mat=False)
+
+        Returns:
+            2-tuple or (4, 4)-array: End-effector pose, either in 4x4 homogeneous
+                matrix form (if @mat=True) or (pos, quat) tuple (if @mat=False), corresponding to arm @arm
+        """
+        link_pose = self._links[link].get_position_orientation()
+        base_link_pose = self.get_position_orientation()
+        pose = T.relative_pose_transform(*link_pose, *base_link_pose)
+        return T.pose2mat(pose) if mat else pose
+    
+    def get_robotiq_links(self):
+          return ["right_robotiq_140_robotiq_arg2f_base_link", "right_robotiq_140_left_outer_knuckle", "right_robotiq_140_left_inner_knuckle",
+           "right_robotiq_140_right_outer_knuckle", "right_robotiq_140_right_inner_knuckle", "right_robotiq_140_left_outer_finger",
+           "right_robotiq_140_left_inner_finger", "right_robotiq_140_right_outer_finger", "right_robotiq_140_right_inner_finger"]
+    
+    def get_gripper_collision(self, filter_obj=None):
+        contact_lists = []
+        for link in self.get_robotiq_links():
+            contact_list_temp = self.links[link].contact_list()
+            contact_list = []
+            for contact in contact_list_temp:
+                # breakpoint()
+                if filter_obj is not None and filter_obj.name in contact.body1:
+                    continue
+                contact_list.append(contact)
+            contact_lists += contact_list
+        if len(contact_lists) > 0:
+            return True
+        return False
+            
+# [robot.links[link].contact_list() for link in robot.get_robotiq_links()]
+            

@@ -22,7 +22,22 @@ def extract_observations_info_from_hdf5(obs_info_strings, obs_info_shapes):
         #     if i == 0:
         #         print(reconstructed_data)
         return reconstructed_data
-    
+
+def get_seg_instance_id_info(ep, hdf5_file):
+    # Basically dealing with HDF5 limitation: handling inconsistent length arrays in observations_info/seg_instance_id_id
+    if 'seg_instance_id_strings' in hdf5_file[f'data/{ep}/observations_info'].keys():
+        seg_instance_id_strings = np.array(hdf5_file["data/{}/observations_info/seg_instance_id_strings".format(ep)])
+        seg_instance_id_shapes = np.array(hdf5_file["data/{}/observations_info/seg_instance_id_shapes".format(ep)])
+        seg_instance_id = extract_observations_info_from_hdf5(obs_info_strings=seg_instance_id_strings, 
+                                                                    obs_info_shapes=seg_instance_id_shapes)
+        # print("111: ", seg_instance_id.shape)
+    else:
+        hd5key = "data/{}/observations_info/seg_instance_id".format(ep)
+        # seg_instance_id = hdf5_file[hd5key]
+        seg_instance_id = np.array(hdf5_file[hd5key]).astype(str)
+        # print("222: ", seg_instance_id.shape)
+    return seg_instance_id
+
 def get_seg_semantic_info(ep, hdf5_file):
     # Basically dealing with HDF5 limitation: handling inconsistent length arrays in observations_info/seg_instance_id
     if 'seg_semantic_strings' in hdf5_file[f'data/{ep}/observations_info'].keys():
@@ -146,8 +161,82 @@ def generate_point_cloud_from_depth(depth_image, intrinsic_matrix, mask, extrins
 
     return point_cloud
 
+def obtain_mask_by_removing_ids(depth, seg_instance_id, seg_instance_id_info, seq_num, rgb=None):
+    import re
+    # class_names_to_remove = ["bottom_cabinet/base_link", "ground_plane"]
+    # remove_ids = []
+    # for row in seg_instance_id_info[seq_num]:
+    #     sem_id, class_name = int(row[0]), row[1]
+    #     if any(remove_name in class_name for remove_name in class_names_to_remove):
+    #         remove_ids.append(sem_id)
+
+    class_names_to_remove = [".*bottom_cabinet/base_link.*", ".*ground_plane.*", ".*controllable__tiago__robot_[^/]+/base_link.*"]
+    remove_ids = []
+    for row in seg_instance_id_info[seq_num]:
+        sem_id, class_name = int(row[0]), row[1]
+        for remove_name in class_names_to_remove:
+            if bool(re.match(remove_name, class_name)):
+                remove_ids.append(sem_id)
+
+    if len(remove_ids) != 0:
+        mask = np.ones_like(depth[seq_num])
+        mask[np.isin(seg_instance_id[seq_num], remove_ids)] = 0
+    else:
+        mask = np.ones_like(depth[seq_num])
+
+    if rgb is not None:
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(rgb[seq_num])
+        ax[1].imshow(mask)
+    else:
+        plt.imshow(mask)
+    plt.show()
+    return mask
+
+
+def obtain_mask_drawer_links(depth, seg_instance_id, seg_instance_id_info, seq_num):
+    interested_ids = ["bottom_cabinet/link_1", "bottom_cabinet/link_2", "bottom_cabinet/link_3", "bottom_cabinet/link_4", "bottom_cabinet/link_5"]
+    keep_ids = []
+    for row in seg_instance_id_info[seq_num]:
+        sem_id, class_name = int(row[0]), row[1]
+        if any(interested_id in class_name for interested_id in interested_ids):
+            keep_ids.append(sem_id)
+    if len(keep_ids) != 0:
+        mask = np.zeros_like(depth[seq_num])
+        mask[np.isin(seg_instance_id[seq_num], keep_ids)] = 1
+    else:
+        mask = np.ones_like(depth[seq_num])
+    
+    return mask
+
+def obtain_mask_removing_floor(depth, seg_instance, seg_instance_info, seq_num):
+    # creating mask to remove floors
+    floor_id = -1
+    # Change here
+    # for row in seg_semantic_info[seq_num]:
+    for row in seg_instance_info[seq_num]:
+        sem_id, class_name = int(row[0]), row[1]
+        # Change here
+        # if class_name == 'floors':
+        if class_name == 'groundPlane':
+            floor_id = sem_id
+            break
+
+    # breakpoint()
+    if floor_id != -1:
+        mask = np.zeros_like(depth[seq_num])
+        # Change here
+        # mask[seg_semantic[seq_num] != floor_id] = 1
+        mask[seg_instance[seq_num] != floor_id] = 1
+    else:
+        mask = np.ones_like(depth[seq_num])
+    # mask = np.ones_like(depth[seq_num])
+
+    return mask
+
 def get_pcd(ep, hdf5_file):
         depth = hdf5_file[f"data/{ep}/observations/depth"]
+        rgb = hdf5_file[f"data/{ep}/observations/rgb"]
         intr =  np.array([
             [103.8416,   0.0000,  64.0000],
             [  0.0000, 103.8416,  64.0000],
@@ -156,45 +245,26 @@ def get_pcd(ep, hdf5_file):
         # TODO: get extrinsic matrix from the code
         extrinsic_matrix = np.array(f["data"][ep]["proprioceptions"]["extrinsic_matrix"])[0]
         # extrinsic_matrix = np.eye(4)
-        
-        # print("len(depth): ", len(depth))
-
-        # creating mask to remove floors
-        seg_semantic = hdf5_file[f'data/{ep}/observations/seg_semantic']
-        seg_instance = hdf5_file[f'data/{ep}/observations/seg_instance']
-        
-        # Change here
-        # seg_semantic_info = get_seg_semantic_info(ep, hdf5_file)
-        seg_instance_info = get_seg_instance_info(ep, hdf5_file)
-        
-        # breakpoint()
 
         pcd_points = []
         pcd_normals = []
         pcd_colors = []
+        
+        # creating mask to remove floors
+        seg_semantic = hdf5_file[f'data/{ep}/observations/seg_semantic']
+        seg_instance = hdf5_file[f'data/{ep}/observations/seg_instance']
+        seg_instance_id = hdf5_file[f'data/{ep}/observations/seg_instance_id']
+        
+        # Change here
+        # seg_semantic_info = get_seg_semantic_info(ep, hdf5_file)
+        seg_instance_info = get_seg_instance_info(ep, hdf5_file)
+        seg_instance_id_info = get_seg_instance_id_info(ep, hdf5_file)
+        
         for seq_num in range(len(depth)):
 
-            # creating mask to remove floors
-            floor_id = -1
-            # Change here
-            # for row in seg_semantic_info[seq_num]:
-            for row in seg_instance_info[seq_num]:
-                sem_id, class_name = int(row[0]), row[1]
-                # Change here
-                # if class_name == 'floors':
-                if class_name == 'groundPlane':
-                    floor_id = sem_id
-                    break
-
-            # breakpoint()
-            if floor_id != -1:
-                mask = np.zeros_like(depth[seq_num])
-                # Change here
-                # mask[seg_semantic[seq_num] != floor_id] = 1
-                mask[seg_instance[seq_num] != floor_id] = 1
-            else:
-                mask = np.ones_like(depth[seq_num])
-            # mask = np.ones_like(depth[seq_num])
+            # mask = obtain_mask_removing_floor(depth, seg_instance, seg_instance_info, seq_num)
+            # mask = obtain_mask_drawer_links(depth, seg_instance_id, seg_instance_id_info, seq_num)
+            mask = obtain_mask_by_removing_ids(depth, seg_instance_id, seg_instance_id_info, seq_num, rgb=rgb)
 
             o3d_pcd = generate_point_cloud_from_depth(depth[seq_num], intr, mask, extrinsic_matrix)
             # show pcd in open3d
@@ -400,10 +470,10 @@ def visualize_pointcloud_and_action(points1, colors1, points2, colors2, action=N
 
 np.random.seed(10)
 # Read and visualize data
-with h5py.File("/home/arpit/projects/OmniGibson/open_cabinet/dataset.hdf5", "r") as f:
-    for _ in range(10):
-        episode_number = np.random.randint(0, len(f["data"]))
-        # episode_number = i
+with h5py.File("/home/arpit/projects/OmniGibson/open_drawer/dataset.hdf5", "r") as f:
+    for i in range(2000, 2010):
+        # episode_number = np.random.randint(0, len(f["data"]))
+        episode_number = i
         # breakpoint()
         waypoint_number = np.random.randint(0, len(f[f"data/episode_{episode_number:05d}/actions/actions"]))
         # waypoint_number = 0

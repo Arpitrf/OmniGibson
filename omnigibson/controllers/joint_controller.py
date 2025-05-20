@@ -107,7 +107,13 @@ class JointController(LocomotionController, ManipulationController, GripperContr
             assert kp is None, "Cannot set kp for JointController with motor_type=effort!"
             assert damping_ratio is None, "Cannot set damping_ratio for JointController with motor_type=effort!"
         self.kp = kp
-        self.kd = None if damping_ratio is None else 2 * math.sqrt(self.kp) * damping_ratio
+        # Modified by Arpit
+        if isinstance(self.kp, list):
+            self.kp = th.tensor(self.kp, dtype=th.float32)
+        if isinstance(self.kp, th.Tensor):
+            self.kd = None if damping_ratio is None else 2 * math.sqrt(self.kp[0]) * damping_ratio
+        else:
+            self.kd = None if damping_ratio is None else 2 * math.sqrt(self.kp) * damping_ratio
         self._use_impedances = use_impedances
         self._use_gravity_compensation = use_gravity_compensation
         self._use_cc_compensation = use_cc_compensation
@@ -201,7 +207,8 @@ class JointController(LocomotionController, ManipulationController, GripperContr
                 position_error = target - base_value
                 vel_pos_error = -control_dict[f"joint_velocity"][self.dof_idx]
                 u = position_error * self.kp + vel_pos_error * self.kd
-                # print("u: ", self._motor_type, u)
+                # print("position_error: ", position_error)
+                # print("u: ", self._motor_type, u, self.kp)
             elif self._motor_type == "velocity":
                 # Compute command torques via PI velocity controller plus gravity compensation torques
                 velocity_error = target - base_value
@@ -228,7 +235,8 @@ class JointController(LocomotionController, ManipulationController, GripperContr
             # Desired is the exact goal
             u = target
         
-        # print("u: ", self._motor_type, u)
+        # if u.shape[0] == 1:
+        #     print("u: ", self._motor_type, u)
 
         # Return control
         return u

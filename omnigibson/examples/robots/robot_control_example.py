@@ -11,6 +11,7 @@ import omnigibson.lazy as lazy
 from omnigibson.macros import gm
 from omnigibson.robots import REGISTERED_ROBOTS
 from omnigibson.utils.ui_utils import KeyboardRobotController, choose_from_options
+from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 
 CONTROL_MODES = dict(
     random="Use autonomous random actions (default)",
@@ -162,6 +163,7 @@ def main(random_selection=False, headless=False, short_exec=False, quickstart=Fa
             action_generator.get_random_action() if control_mode == "random" else action_generator.get_teleop_action()
         )
         print("action: ", action)
+        print("detect_robot_collision_in_sim: ", detect_robot_collision_in_sim(robot))
         if keypress_str == 'TAB':
             breakpoint()
         env.step(action=action)

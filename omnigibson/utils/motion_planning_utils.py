@@ -11,7 +11,7 @@ from omnigibson.object_states import ContactBodies
 from omnigibson.utils.control_utils import IKSolver
 from omnigibson.utils.sim_utils import prim_paths_to_rigid_prims
 from omnigibson.utils.ui_utils import create_module_logger
-from omnigibson.utils.usd_utils import GripperRigidContactAPI
+from omnigibson.utils.usd_utils import GripperRigidContactAPI, RigidContactAPI
 
 # Create module logger
 logger = create_module_logger(module_name=__name__)
@@ -529,7 +529,6 @@ def detect_robot_collision(context, verbose=False):
 
     return valid_hit
 
-
 def detect_robot_collision_in_sim(robot, filter_objs=None, ignore_obj_in_hand=True):
     """
     Detects robot collisions with the environment, but not with itself using the ContactBodies API
@@ -551,12 +550,14 @@ def detect_robot_collision_in_sim(robot, filter_objs=None, ignore_obj_in_hand=Tr
     if obj_in_hand is not None and ignore_obj_in_hand:
         filter_objs.append(obj_in_hand)
 
+
     # Use the RigidCollisionAPI to get the things this robot is colliding with
     scene_idx = robot.scene.idx
     link_paths = set(robot.link_prim_paths)
     collision_body_paths = {
         row
-        for row, _ in GripperRigidContactAPI.get_contact_pairs(scene_idx, column_prim_paths=link_paths)
+        # for row, _ in GripperRigidContactAPI.get_contact_pairs(scene_idx, column_prim_paths=link_paths)
+        for row, _ in RigidContactAPI.get_contact_pairs(scene_idx, column_prim_paths=link_paths)
         if row not in link_paths
     }
 

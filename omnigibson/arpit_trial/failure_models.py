@@ -1,6 +1,7 @@
 
 import argparse
 import numpy as np
+import open3d as o3d
 import os
 import torch
 import importlib
@@ -225,7 +226,8 @@ class GraspFailureModel:
         pcd_points.append(np.asarray(o3d_pcd.points))
         pcd_colors.append(np.asarray(o3d_pcd.colors))
         pcd_normals.append(np.asarray(o3d_pcd.normals))
-        
+        # o3d.visualization.draw_geometries([o3d_pcd])
+
         # TODO: Convert to torch tensors of dtype float64
         # pcd shape: torch.Size([1, 16384, 3])
         # actions shape: torch.Size([1, 10])
@@ -264,8 +266,8 @@ class GraspFailureModel:
         # Convert probabilities to binary predictions (0 or 1)
         pred_choice = (probabilities >= threshold).float()
 
-        if waypt > 1:
-            print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
+        # if waypt > 1:
+        print(f"pred_choice, pred_prob: ", pred_choice.item(), probabilities.item())
         # -----------------------------
 
         # pcd = o3d.geometry.PointCloud()

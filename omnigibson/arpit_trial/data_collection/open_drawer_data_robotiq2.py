@@ -22,6 +22,9 @@ from omnigibson.action_primitives.starter_semantic_action_primitives import Star
 from omnigibson.utils.motion_planning_utils import detect_robot_collision_in_sim
 from omnigibson.arpit_trial.utils.memory import Memory
 from omnigibson.utils.python_utils import nums2array
+from omnigibson.objects import DatasetObject
+from omnigibson import object_states
+from omnigibson.arpit_trial.utils.data_collection_configs import data_collection_configs as DCC
 
 prior = np.array([
     [0.,    0.,    0., -0.058,  0.001,  0.,    0.,    0.,    0., -1.0],
@@ -100,6 +103,8 @@ def move_primitive(robot, action_traj, episode_memory=None, writer=None):
         orn_error = orn_error % (2*th.pi)
         print("prev_pos, target_pos, reached_pos: ", current_pos, target_pos, ee_pose_after[0])
         print(f"==== Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees ====")
+
+        breakpoint()
 
         if action_exec is False:
             return 
@@ -335,7 +340,7 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None, 
             concat_img = concat_img.astype(np.uint8)
             writer.append_data(concat_img)
         
-        # If singularity is reached in this action, stop and do not add to memory
+        # If singularity is reached in this action
         singularity = robot._controllers["arm_right"].singularity
         singularities.append(singularity)
         if sum(singularities) > 10:
@@ -349,6 +354,7 @@ def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None, 
         is_grasping = robot.custom_is_grasping()
         if check_grasp and not is_grasping:
             print("Grasp failed. Exiting.")
+            # breakpoint()
             if episode_memory is not None:
                 dump_to_memory(env, robot, episode_memory) 
             return False
@@ -376,22 +382,35 @@ def grasp_handle(grasp_mode):
     # ])
     # target_pose_world = T.mat2pose(target_pose_world)
 
-    # # w.r.t object (front grasp)
-    if grasp_mode == "front":
-        target_pose_obj = np.array([
-            [-0.03007303, -0.98993309, -0.13830437,  0.03215751],
-            [-0.16730912, -0.13142948,  0.97710488, -0.3610887 ],
-            [-0.98544572,  0.05252409, -0.16167235,  0.30995518],
-            [ 0.        ,  0.,          0.,          1.        ],
-        ])
-    elif grasp_mode == "top":
-        # w.r.t object (top grasp)
-        target_pose_obj = np.array([
-            [-0.39885193, -0.91322829, -0.08325405,  0.0605697 ],
-            [-0.9110646 ,  0.38430112,  0.14924456, -0.34837461],
-            [-0.10429973,  0.1353763,  -0.98528921,  0.34404946],
-            [ 0.        ,  0.,          0.,          1.        ],
-        ])
+    # w.r.t object (front grasp)
+    if drawer.model == "rntwkg":
+        if grasp_mode == "front":
+            target_pose_obj = np.array([
+                [-0.03007303, -0.98993309, -0.13830437,  0.03215751],
+                [-0.16730912, -0.13142948,  0.97710488, -0.3610887 ],
+                [-0.98544572,  0.05252409, -0.16167235,  0.30995518],
+                [ 0.        ,  0.,          0.,          1.        ],
+            ])
+        elif grasp_mode == "top":
+            # w.r.t object (top grasp)
+            target_pose_obj = np.array([
+                [-0.39885193, -0.91322829, -0.08325405,  0.0605697 ],
+                [-0.9110646 ,  0.38430112,  0.14924456, -0.34837461],
+                [-0.10429973,  0.1353763,  -0.98528921,  0.34404946],
+                [ 0.        ,  0.,          0.,          1.        ],
+            ])
+
+    # second drawer
+    if drawer.model == "pkdnbu":
+        # w.r.t object (front grasp)
+        if grasp_mode == "front":
+            target_pose_obj = np.array([
+                [-0.03007303, -0.98993309, -0.13830437,  0.03215751],
+                [-0.16730912, -0.13142948,  0.97710488, -0.3510887 ],
+                [-0.98544572,  0.05252409, -0.16167235,  0.25995518],
+                [ 0.        ,  0.,          0.,          1.        ],
+            ])
+
     cabinet_pos_world, cabinet_orn_world = scene.object_registry("name", "bottom_cabinet").get_position_orientation()
     cabinet_pose_world = np.eye(4)
     cabinet_pose_world[:3, :3] = R.from_quat(cabinet_orn_world).as_matrix()
@@ -441,6 +460,27 @@ def grasp_handle(grasp_mode):
     return action_exec
 
 
+def randomize_objects(drawer):
+    x_scale = np.random.uniform(0.8, 1.2)
+    temp_state = og.sim.dump_state(serialized=False)
+    og.sim.stop()
+    drawer.scale = th.tensor([1.0*x_scale, 1.0, 1.4])
+    og.sim.play()
+    og.sim.load_state(temp_state)
+    drawer.keep_still()
+
+    # num_objects = np.random.randint(2, 6)
+    num_objects = 6
+    chosen_objs = np.random.choice(np.array(extra_objects), num_objects, replace=False)
+    chosen_obj_pos = th.tensor([1.3433, -0.150, 0.7241])
+    for chosen_obj in chosen_objs:
+        chosen_obj = env.scene.object_registry("name", chosen_obj.name)
+        # pos_x_noise = np.random.uniform(-0.2, 0.3)
+        # pos_y_noise = np.random.uniform(-0.2, 0.4)
+        # sampled_pos = chosen_obj_pos + th.tensor([pos_x_noise, pos_y_noise, 0.0])
+        # chosen_obj.set_position_orientation(position=sampled_pos)
+        chosen_obj.states[object_states.Inside].set_value(other=shelf, new_value=True)
+
 def set_all_seeds(seed):
     import random
 
@@ -475,12 +515,14 @@ obj_cfg = dict(
     name="bottom_cabinet",
     category="bottom_cabinet",
     # visual_only=True,
-    model="rntwkg",
+    # models: rntwkg, pkdnbu
+    model="pkdnbu", 
     position=[1.5, -0.25, 1.0],
-    scale=[1.0, 1.0, 1.2],
+    scale=[1.0, 1.0, 1.4],
     orientation=rot_quat,
     )
 config["objects"] = [obj_cfg]
+dcc = DCC[f"open_drawer_{obj_cfg['model']}"]
 
 env = og.Environment(configs=config)
 scene = env.scene
@@ -493,8 +535,8 @@ from omni.isaac.core.materials import PhysicsMaterial
 gripper_mat = PhysicsMaterial(
     prim_path=f"{robot.prim_path}/gripper_mat",
     name="gripper_material",
-    static_friction=0.5,
-    dynamic_friction=0.5,
+    static_friction=dcc["gripper_friction"],
+    dynamic_friction=dcc["gripper_friction"],
     restitution=None,
 )
 for arm, links in robot.finger_links.items():
@@ -512,20 +554,86 @@ og.sim.viewer_camera.set_position_orientation(
     th.tensor([-0.12,  0.50,  0.83, -0.20]),
 )
 
+
+#  =========== Adding more objects at runtime ===========
+# add more objects in the shelf: can, bottle, bowl
+extra_objects = [
+    DatasetObject(
+        name = "can_1",
+        category = "can_of_baking_mix",
+        model = "blrqqz", 
+        scale = [0.6, 0.6, 0.8],
+        position = [-0.5, 0.5, 0.5],
+        mass = 15.0
+        # orientation = [0, 0, 0, 1]
+    ),
+    DatasetObject(
+        name = "can_2",
+        category = "can_of_baking_mix",
+        model = "blrqqz", 
+        scale = [0.8, 0.8, 1.2],
+        position = [-0.5, 0.5, 0.5],
+        mass = 15.0
+        # orientation = [0, 0, 0, 1]
+    ),
+    DatasetObject(
+        name = "bowl",
+        category = "bowl",
+        model = "tvtive", 
+        # scale = [0.7, 0.7, 1.0],
+        position = [-0.7, 0.5, 0.5],
+        mass = 15.0
+        # orientation = [0, 0, 0, 1]
+    ),
+    DatasetObject(
+        name = "box_of_apple_juice_1",
+        category = "box_of_apple_juice",
+        model = "zjzgjy", 
+        # scale = [0.6, 0.6, 0.8],
+        position = [-0.9, 0.5, 0.5],
+        mass = 15.0
+        # orientation = [0, 0, 0, 1]
+    ),
+    DatasetObject(
+        name = "box_of_apple_juice_2",
+        category = "box_of_apple_juice",
+        model = "zjzgjy", 
+        scale = [0.8, 0.8, 0.8],
+        position = [-0.9, 0.5, 0.5],
+        mass = 15.0
+        # orientation = [0, 0, 0, 1]
+    ),
+    DatasetObject(
+        name = "box_of_almond_milk",
+        category = "box_of_almond_milk",
+        model = "oiiqwq", 
+        # scale = [0.6, 0.6, 0.8],
+        position = [-0.9, 0.5, 0.5],
+        mass = 15.0
+        # orientation = [0, 0, 0, 1]
+    )
+]
+for extra_obj in extra_objects:
+    env.scene.add_object(extra_obj)
+    extra_obj.root_link.mass = 10.0
+    random_pos = np.random.uniform(-2.0, -1.0, 2)
+    extra_obj.set_position_orientation(position=th.tensor([random_pos[0], random_pos[1], 0.0]))
+    for _ in range(20): og.sim.step()
+    # breakpoint()
+# ====================================================
+
 for _ in range(20):
     og.sim.step()
 
-save_folder = 'open_drawer_temp'
+SAVE_VIDEO_FREQUENCY = 15
+save_folder = 'open_drawer'
 os.makedirs(save_folder, exist_ok=True)
 episode_memory = Memory()
-
 episode_number = 0
 if os.path.isfile(f'{save_folder}/dataset.hdf5'):
     with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
         episode_number = len(file['data'].keys())
         print("episode_number: ", episode_number)
-
-num_samples = 1600
 init_episode_number = episode_number
 
 # # To quickly visualize different trajectories
@@ -544,67 +652,76 @@ init_episode_number = episode_number
 drawer = env.scene.object_registry("name", "bottom_cabinet")
 relevant_objs = [drawer]
 drawer.root_link.mass = 50.0
-for link_number in range(1, 5):
-    drawer.links[f"link_{link_number}"].mass = 5.0
+if drawer.model == "rntwkg":
+    for link_number in range(1, 5):
+        drawer.links[f"link_{link_number}"].mass = 5.0
+if drawer.model == "pkdnbu":
+    drawer.joints["j_link_3"].friction = 2.0
+drawer.keep_still()
+
+# robot controller settings
+robot.controllers["arm_right"].kp = 300.0
 
 
-writer = None
 state = og.sim.dump_state(serialized=False)
-grasp_modes = ["front", "top"]
+grasp_modes = dcc["grasp_modes"]
 
-while episode_number < init_episode_number + num_samples:
-    print(f"============== Episode {episode_number} ==============")
-    if episode_number < 800:
-        grasp_mode = grasp_modes[0]
-    else:
-        grasp_mode = grasp_modes[1]
-    
-    custom_reset(env, robot, episode_memory, grasp_mode=grasp_mode)
-    
-    action_exec = grasp_handle(grasp_mode)
-    print("action_exec: ", action_exec)
-    if action_exec is False:
-        continue
+for grasp_mode in grasp_modes:
+    while episode_number < init_episode_number + dcc["num_episodes"]:
+        print(f"============== Episode {episode_number} ==============")
+        writer = None
+        
+        custom_reset(env, robot, episode_memory, grasp_mode=grasp_mode)
+        randomize_objects(drawer)
+        robot.keep_still()
+        
+        action_exec = grasp_handle(grasp_mode)
+        print("action_exec: ", action_exec)
+        if action_exec is False:
+            continue
 
-    # imgio_kargs = {'fps': 10, 'quality': 10, 'macro_block_size': None,  'codec': 'h264',  'ffmpeg_params': ['-vf', 'crop=trunc(iw/2)*2:trunc(ih/2)*2']}
-    # output_path = f'{save_folder}/episode_{episode_number:05d}_video.mp4'
-    # writer = imageio.get_writer(output_path, **imgio_kargs)
+        if episode_number % SAVE_VIDEO_FREQUENCY == 0:
+            imgio_kargs = {'fps': 10, 'quality': 10, 'macro_block_size': None,  'codec': 'h264',  'ffmpeg_params': ['-vf', 'crop=trunc(iw/2)*2:trunc(ih/2)*2']}
+            output_path = f'{save_folder}/episode_{episode_number:05d}_video.mp4'
+            writer = imageio.get_writer(output_path, **imgio_kargs)
 
-    set_extrinsic_matrix(robot)
+        set_extrinsic_matrix(robot)
 
-    # sample trajectory
-    sampled_traj_pos = sample_from_cone(prior[:, 3:6], max_angle=np.pi/3, norm_variance=0.4)
-    sampled_traj = prior.copy()
-    sampled_traj[:, 3:6] = sampled_traj_pos
-    
-    action_primitives.move_hand_direct_ik_pos_error = 0.0
-    action_primitives.move_hand_direct_ik_orn_error = 0.0
-    dump_to_memory(env, robot, episode_memory)
-    
-    # primitive(episode_memory, episode_number, sampled_vector=sampled_vectors[i], writer=writer)
-    move_primitive(robot, sampled_traj, episode_memory=episode_memory, writer=writer)
-    episode_memory.dump(f'{save_folder}/dataset.hdf5')
+        # sample trajectory
+        sampled_traj_pos = sample_from_cone(prior[:, 3:6], max_angle=np.pi/3, norm_variance=0.4)
+        sampled_traj = prior.copy()
+        sampled_traj[:, 3:6] = sampled_traj_pos
+        
+        action_primitives.move_hand_direct_ik_pos_error = 0.0
+        action_primitives.move_hand_direct_ik_orn_error = 0.0
+        dump_to_memory(env, robot, episode_memory)
 
-    for _ in range(10):
-        og.sim.step()
-        if writer is not None:
-            obs, _ = env.get_obs()
-            img = obs[f"{robot.name}"][f"{robot.name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy() / 255.0
-            viewer_img = og.sim.viewer_camera._get_obs()[0]['rgb'][:,:,:3] / 255.0
-            concat_img = hori_concatenate_image([viewer_img, img])
-            concat_img = concat_img * 255.0
-            concat_img = concat_img.astype(np.uint8)
-            writer.append_data(concat_img)
+        breakpoint()
+        
+        # primitive(episode_memory, episode_number, sampled_vector=sampled_vectors[i], writer=writer)
+        move_primitive(robot, sampled_traj, episode_memory=episode_memory, writer=writer)
+        # episode_memory.dump(f'{save_folder}/dataset.hdf5')
 
-    # breakpoint()
-    og.sim.load_state(state, serialized=False)
-    for _ in range(10):
-        og.sim.step()
+        for _ in range(10):
+            og.sim.step()
+            if writer is not None:
+                obs, _ = env.get_obs()
+                img = obs[f"{robot.name}"][f"{robot.name}:eyes:Camera:0"]["rgb"][:, :, :3].numpy() / 255.0
+                viewer_img = og.sim.viewer_camera._get_obs()[0]['rgb'][:,:,:3] / 255.0
+                concat_img = hori_concatenate_image([viewer_img, img])
+                concat_img = concat_img * 255.0
+                concat_img = concat_img.astype(np.uint8)
+                writer.append_data(concat_img)
 
-    del episode_memory
-    episode_number += 1
+        # breakpoint()
+        og.sim.load_state(state, serialized=False)
+        for _ in range(10):
+            og.sim.step()
 
-    episode_memory = Memory()
+        del episode_memory
+        episode_number += 1
+
+        episode_memory = Memory()
 
 # Always shut down the environment cleanly at the end
 og.shutdown()

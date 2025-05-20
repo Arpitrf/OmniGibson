@@ -134,7 +134,7 @@ def main():
     action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
     save_images = True
-    video_name = "arpit_pick_and_place"
+    video_name = "arpit_place_in_drawer_1"
     save_image_dir = f"omnigibson/arnav_trial/{video_name}_images"
     counter = 0
     manipulate_fps = 5
@@ -258,7 +258,7 @@ def main():
                 pose2d = (target_pos_world_frame[0], target_pos_world_frame[1], target_yaw_world_frame)
                 action_dict["robot_actions"].append([round(delta_points_init_robot_frame[i][0], 3), round(delta_points_init_robot_frame[i][1], 3), round(delta_yaws_init_robot_frame[i], 3)])
                 print("delta_points_init_robot_frame[i], delta_yaws_init_robot_frame[i]:: ", delta_points_init_robot_frame[i][:2], delta_yaws_init_robot_frame[i])
-                execute_controller(action_primitives._navigate_to_pose_direct(pose2d), env, robot)
+                # execute_controller(action_primitives._navigate_to_pose_direct(pose2d), env, robot)
 
                 for _ in range(10):
                     og.sim.step()
@@ -323,10 +323,10 @@ def main():
                 target_robot_hand_orn_euler_lis = [round(value, 3) for value in target_robot_hand_orn_euler.tolist()]
                 action_dict["robot_actions"].append([delta_human_hand_pos_lis, target_robot_hand_orn_euler_lis])
 
-                if action == "no contact":
-                    execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), env, robot)
-                else:
-                    execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), env, robot, grasp_action=1.0)
+                # if action == "no contact":
+                #     execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), env, robot)
+                # else:
+                #     execute_controller(action_primitives._move_hand_direct_ik(target_pose, ignore_failure=True, in_world_frame=False), env, robot, grasp_action=1.0)
 
                 for _ in range(10):
                     og.sim.step()

@@ -503,7 +503,7 @@ obj_cfg = dict(
     type="DatasetObject",
     name="fridge",
     category="fridge",
-    model="hzgqdn",
+    model="petcxr",
     # Play with this 
     position=[2.5, -0.6, 1.0],
     # Play with this 
@@ -555,11 +555,11 @@ if bottom_cabinet is not None:
     bottom_cabinet.root_link.mass = 50.0
     object_name = "bottom_cabinet"
 fridge = env.scene.object_registry("name", "fridge")
-if fridge is not None:
-    object_name = "fridge"
-    fridge.root_link.mass = 50.0
-    fridge.links["link_0"].mass = 20.0
-    fridge.joints["j_link_0"].friction = 300.0
+# if fridge is not None:
+#     object_name = "fridge"
+#     fridge.root_link.mass = 50.0
+#     fridge.links["link_0"].mass = 20.0
+#     fridge.joints["j_link_0"].friction = 300.0
 
 breakpoint()
 

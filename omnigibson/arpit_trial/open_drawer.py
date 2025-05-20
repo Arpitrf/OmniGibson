@@ -121,8 +121,6 @@ def custom_reset(env, robot, episode_memory=None):
     for _ in range(10):
         og.sim.step()
 
-    # add to memory
-    dump_to_memory(env, robot, episode_memory)
 
 def execute_controller(ctrl_gen, env, robot, grasp_action, episode_memory=None):
     global GLOBAL_TIMESTEP 
@@ -253,11 +251,6 @@ def primitive(episode_memory=None, episode_number=0):
     env.step(action)
     for _ in range(40):
         og.sim.step()
-    # save everything to memory
-    dump_to_memory(env, robot, episode_memory)
-    # TODO: Change the indexing here
-    action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
-    episode_memory.add_action('actions', action_to_add)
     # ==============================================
         
     # # ======================= Move hand back ================================  
@@ -331,7 +324,8 @@ obj_cfg = dict(
     name="bottom_cabinet",
     category="bottom_cabinet",
     # visual_only=True,
-    model="rntwkg",
+    # dsbcxl or pkdnbu
+    model="pkdnbu",
     position=[1.5, -0.25, 1.0],
     scale=[1.0, 1.0, 1.2],
     orientation=rot_quat,
@@ -376,23 +370,12 @@ og.sim.viewer_camera.set_position_orientation(
 for _ in range(20):
     og.sim.step()
 
-save_folder = 'open_drawer_temp'
-os.makedirs(save_folder, exist_ok=True)
-episode_memory = Memory()
-
-episode_number = 0
-if os.path.isfile(f'{save_folder}/dataset.hdf5'):
-    with h5py.File(f'{save_folder}/dataset.hdf5', 'r') as file:
-        episode_number = len(file['data'].keys())
-        print("episode_number: ", episode_number)
-
-# robot.controllers["arm_right"].kp[:3] = nums2array(nums=2000, dim=3, dtype=th.float32)
-# robot.controllers["arm_right"].kp[-3:] = nums2array(nums=5000, dim=3, dtype=th.float32)
 
 # setting properties of the objects
 drawer = env.scene.object_registry("name", "bottom_cabinet")
 drawer.root_link.mass = 50.0
-drawer.links["link_5"].mass = 5.0
+drawer.links["link_1"].mass = 5.0
+drawer.links["link_2"].mass = 5.0
 
 # ani = animation.FuncAnimation(fig, update, frames=force_data_generator, init_func=init, blit=True, interval=100)
 # plt.show()
@@ -401,7 +384,7 @@ drawer.links["link_5"].mass = 5.0
 # plt.ion()  # Turn on interactive mode
 # plt.show()  # Display the plot
 
-
+episode_memory = None
 state = og.sim.dump_state(serialized=False)
 for _ in range(1):
     custom_reset(env, robot, episode_memory)

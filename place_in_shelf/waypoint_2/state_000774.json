@@ -1,0 +1,780 @@
+{
+    "metadata": {},
+    "state": {
+        "system_registry": {},
+        "object_registry": {
+            "coffee_table": {
+                "root_link": {
+                    "pos": [
+                        223.81259155273438,
+                        -19.324153900146484,
+                        325.66351318359375
+                    ],
+                    "ori": [
+                        0.2902666926383972,
+                        -0.43560194969177246,
+                        -0.06127934902906418,
+                        0.849847674369812
+                    ],
+                    "lin_vel": [
+                        49.806270599365234,
+                        -4.291179180145264,
+                        50.516578674316406
+                    ],
+                    "ang_vel": [
+                        37.027976989746094,
+                        0.04370853304862976,
+                        -19.584182739257812
+                    ]
+                },
+                "non_kin": {}
+            },
+            "marker": {
+                "root_link": {
+                    "pos": [
+                        1.1632227364026952e-25,
+                        3.877409121342317e-26,
+                        0.0
+                    ],
+                    "ori": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {},
+                "radius": 0.029999999329447746,
+                "height": -1,
+                "size": -1
+            },
+            "shelf": {
+                "root_link": {
+                    "pos": [
+                        6.955934524536133,
+                        4.823343753814697,
+                        0.28153300285339355
+                    ],
+                    "ori": [
+                        -0.3746818006038666,
+                        -0.599626898765564,
+                        -0.37732142210006714,
+                        0.5980716347694397
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {}
+            },
+            "robot_mmtjco": {
+                "root_link": {
+                    "pos": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ori": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "joint_pos": [
+                    -959391.5625,
+                    -4490899.0,
+                    17930884.0,
+                    -12.566370964050293,
+                    12.566370964050293,
+                    12.566370964050293,
+                    0.3499999940395355,
+                    -1106106368.0,
+                    -58208656.0,
+                    1834687.25,
+                    104698224.0,
+                    -3911119.25,
+                    -17493.271484375,
+                    -1279228288.0,
+                    133624672.0,
+                    -207443440.0,
+                    17503726.0,
+                    6228450304.0,
+                    -27178736.0,
+                    -20718733312.0,
+                    -26527792.0,
+                    24714575872.0,
+                    339327168.0,
+                    -134160056.0,
+                    539015872.0,
+                    209060656.0,
+                    -29509288.0,
+                    29351996.0,
+                    99012344.0,
+                    38402992.0,
+                    -32700.45703125,
+                    75286616.0,
+                    -10927523.0,
+                    24827462.0,
+                    23743886.0
+                ],
+                "joint_vel": [
+                    10905646.0,
+                    -16341355.0,
+                    9603909.0,
+                    15982696.0,
+                    14809832.0,
+                    -19282740.0,
+                    -12819855.0,
+                    -296321344.0,
+                    -532893472.0,
+                    -1454552.625,
+                    -68279936.0,
+                    181230368.0,
+                    63986.18359375,
+                    -8231424.0,
+                    -196536448.0,
+                    -52504320.0,
+                    -15060680.0,
+                    -1166339072.0,
+                    52444288.0,
+                    -3095883776.0,
+                    302476288.0,
+                    -3830530048.0,
+                    -246371200.0,
+                    1768529920.0,
+                    9797504.0,
+                    -29190352.0,
+                    69515200.0,
+                    -31293376.0,
+                    28647512.0,
+                    -608090944.0,
+                    11158312.0,
+                    -723205888.0,
+                    -132157696.0,
+                    -28210432.0,
+                    27719680.0
+                ],
+                "joint_eff": [
+                    -43945525248.0,
+                    -83006693376.0,
+                    -38330224640.0,
+                    2162538240.0,
+                    -5857152000.0,
+                    37735481344.0,
+                    -5863926398976.0,
+                    -431575662592.0,
+                    -350926241792.0,
+                    -48626802688.0,
+                    642911830016.0,
+                    -68014473216.0,
+                    -52803182592.0,
+                    -29819142144.0,
+                    129615790080.0,
+                    371648430080.0,
+                    -42792337408.0,
+                    136797683712.0,
+                    7425086464.0,
+                    302796996608.0,
+                    -48016648.0,
+                    144425713664.0,
+                    187151744.0,
+                    -151824203776.0,
+                    -2339310848.0,
+                    -37914349568.0,
+                    115168952320.0,
+                    -5561101.5,
+                    -80787144.0,
+                    49419216.0,
+                    -10505672.0,
+                    -6340568064.0,
+                    -6556657152.0,
+                    -2376421.0,
+                    7090890.5
+                ],
+                "controllers": {
+                    "base": {
+                        "goal_is_valid": true,
+                        "goal": {
+                            "target": [
+                                0.0,
+                                0.0,
+                                0.0
+                            ]
+                        }
+                    },
+                    "camera": {
+                        "goal_is_valid": true,
+                        "goal": {
+                            "target": [
+                                -1.3089967966079712,
+                                -1.0471975803375244
+                            ]
+                        }
+                    },
+                    "arm_left": {
+                        "goal_is_valid": true,
+                        "goal": {
+                            "target": [
+                                0.17000000178813934,
+                                -1.100000023841858,
+                                1.4700000286102295,
+                                2.7100000381469727,
+                                1.7100000381469727,
+                                -1.5700000524520874,
+                                1.3899999856948853,
+                                0.0
+                            ]
+                        }
+                    },
+                    "gripper_left": {
+                        "goal_is_valid": true,
+                        "goal": {
+                            "target": [
+                                0.0
+                            ]
+                        }
+                    },
+                    "arm_right": {
+                        "goal_is_valid": true,
+                        "goal": {
+                            "target_pos": [
+                                0.8179203867912292,
+                                0.07124419510364532,
+                                0.6369511485099792
+                            ],
+                            "target_quat": [
+                                0.17617827653884888,
+                                0.6625484824180603,
+                                -0.5399270057678223,
+                                -0.4883336126804352
+                            ]
+                        },
+                        "control_filter": {
+                            "past_samples": [
+                                [
+                                    -1.1780972480773926,
+                                    -1.1780972480773926,
+                                    3.926990509033203,
+                                    2.356194496154785,
+                                    -2.094395160675049,
+                                    -1.4137165546417236,
+                                    2.094395160675049
+                                ],
+                                [
+                                    -1.1780972480773926,
+                                    -1.1780972480773926,
+                                    3.926990509033203,
+                                    2.356194496154785,
+                                    -2.094395160675049,
+                                    -1.4137165546417236,
+                                    2.094395160675049
+                                ]
+                            ],
+                            "current_idx": 1,
+                            "fully_filled": true
+                        }
+                    },
+                    "gripper_right": {
+                        "goal_is_valid": true,
+                        "goal": {
+                            "target": [
+                                0.7857471704483032
+                            ]
+                        }
+                    }
+                },
+                "non_kin": {}
+            },
+            "box": {
+                "root_link": {
+                    "pos": [
+                        0.7196729779243469,
+                        -0.4864858090877533,
+                        0.04999992623925209
+                    ],
+                    "ori": [
+                        0.6461215615272522,
+                        -0.2872749865055084,
+                        0.6461215615272522,
+                        0.2872750759124756
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {},
+                "radius": -1,
+                "height": -1,
+                "size": 1.0
+            },
+            "can_1": {
+                "root_link": {
+                    "pos": [
+                        6.2111992835998535,
+                        0.523611307144165,
+                        0.027955561876296997
+                    ],
+                    "ori": [
+                        0.6386564373970032,
+                        -0.3004622757434845,
+                        0.6468297839164734,
+                        -0.28887999057769775
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {}
+            },
+            "can_2": {
+                "root_link": {
+                    "pos": [
+                        6.768909931182861,
+                        4.4201884269714355,
+                        0.06241337209939957
+                    ],
+                    "ori": [
+                        -0.33017563819885254,
+                        -0.6234130263328552,
+                        -0.42841628193855286,
+                        0.5646236538887024
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {}
+            },
+            "bowl": {
+                "root_link": {
+                    "pos": [
+                        26.00634002685547,
+                        1.5983121395111084,
+                        0.06400986015796661
+                    ],
+                    "ori": [
+                        2.1886080503463745e-08,
+                        2.246815711259842e-08,
+                        0.9925615191459656,
+                        -0.12174469232559204
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {
+                    "Temperature": {
+                        "temperature": 23.0
+                    }
+                }
+            },
+            "box_of_apple_juice_1": {
+                "root_link": {
+                    "pos": [
+                        1.0934687852859497,
+                        -0.042538776993751526,
+                        0.02248235046863556
+                    ],
+                    "ori": [
+                        0.30794504284858704,
+                        0.6365295052528381,
+                        -0.3079454302787781,
+                        0.6365293860435486
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {
+                    "Temperature": {
+                        "temperature": 23.0
+                    }
+                }
+            },
+            "box_of_apple_juice_2": {
+                "root_link": {
+                    "pos": [
+                        1.2270052433013916,
+                        -0.15546980500221252,
+                        0.01798594370484352
+                    ],
+                    "ori": [
+                        -0.11119517683982849,
+                        0.6983093619346619,
+                        0.11119511723518372,
+                        0.6983090043067932
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {
+                    "Temperature": {
+                        "temperature": 23.0
+                    }
+                }
+            },
+            "box_of_almond_milk": {
+                "root_link": {
+                    "pos": [
+                        6.467584609985352,
+                        8.525388717651367,
+                        0.03498677909374237
+                    ],
+                    "ori": [
+                        0.32421278953552246,
+                        -0.6280620098114014,
+                        0.31595712900161743,
+                        0.6329259872436523
+                    ],
+                    "lin_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "ang_vel": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                "non_kin": {
+                    "Temperature": {
+                        "temperature": 23.0
+                    }
+                }
+            }
+        }
+    },
+    "init_info": {
+        "class_module": "omnigibson.scenes.scene_base",
+        "class_name": "Scene",
+        "args": {
+            "scene_file": null
+        }
+    },
+    "objects_info": {
+        "init_info": {
+            "coffee_table": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "coffee_table",
+                    "category": "coffee_table",
+                    "model": "fqluyq",
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            "marker": {
+                "class_module": "omnigibson.objects.primitive_object",
+                "class_name": "PrimitiveObject",
+                "args": {
+                    "name": "marker",
+                    "primitive_type": "Sphere",
+                    "relative_prim_path": "/marker",
+                    "visual_only": true,
+                    "rgba": [
+                        1.0,
+                        0,
+                        0,
+                        1.0
+                    ],
+                    "radius": 0.03
+                }
+            },
+            "shelf": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "shelf",
+                    "category": "shelf",
+                    "model": "eniafz",
+                    "scale": [
+                        2.0,
+                        1.6248747110366821,
+                        0.8230185508728027
+                    ]
+                }
+            },
+            "robot_mmtjco": {
+                "class_module": "omnigibson.robots.tiago",
+                "class_name": "Tiago",
+                "args": {
+                    "name": "robot_mmtjco",
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "self_collisions": true,
+                    "controller_config": {
+                        "base": {
+                            "name": "JointController"
+                        },
+                        "arm_left": {
+                            "name": "NullJointController"
+                        },
+                        "arm_right": {
+                            "name": "InverseKinematicsController",
+                            "kp": 150.0
+                        },
+                        "gripper_left": {
+                            "name": "NullJointController"
+                        },
+                        "gripper_right": {
+                            "name": "JointController",
+                            "motor_type": "position",
+                            "command_input_limits": [
+                                -1.0,
+                                1.0
+                            ],
+                            "command_output_limits": [
+                                -1.0,
+                                1.0
+                            ],
+                            "use_delta_commands": false
+                        },
+                        "camera": {
+                            "name": "JointController"
+                        }
+                    },
+                    "action_type": "continuous",
+                    "action_normalize": false,
+                    "obs_modalities": [
+                        "rgb",
+                        "depth",
+                        "seg_semantic",
+                        "normal",
+                        "seg_instance",
+                        "seg_instance_id"
+                    ],
+                    "sensor_config": {
+                        "VisionSensor": {
+                            "sensor_kwargs": {
+                                "image_height": 128,
+                                "image_width": 128
+                            }
+                        }
+                    },
+                    "grasping_mode": "physical",
+                    "rigid_trunk": false,
+                    "default_trunk_offset": 0.15,
+                    "default_arm_pose": "vertical"
+                }
+            },
+            "box": {
+                "class_module": "omnigibson.objects.primitive_object",
+                "class_name": "PrimitiveObject",
+                "args": {
+                    "name": "box",
+                    "primitive_type": "Cube",
+                    "scale": [
+                        0.10000000149011612,
+                        0.05000000074505806,
+                        0.10000000149011612
+                    ],
+                    "rgba": [
+                        1.0,
+                        0,
+                        0,
+                        1.0
+                    ]
+                }
+            },
+            "can_1": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "can_1",
+                    "category": "can_of_baking_mix",
+                    "model": "blrqqz",
+                    "scale": [
+                        0.6000000238418579,
+                        0.6000000238418579,
+                        0.800000011920929
+                    ],
+                    "position": [
+                        -0.5,
+                        0.5,
+                        0.5
+                    ],
+                    "mass": 15.0
+                }
+            },
+            "can_2": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "can_2",
+                    "category": "can_of_baking_mix",
+                    "model": "blrqqz",
+                    "scale": [
+                        0.800000011920929,
+                        0.800000011920929,
+                        1.2000000476837158
+                    ],
+                    "position": [
+                        -0.5,
+                        0.5,
+                        0.5
+                    ],
+                    "mass": 15.0
+                }
+            },
+            "bowl": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "bowl",
+                    "category": "bowl",
+                    "model": "tvtive",
+                    "position": [
+                        -0.7,
+                        0.5,
+                        0.5
+                    ],
+                    "mass": 15.0,
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            "box_of_apple_juice_1": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "box_of_apple_juice_1",
+                    "category": "box_of_apple_juice",
+                    "model": "zjzgjy",
+                    "position": [
+                        -0.9,
+                        0.5,
+                        0.5
+                    ],
+                    "mass": 15.0,
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            "box_of_apple_juice_2": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "box_of_apple_juice_2",
+                    "category": "box_of_apple_juice",
+                    "model": "zjzgjy",
+                    "scale": [
+                        0.800000011920929,
+                        0.800000011920929,
+                        0.800000011920929
+                    ],
+                    "position": [
+                        -0.9,
+                        0.5,
+                        0.5
+                    ],
+                    "mass": 15.0
+                }
+            },
+            "box_of_almond_milk": {
+                "class_module": "omnigibson.objects.dataset_object",
+                "class_name": "DatasetObject",
+                "args": {
+                    "name": "box_of_almond_milk",
+                    "category": "box_of_almond_milk",
+                    "model": "oiiqwq",
+                    "position": [
+                        -0.9,
+                        0.5,
+                        0.5
+                    ],
+                    "mass": 15.0,
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            }
+        }
+    }
+}

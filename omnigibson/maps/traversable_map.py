@@ -140,7 +140,7 @@ class TraversableMap(BaseMap):
 
         # If nothing is given, sample a random floor and a random point on that floor
         if floor is None and reference_point is None:
-            floor = th.randint(0, self.n_floors)
+            floor = th.randint(0, self.n_floors, size=(1,)).item()
 
         # create a deep copy so that we don't erode the original map
         trav_map = th.clone(self.floor_map[floor])
