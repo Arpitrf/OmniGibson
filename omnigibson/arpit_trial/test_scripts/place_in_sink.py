@@ -246,7 +246,7 @@ def visualize_axes(target_pose):
 def primitive(episode_memory=None, episode_number=0):
 
     # # ======================= Move base ================================  
-    grasp_action = -1.0
+    grasp_action = 1.0
     # # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
     # target_base_pose = th.tensor([0.0, 0.0, 1.57])
     # execute_controller(action_primitives._navigate_to_pose_linearly_cartesian(target_base_pose, episode_memory=episode_memory), 
@@ -305,12 +305,12 @@ def primitive(episode_memory=None, episode_number=0):
     # ])
     # horizontal-forward
     # w.r.t world
-    target_pose = th.tensor([
-        [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
-        [ 0.81670615,  0.02154281,  0.57665151,  0.49947819],
-        [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
-        [ 0.        ,  0.,          0.,          0.        ]
-    ])
+    # target_pose = th.tensor([
+    #     [ 0.57506982,  0.05240871, -0.81642393,  0.13022119],
+    #     [ 0.81670615,  0.02154281,  0.57665151,  0.49947819],
+    #     [ 0.04780963, -0.99839333, -0.03041389,  0.40455796],
+    #     [ 0.        ,  0.,          0.,          0.        ]
+    # ])
     
     # # pan
     # target_pose = th.tensor([
@@ -319,8 +319,11 @@ def primitive(episode_memory=None, episode_number=0):
     #     [ 0.90803515, -0.38750226, -0.15910426,  0.50454916],
     #     [ 0.        ,  0.,          0.,          0.        ],
     # ])
+    # vertical pan for original gripper    
+    target_pose = robot.eef_links["right"].get_position_orientation()
+    target_pose = (th.tensor([0.35828257, 0.49818253, 0.50454916]), target_pose[1])
     
-    target_pose = T.mat2pose(target_pose)
+    # target_pose = T.mat2pose(target_pose)
 
     # # ============== testing grasp proposals =================
     # in_world_frame = False
@@ -368,7 +371,7 @@ def primitive(episode_memory=None, episode_number=0):
     # # visualize_axes(target_pose)
     # # # =======================================================
 
-    pre_target_pose = (target_pose[0] + th.tensor([0.0, -0.04, 0.1]), target_pose[1]) 
+    pre_target_pose = (target_pose[0] + th.tensor([0.0, 0.0, 0.1]), target_pose[1]) 
     execute_controller(action_primitives._move_hand_direct_ik(pre_target_pose, ignore_failure=True, in_world_frame=in_world_frame), 
                        env, 
                        robot, 
@@ -389,10 +392,11 @@ def primitive(episode_memory=None, episode_number=0):
     pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
     orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
+    breakpoint()
     # =================================================================================
 
     # ============= Perform grasp ===================
-    grasp_action = 1.0
+    grasp_action = 0.0 # or -1.0
     action = action_primitives._empty_action()
     action[robot.gripper_action_idx["right"]] = grasp_action
     env.step(action)
@@ -472,7 +476,7 @@ def primitive(episode_memory=None, episode_number=0):
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
     # ============================================
     
-    og.sim.save([f'saved_simulation_states/place_in_sink_start_state_forward_can.json'])
+    # og.sim.save([f'saved_simulation_states/place_in_sink_start_state_forward_can.json'])
 
     # # ======================= Move hand to place pose ================================
     # # w.r.t world
@@ -528,6 +532,7 @@ config["scene"]["type"] = "Scene"
 
 config["robots"][0]["controller_config"]["arm_right"]["name"] = "InverseKinematicsController"
 config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
+config["robots"][0]["grasping_mode"] = "assisted"
 # config["robots"][0]["controller_config"]["arm_right"]["kp"] = th.tensor([2000.0, 2000.0, 2000.0, 5000.0, 1000.0, 1000.0, 1000.0])
 # config["robots"][0]["controller_config"]["gripper_right"]["motor_type"] = "velocity"
 
@@ -538,12 +543,16 @@ config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
 # Create and load this object into the simulator
 rot_euler = [0.0, 0.0, 180.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
+coffee_table_euler = [0.0, 0.0, 90.0]
+coffee_table_quat = np.array(R.from_euler('XYZ', coffee_table_euler, degrees=True).as_quat())
+
 # for forward grasp
 # box_euler = [0.0, 0.0, -30.0]
 # for top-down grasp
+
 box_euler = [0.0, 0.0, 0.0]
 box_quat = np.array(R.from_euler('XYZ', box_euler, degrees=True).as_quat())
-pan_euler = [0.0, 0.0, 90.0]
+pan_euler = [0.0, 0.0, 0.0]
 pan_quat = np.array(R.from_euler('XYZ', pan_euler, degrees=True).as_quat())
 config["objects"] = [
     # {
@@ -571,7 +580,7 @@ config["objects"] = [
         "model": "fqluyq",
         # "scale": [1.0, 1.0, 1.3],
         "position": [0, 0.6, 0.3],
-        "orientation": [0, 0, 0, 1]
+        "orientation": coffee_table_quat
     },
     # {
     #     "type": "PrimitiveObject",
@@ -585,27 +594,27 @@ config["objects"] = [
     #     "position": [0.1, 0.5, 0.5],
     #     "orientation": box_quat
     # },
-    {
-        "type": "DatasetObject",
-        "name": "can_of_baking_mix",
-        "category": "can_of_baking_mix",
-        "model": "blrqqz", 
-        "scale": [0.7, 0.7, 1.3],
-        "position": [0.1, 0.5, 0.5],
-        "orientation": [0, 0, 0, 1]
-    },
     # {
     #     "type": "DatasetObject",
-    #     "name": "saucepan",
-    #     "category": "saucepan",
-    #     "model": "fsinsu", 
-    #     # "scale": [0.7, 0.7, 1.3],
-    #     "position": [0.20, 0.52, 0.5],
-    #     "orientation": pan_quat
+    #     "name": "can_of_baking_mix",
+    #     "category": "can_of_baking_mix",
+    #     "model": "blrqqz", 
+    #     "scale": [0.7, 0.7, 1.3],
+    #     "position": [0.1, 0.5, 0.5],
+    #     "orientation": [0, 0, 0, 1]
     # },
+    {
+        "type": "DatasetObject",
+        "name": "saucepan",
+        "category": "saucepan",
+        "model": "fsinsu", 
+        # "scale": [0.7, 0.7, 1.3],
+        "position": [0.20, 0.52, 0.5],
+        "orientation": pan_quat
+    },
 ]
-held_obj_name = "can_of_baking_mix"
-# held_obj_name = "saucepan"
+# held_obj_name = "can_of_baking_mix"
+held_obj_name = "saucepan"
 
 env = og.Environment(configs=config)
 scene = env.scene
@@ -633,6 +642,7 @@ og.sim.load_state(state)
 
 action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
 
+
 # # pdb.set_trace()
 # # obj = env.scene.object_registry("name", "box")
 held_obj = env.scene.object_registry("name", held_obj_name)
@@ -658,8 +668,7 @@ eef_marker = PrimitiveObject(
         )
 env.scene.add_object(eef_marker)
 
-for _ in range(20):
-    og.sim.step()
+for _ in range(20): og.sim.step()
 
 save_folder = 'place_in_shelf_temp'
 os.makedirs(save_folder, exist_ok=True)
@@ -671,14 +680,15 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
         episode_number = len(file['data'].keys())
         print("episode_number: ", episode_number)
 
+
 # if robot.controllers["arm_right"] != "absolute_pose":
 # robot.controllers["arm_right"].kp[:3] = nums2array(nums=2000, dim=3, dtype=th.float32)
 # robot.controllers["arm_right"].kp[-3:] = nums2array(nums=5000, dim=3, dtype=th.float32)
 
-for _ in range(500):
-    action = action_primitives._empty_action()
-    action[robot.base_action_idx] = th.tensor([0.0, 0.0, 0.0], dtype=th.float32)
-    env.step(action)
+# for _ in range(500):
+#     action = action_primitives._empty_action()
+#     action[robot.base_action_idx] = th.tensor([0.0, 0.0, 0.0], dtype=th.float32)
+#     env.step(action)
     # robot.set_linear_velocity(th.tensor([0.1, 0.1, 0.0], dtype=th.float32))
     # og.sim.step()
 

@@ -138,6 +138,7 @@ object_dropping_data/
 place_in_shelf_data_low_noise/
 place_in_shelf_data_medium_noise/
 place_in_shelf_data_high_noise/
+place_in_sink/
 real_world_data/
 resources/
 place_in_shelf_data_final/

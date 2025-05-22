@@ -590,7 +590,7 @@ grasp_modes = ["forward"]
 obj_names = ["pan"] 
 for obj_name in obj_names:
     for grasp_mode in grasp_modes:
-        dcc = DCC[f'place_in_shelf_{grasp_mode}_{obj_name}']
+        dcc = DCC[f'place_in_sink_{grasp_mode}_{obj_name}']
         # Set the starting simulation state
         # og.clear()
         og.sim.restore([f"saved_simulation_states/{dcc['start_state']}"])
@@ -599,6 +599,7 @@ for obj_name in obj_names:
 
         scene = env.scene
         robot = env.robots[0]
+        breakpoint()
         # robot = og.sim.scenes[0].robots[0]
         action_primitives = StarterSemanticActionPrimitives(env, enable_head_tracking=False)
         set_gripper_friction()
@@ -705,6 +706,7 @@ for obj_name in obj_names:
                 output_path = f'{save_folder}/episode_{episode_number:05d}_video.mp4'
                 writer = imageio.get_writer(output_path, **imgio_kargs)
 
+            breakpoint()
             # Randomize base pose and head pose a bit
             randomize_robot()
             # randomzie_objects()
