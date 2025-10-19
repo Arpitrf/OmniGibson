@@ -392,8 +392,9 @@ def primitive(episode_memory=None, episode_number=0):
     pos_error = np.linalg.norm(post_eef_pose[0] - target_pose[0])
     orn_error = T.get_orientation_diff_in_radian(post_eef_pose[1], target_pose[1])
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
-    breakpoint()
     # =================================================================================
+
+    # breakpoint()
 
     # ============= Perform grasp ===================
     grasp_action = 0.0 # or -1.0
@@ -409,11 +410,11 @@ def primitive(episode_memory=None, episode_number=0):
     episode_memory.add_action('actions', action_to_add)
     # ==============================================
 
-    breakpoint()
+    # breakpoint()
         
     # ======================= Move hand up ================================  
     curr_pos, curr_orn = robot.get_relative_eef_pose(arm='right')
-    new_pos = curr_pos + th.tensor([0.0, 0.0, 0.2])
+    new_pos = curr_pos + th.tensor([-0.2, 0.0, 0.2])
     target_pose = (new_pos, curr_orn)
     execute_controller(action_primitives._move_hand_linearly_cartesian(target_pose, ignore_failure=True, in_world_frame=False), 
                        env, 
@@ -458,7 +459,7 @@ def primitive(episode_memory=None, episode_number=0):
     # debugging
     ee_pose_before_nav = robot.get_relative_eef_pose(arm='right')
     # target_base_pose = (th.tensor([0.4256, 0.0257, 0.0005]), th.tensor([-6.8379e-08, -7.3217e-08,  3.1305e-02,  9.9951e-01]))
-    target_base_pose = th.tensor([0.456, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
+    target_base_pose = th.tensor([0.656, 0.0257, 0.0]) # [0.526, 0.0257, 0.0]
     execute_controller(action_primitives._navigate_to_pose_direct(target_base_pose),
                        env, 
                        robot, 
@@ -476,7 +477,7 @@ def primitive(episode_memory=None, episode_number=0):
     print(f"Final pos_error and orn error: {pos_error} meters, {np.rad2deg(orn_error)} degrees.")
     # ============================================
     
-    # og.sim.save([f'saved_simulation_states/place_in_sink_start_state_forward_can.json'])
+    og.sim.save([f'saved_simulation_states/place_in_sink_start_state_down_pan.json'])
 
     # # ======================= Move hand to place pose ================================
     # # w.r.t world
@@ -692,7 +693,7 @@ if os.path.isfile(f'{save_folder}/dataset.hdf5'):
     # robot.set_linear_velocity(th.tensor([0.1, 0.1, 0.0], dtype=th.float32))
     # og.sim.step()
 
-breakpoint()
+# breakpoint()
 
 for _ in range(1):
     custom_reset(env, robot, episode_memory)

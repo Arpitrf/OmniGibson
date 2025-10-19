@@ -494,6 +494,7 @@ def grasp_handle(grasp_mode):
     env.step(action)
     for _ in range(40):
         og.sim.step()
+    breakpoint()
     # ==============================================
 
     is_grasping = robot.custom_is_grasping()
@@ -517,7 +518,7 @@ config["robots"][0]["controller_config"]["arm_right"]["name"] = "InverseKinemati
 config["robots"][0]["controller_config"]["arm_right"]["kp"] = 150.0
 
 # Create and load this object into the simulator
-rot_euler = [0.0, 0.0, -90.0]
+rot_euler = [0.0, 0.0, 180.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
 # obj_cfg = dict(
 #     type="DatasetObject",

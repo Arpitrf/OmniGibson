@@ -104,6 +104,16 @@ data_collection_configs = {
         },
     },
 
+    "place_in_sink_down_pan": {
+        "start_state": "place_in_sink_start_state_down_pan.json",
+        "obj_name": "saucepan",
+        "num_episodes": 400,
+        "held_pos": {
+            "world": None,
+            "robot": np.array([ 0.60, -0.30,  0.97]),
+        },
+    },
+
     "place_in_shelf_forward_pan": {
         "start_state": "place_in_shelf_start_state_forward_pan.json",
         "obj_name": "saucepan",

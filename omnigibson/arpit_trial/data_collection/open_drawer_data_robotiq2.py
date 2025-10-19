@@ -439,6 +439,7 @@ def grasp_handle(grasp_mode):
     if not action_exec:
         return action_exec
     # =================================================================================
+    breakpoint()
 
     # ============= Perform grasp ===================
     grasp_action = 1.0
@@ -453,6 +454,7 @@ def grasp_handle(grasp_mode):
     # action_to_add = np.concatenate((np.array([0.0, 0.0, 0.0]), np.array(action[14:21]))) # TODO check the indices here    
     # episode_memory.add_action('actions', action_to_add)
     # ==============================================
+    breakpoint()
 
     is_grasping = robot.custom_is_grasping()
     action_exec = is_grasping
@@ -469,17 +471,17 @@ def randomize_objects(drawer):
     og.sim.load_state(temp_state)
     drawer.keep_still()
 
-    # num_objects = np.random.randint(2, 6)
-    num_objects = 6
-    chosen_objs = np.random.choice(np.array(extra_objects), num_objects, replace=False)
-    chosen_obj_pos = th.tensor([1.3433, -0.150, 0.7241])
-    for chosen_obj in chosen_objs:
-        chosen_obj = env.scene.object_registry("name", chosen_obj.name)
-        # pos_x_noise = np.random.uniform(-0.2, 0.3)
-        # pos_y_noise = np.random.uniform(-0.2, 0.4)
-        # sampled_pos = chosen_obj_pos + th.tensor([pos_x_noise, pos_y_noise, 0.0])
-        # chosen_obj.set_position_orientation(position=sampled_pos)
-        chosen_obj.states[object_states.Inside].set_value(other=shelf, new_value=True)
+    # # num_objects = np.random.randint(2, 6)
+    # num_objects = 6
+    # chosen_objs = np.random.choice(np.array(extra_objects), num_objects, replace=False)
+    # chosen_obj_pos = th.tensor([1.3433, -0.150, 0.7241])
+    # for chosen_obj in chosen_objs:
+    #     chosen_obj = env.scene.object_registry("name", chosen_obj.name)
+    #     # pos_x_noise = np.random.uniform(-0.2, 0.3)
+    #     # pos_y_noise = np.random.uniform(-0.2, 0.4)
+    #     # sampled_pos = chosen_obj_pos + th.tensor([pos_x_noise, pos_y_noise, 0.0])
+    #     # chosen_obj.set_position_orientation(position=sampled_pos)
+    #     chosen_obj.states[object_states.Inside].set_value(other=shelf, new_value=True)
 
 def set_all_seeds(seed):
     import random
@@ -499,7 +501,7 @@ config["scene"] = dict()
 config["scene"]["type"] = "Scene"
 
 # Create and load this object into the simulator
-rot_euler = [0.0, 0.0, -90.0]
+rot_euler = [0.0, 0.0, 180.0]
 rot_quat = np.array(R.from_euler('XYZ', rot_euler, degrees=True).as_quat())
 # obj_cfg = dict(
 #     type="DatasetObject",
@@ -516,7 +518,7 @@ obj_cfg = dict(
     category="bottom_cabinet",
     # visual_only=True,
     # models: rntwkg, pkdnbu
-    model="pkdnbu", 
+    model="rntwkg", 
     position=[1.5, -0.25, 1.0],
     scale=[1.0, 1.0, 1.4],
     orientation=rot_quat,
@@ -665,6 +667,9 @@ robot.controllers["arm_right"].kp = 300.0
 
 state = og.sim.dump_state(serialized=False)
 grasp_modes = dcc["grasp_modes"]
+# remove later
+grasp_modes = ["top"]
+# breakpoint()
 
 for grasp_mode in grasp_modes:
     while episode_number < init_episode_number + dcc["num_episodes"]:

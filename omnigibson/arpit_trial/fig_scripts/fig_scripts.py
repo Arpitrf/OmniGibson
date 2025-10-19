@@ -1,33 +1,33 @@
 import plotly.graph_objects as go
 
 import plotly.io as pio
-pio.kaleido.scope.mathjax = None  # Disable MathJax rendering
+# pio.kaleido.scope.mathjax = None  # Disable MathJax rendering
 
 
-# 1. Place in shelf
-task_name = "Shelving an Item"
-save_path = "place_in_shelf.svg"
-x = ["Nav to<br>object", "Pick<br>object", "Nav to<br>shelf", "Place in<br>shelf"]
-y1 = [1, 1, 1, 0.8]
-y2 = [0.4, 0.4, 0.2, 0]
-y3 = [0.4, 0.4, 0.2, 0]
-y4 = [0.8, 0.8, 0.6, 0]
-y5 = [1, 1, 1, 0.0]
-y6 = [1, 1, 1, 0.2]
-# marker_symbols = ["x", "x", "x", "circle"]
-# marker_symbols = ["circle-open", "circle-open", "circle-open", "circle"]
-# marker_sizes = [32, 32, 32, 20]
+# # 1. Place in shelf
+# task_name = "Shelving an Item"
+# save_path = "place_in_shelf.svg"
+# x = ["Nav to<br>object", "Pick<br>object", "Nav to<br>shelf", "Place in<br>shelf"]
+# y1 = [1, 1, 1, 0.8]
+# y2 = [0.4, 0.4, 0.2, 0]
+# y3 = [0.4, 0.4, 0.2, 0]
+# y4 = [0.8, 0.8, 0.6, 0]
+# y5 = [1, 1, 1, 0.0]
+# y6 = [1, 1, 1, 0.2]
+# # marker_symbols = ["x", "x", "x", "circle"]
+# # marker_symbols = ["circle-open", "circle-open", "circle-open", "circle"]
+# # marker_sizes = [32, 32, 32, 20]
 
-# # 2. Store Object in Drawer
-# task_name = "Store in Drawer"
-# save_path = "store_in_drawer.svg"
-# x = ["Nav to<br>drawer", "Open<br>drawer", "Pick<br>object", "Place in<br>drawer", "Close<br>drawer"]
-# y1 = [1, 0.8, 0.8, 0.8, 0.8]
-# y2 = [0.6, 0.0, 0.0, 0.0, 0.0]
-# y3 = [0.4, 0.0, 0.0, 0.0, 0.0]
-# y4 = [1, 0.0, 0.0, 0.0, 0.0]
-# y5 = [1, 0.4, 0.4, 0.0, 0.0]
-# y6 = [1, 0.2, 0.2, 0.2, 0.2]
+# 2. Store Object in Drawer
+task_name = "Store in Drawer"
+save_path = "store_in_drawer.svg"
+x = ["Nav to<br>drawer", "Open<br>drawer", "Pick<br>object", "Place in<br>drawer", "Close<br>drawer"]
+y1 = [1, 0.8, 0.8, 0.8, 0.8]
+y2 = [0.6, 0.0, 0.0, 0.0, 0.0]
+y3 = [0.4, 0.0, 0.0, 0.0, 0.0]
+y4 = [1, 0.0, 0.0, 0.0, 0.0]
+y5 = [1, 0.4, 0.4, 0.0, 0.0]
+y6 = [1, 0.2, 0.2, 0.2, 0.2]
 # marker_symbols = ["x", "circle", "x", "circle", "circle"]
 # marker_symbols = ["circle-open", "circle", "circle-open", "circle", "circle"]
 # marker_sizes = [32, 20, 32, 20, 20]
@@ -43,16 +43,16 @@ y6 = [1, 1, 1, 0.2]
 # y5 = [1, 0.0, 0.0]
 # y6 = [1, 0.2, 0.0]
 
-# 4. Refrigerate
-task_name = "Refrigerating an Item"
-save_path = "refrigerate.svg"
-x = ["Nav to<br>fridge", "Open<br>fridge", "Nav to<br>object", "Pick<br>object", "Nav with obj<br>to fridge", "Place in<br>fridge"]
-y1 = [1, 1, 1, 1, 0.8, 0.6]
-y2 = [0.6, 0.0, 0.0, 0.0, 0.0, 0.0]
-y3 = [0.4, 0.0, 0.0, 0.0, 0.0, 0.0]
-y4 = [0.8, 0.0, 0.0, 0.0, 0.0, 0.0]
-y5 = [1, 0.0, 0.0, 0.0, 0.0, 0.0]
-y6 = [1, 0.2, 0.2, 0.2, 0.2, 0.0]
+# # 4. Refrigerate
+# task_name = "Refrigerating an Item"
+# save_path = "refrigerate.svg"
+# x = ["Nav to<br>fridge", "Open<br>fridge", "Nav to<br>object", "Pick<br>object", "Nav with obj<br>to fridge", "Place in<br>fridge"]
+# y1 = [1, 1, 1, 1, 0.8, 0.6]
+# y2 = [0.6, 0.0, 0.0, 0.0, 0.0, 0.0]
+# y3 = [0.4, 0.0, 0.0, 0.0, 0.0, 0.0]
+# y4 = [0.8, 0.0, 0.0, 0.0, 0.0, 0.0]
+# y5 = [1, 0.0, 0.0, 0.0, 0.0, 0.0]
+# y6 = [1, 0.2, 0.2, 0.2, 0.2, 0.0]
 
 
 # # 5. Place in box
@@ -79,7 +79,7 @@ y6 = [1, 0.2, 0.2, 0.2, 0.2, 0.0]
 
 # # 7. Heat in oven
 # task_name = "Load in Oven"
-# save_path = "load_in_oven.svg"
+# save_path = "load_in_oven_3.svg"
 # x = ["Open<br>oven", "Nav to<br>object", "Pick<br>object", "Nav to<br>oven", "Place in<br>oven", "Close<br>oven"]
 # y1 = [1, 1, 1, 1, 0.8, 0.4]
 # y2 = [0.2, 0.2, 0.2, 0.2, 0, 0]
@@ -167,12 +167,12 @@ fig.update_layout(
         'y': 0.90,  # Position title closer to the top (y=1 is top)
         # 'xanchor': 'center',  # Title alignment
         'yanchor': 'top',  # Align title to the top
-        'font': dict(size=32, family='Times New Roman', color='black'),
+        'font': dict(size=32, family='Avenir', color='black'),
     },
     xaxis=dict(
         # title="Segments",
-        # title_font=dict(size=24, family='Times New Roman', color='black'),
-        tickfont=dict(size=28, family='Times New Roman', color='black'),
+        # title_font=dict(size=24, family='Avenir', color='black'),
+        tickfont=dict(size=28, family='Avenir', color='black'),
         tickangle=0,  # Keep text horizontal
         tickmode="array",  # Use a custom list of ticks
         tickvals=x,  # Define the positions of the categories
@@ -182,8 +182,8 @@ fig.update_layout(
     ),
     yaxis=dict(
         title="Success Rate",
-        title_font=dict(size=32, family='Times New Roman', color='black'),
-        tickfont=dict(size=28, family='Times New Roman', color='black'),
+        title_font=dict(size=32, family='Avenir', color='black'),
+        tickfont=dict(size=28, family='Avenir', color='black'),
         ticklabelposition="outside",  # Ensure labels are outside the axis
         range=[-0.05, 1.05],  # Set the range for y-axis (min, max)
         showgrid=True, gridcolor="lightgray",
@@ -204,7 +204,7 @@ fig.update_layout(
         x=0.5,  # Position legend in the center
         font=dict(
             size=16,  # Change font size of the legend text
-            family="Times New Roman",  # Font family for legend
+            family="Avenir",  # Font family for legend
         )
     ),
     showlegend=False,  # Hide the legend
@@ -214,4 +214,4 @@ fig.update_layout(
 
 # Show the plot
 fig.show()
-# fig.write_image(save_path, format='svg')
+fig.write_image(save_path, format='svg')
